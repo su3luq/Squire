@@ -35,13 +35,14 @@ Squire is a gamified learning platform for a single teacher (the developer/autho
 
 1. **All sensitive teacher-only data is protected by RLS at the DB layer**, not by hiding fields in app code. Never write app-level filtering as the primary defense.
 2. **The student bundle must not contain code paths that fetch teacher-only columns.** Use separate queries scoped by role.
-3. **One quest accepted at a time per slot (1 solo + 1 coop).** Enforced by Postgres partial unique indexes (already in place). Do not bypass.
-4. **A student cannot abandon an accepted quest.** They submit, and the teacher passes or fails. On fail, the acceptance stays active with feedback shown; resubmit until pass.
-5. **A student cannot do the same coop quest twice** (no helping classmates). Enforced by unique index.
-6. **All times are Saigon time (Asia/Ho_Chi_Minh).** Store as `timestamptz` (UTC), convert for display.
-7. **English-only UI.** This is an English-learning app. No localization.
-8. **Free tier first.** Don't introduce paid services without flagging. Current paid items: Apple Developer ($99/yr), Google Play one-time ($25). Everything else free.
-9. **Never commit secrets.** `.env` is gitignored. Supabase anon key goes in `.env` for local; production uses Vercel/EAS environment variables.
+3. **Teacher-only sensitive metadata lives in `student_assessments` table (NOT on `profiles`).** Add new teacher-only fields there, not as new columns on `profiles`. Postgres RLS is row-level, not column-level — keeping these on a separately-policied table is the only clean enforcement path.
+4. **One quest accepted at a time per slot (1 solo + 1 coop).** Enforced by Postgres partial unique indexes (already in place). Do not bypass.
+5. **A student cannot abandon an accepted quest.** They submit, and the teacher passes or fails. On fail, the acceptance stays active with feedback shown; resubmit until pass.
+6. **A student cannot do the same coop quest twice** (no helping classmates). Enforced by unique index.
+7. **All times are Saigon time (Asia/Ho_Chi_Minh).** Store as `timestamptz` (UTC), convert for display.
+8. **English-only UI.** This is an English-learning app. No localization.
+9. **Free tier first.** Don't introduce paid services without flagging. Current paid items: Apple Developer ($99/yr), Google Play one-time ($25). Everything else free.
+10. **Never commit secrets.** `.env` is gitignored. Supabase anon key goes in `.env` for local; production uses Vercel/EAS environment variables.
 
 ---
 
@@ -50,8 +51,8 @@ Squire is a gamified learning platform for a single teacher (the developer/autho
 | Field | Teacher | Student (self) | Other students |
 |---|---|---|---|
 | `teacher_notes.*` | ✅ | ❌ | ❌ |
-| `profiles.english_proficiency_pearson` | ✅ | ❌ | ❌ |
-| `profiles.english_proficiency_cefr` | ✅ | ❌ | ❌ |
+| `student_assessments.english_proficiency_pearson` | ✅ | ❌ | ❌ |
+| `student_assessments.english_proficiency_cefr` | ✅ | ❌ | ❌ |
 | `profiles.full_name` | ✅ | ✅ | ❌ |
 | `profiles.email` | ✅ | ✅ | ❌ |
 | `profiles.age` | ✅ | ✅ | ✅ (within class) |
@@ -120,11 +121,11 @@ For each student, look at quiz answers in trailing 30 days. Weight each answer b
 
 ## Database Schema (already created)
 
-15 tables in `public` schema. **Do not run migrations to alter the schema without asking the user first.** Schema reference: see `docs/SCHEMA.md`.
+16 tables in `public` schema. **Do not run migrations to alter the schema without asking the user first.** Schema reference: see `docs/SCHEMA.md`.
 
-Key tables: `profiles`, `classes`, `lessons`, `review_cards`, `card_quiz_questions`, `card_reviews`, `quests`, `coop_quest_instances`, `quest_acceptances`, `quest_submissions`, `daily_quiz_attempts`, `xp_ledger`, `notifications`, `push_tokens`, `teacher_notes`.
+Key tables: `profiles`, `classes`, `lessons`, `review_cards`, `card_quiz_questions`, `card_reviews`, `quests`, `coop_quest_instances`, `quest_acceptances`, `quest_submissions`, `daily_quiz_attempts`, `xp_ledger`, `notifications`, `push_tokens`, `teacher_notes`, `student_assessments`.
 
-**RLS is currently DISABLED on all tables** until Phase 1 RLS migration runs. Treat this as a critical pre-Phase-1 task.
+**RLS is enabled on all tables via migration 008** (`supabase/migrations/008_rls_policies_and_assessments_split.sql`). Helper functions (`is_teacher`, `user_class_id`, `users_share_class`, `lookup_class_by_invite`, `is_username_available`), the `public_profiles` security-barrier view, and the `student_assessments` split are documented in `docs/SCHEMA.md`.
 
 ---
 
@@ -147,6 +148,7 @@ See `docs/PLAN.md` for full detail. Quick reference:
 - **Components:** Co-located, `app/_components/` for shared
 - **Types:** Generated from Supabase via `supabase gen types typescript --project-id dicufymnejhrkrakgluu` into `lib/database.types.ts`. Regenerate after every schema change.
 - **Supabase client:** Single instance, `lib/supabase.ts`, exports typed client
+- **Profile reads:** Student-facing queries on user profiles should use `public_profiles` view, not the `profiles` table directly. Teacher queries can use `profiles` for full column access plus `student_assessments` for sensitive metadata.
 - **Env vars:** Expo CLI auto-loads `.env` and exports `EXPO_PUBLIC_*` vars. No dotenv package needed.
 - **Naming:** snake_case in DB and SQL, camelCase in TypeScript (Supabase JS client auto-converts via `db.schema.ts` config)
 - **Commits:** Small and frequent. Conventional commits style preferred (`feat:`, `fix:`, `db:`, `docs:`).

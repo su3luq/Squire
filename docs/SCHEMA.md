@@ -1,6 +1,6 @@
 # Squire — Database Schema Reference
 
-Authoritative reference for all 15 tables in the `public` schema of the SQUIRE Supabase project (`dicufymnejhrkrakgluu`). Match this exactly when writing queries.
+Authoritative reference for all 16 tables in the `public` schema of the SQUIRE Supabase project (`dicufymnejhrkrakgluu`). Match this exactly when writing queries.
 
 **Project region:** `ap-northeast-2` (Seoul)
 **Postgres version:** 17
@@ -48,13 +48,28 @@ Extends `auth.users` (id matches `auth.users.id`).
 | age | int | class | |
 | class_id | uuid FK classes | self + teacher | nullable on creation |
 | interest_tags | text[] | class | |
-| english_proficiency_pearson | int | **teacher only** | 10-90 range |
-| english_proficiency_cefr | text | **teacher only** | |
 | xp_total | int DEFAULT 0 | public | **do not write directly** — use `xp_ledger` |
 | current_rank | int DEFAULT 1 | public | 1-7, **auto-updated by trigger** |
 | learning_velocity | numeric(4,3) DEFAULT 0 | class | 0.000-1.000, updated by cron |
 | created_at | timestamptz | self + teacher | |
 | last_active_at | timestamptz | teacher | |
+
+Note: previously had `english_proficiency_pearson` / `english_proficiency_cefr` columns. These were moved to the new `student_assessments` table in migration 008 — Postgres RLS is row-level, not column-level, so any field students must not see lives on a separately-policied table.
+
+### `student_assessments`
+**Teacher-only at all times.** Row-level home for fields previously in `profiles` whose privacy could not be enforced by RLS while they shared a row with student-readable columns.
+
+| Column | Type | Notes |
+|---|---|---|
+| id | uuid PK | DEFAULT `gen_random_uuid()` |
+| student_id | uuid FK profiles | UNIQUE, `ON DELETE CASCADE` |
+| english_proficiency_pearson | int | nullable; CHECK 10-90 if set |
+| english_proficiency_cefr | text | nullable |
+| updated_at | timestamptz NOT NULL DEFAULT now() | auto via `trg_assessments_updated_at` → `set_updated_at()` |
+
+Index: `idx_assessments_student` on `(student_id)`.
+
+RLS: single policy `student_assessments_teacher_all` — teachers can do everything, students see nothing.
 
 ### `teacher_notes`
 **Teacher-only at all times.**
@@ -240,6 +255,41 @@ Append-only audit trail. **Insert here to award XP; trigger auto-updates `profil
 
 - `xp_ledger AFTER INSERT` → updates `profiles.xp_total`, recomputes `current_rank` via `compute_rank_from_xp(xp)` function
 - `teacher_notes BEFORE UPDATE` → sets `updated_at = now()`
+
+---
+
+## Views
+
+### `public_profiles`
+Security-barrier view over `profiles`. Student-facing surface for classmate and leaderboard reads — never query `profiles` directly from a student session. Built with `WITH (security_barrier = true)` to prevent leak via crafted predicates.
+
+**Columns (12, all from `profiles`):** `id`, `role`, `username`, `display_name`, `avatar_url`, `age`, `class_id`, `interest_tags`, `xp_total`, `current_rank`, `learning_velocity`, `created_at`.
+
+Excluded vs. `profiles`: `full_name`, `email`, `last_active_at`. The previously-protected English-proficiency columns no longer live on `profiles` at all — they're in `student_assessments`.
+
+**Visibility (WHERE clause):**
+- Teacher → all rows
+- Self → own row regardless of role
+- Other students → all rows where `role = 'student'` (global student leaderboard)
+- Teacher rows are NOT exposed to other users
+
+`SELECT` granted to `authenticated`.
+
+---
+
+## Helper functions
+
+All `SECURITY DEFINER` with explicit `SET search_path = public`. `EXECUTE` is revoked from `anon` and `PUBLIC` except where shown.
+
+| Function | Returns | Callable by | Intent |
+|---|---|---|---|
+| `is_teacher(uid uuid DEFAULT auth.uid())` | `boolean` | authenticated | Role check; used inside RLS `USING` / `WITH CHECK` |
+| `user_class_id(uid uuid DEFAULT auth.uid())` | `uuid` | authenticated | Class lookup; used inside RLS clauses |
+| `users_share_class(a uuid, b uuid)` | `boolean` | authenticated | Same-class predicate (or either side is teacher) |
+| `lookup_class_by_invite(code text)` | `TABLE(id uuid, name text)` | **anon** + authenticated | Pre-registration: validate invite code → resolve class. Invite codes are treated as secrets. |
+| `is_username_available(uname text)` | `boolean` | **anon** + authenticated | Pre-registration: username availability check |
+
+Internal trigger functions (`apply_xp_change`, `set_updated_at`, `compute_rank_from_xp`) have `EXECUTE` revoked from every role — they run only via triggers.
 
 ---
 
