@@ -2,6 +2,7 @@ import { Stack, useRouter, useSegments } from 'expo-router';
 import { useEffect } from 'react';
 import 'react-native-url-polyfill/auto';
 import '../global.css';
+import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { AuthProvider, useAuth } from '../lib/auth-context';
 
 function RouteGuard() {
@@ -41,8 +42,10 @@ function RouteGuard() {
 
 export default function RootLayout() {
   return (
-    <AuthProvider>
-      <RouteGuard />
-    </AuthProvider>
+    <SafeAreaProvider>
+      <AuthProvider>
+        <RouteGuard />
+      </AuthProvider>
+    </SafeAreaProvider>
   );
 }
