@@ -1,13 +1,15 @@
 import 'react-native-url-polyfill/auto';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { createClient } from '@supabase/supabase-js';
+import type { Database } from './database.types';
 
-// NOTE: Two table-access patterns coexist by design:
-//   - `supabase.from('profiles')` — for self/teacher reads with full column access (RLS-gated)
-//   - `supabase.from('public_profiles')` — security-barrier view for non-self student reads
-//     (excludes teacher-only columns like english_proficiency_*).
-// Pick the right one per query. See docs/PLAN.md §4.
-// `Database` type will be generated and added once the schema is finalized; for now we use `any`.
+// IMPORTANT — Two table-access patterns coexist by design:
+//   - `supabase.from('profiles')` for teacher reads (full columns) and student self-reads
+//   - `supabase.from('public_profiles')` for student reads of OTHER students (leaderboard, classmates)
+//     This view excludes columns that shouldn't be visible to students.
+// Teacher-only metadata (English proficiency, etc.) lives in `student_assessments` table,
+// which has its own teacher-only RLS policy. Never query it from student code paths.
+// See CLAUDE.md "Privacy Model" table and docs/SCHEMA.md for the authoritative list.
 
 const supabaseUrl = process.env.EXPO_PUBLIC_SUPABASE_URL!;
 const supabaseAnonKey = process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY!;
@@ -18,7 +20,7 @@ if (!supabaseUrl || !supabaseAnonKey) {
   );
 }
 
-export const supabase = createClient(supabaseUrl, supabaseAnonKey, {
+export const supabase = createClient<Database>(supabaseUrl, supabaseAnonKey, {
   auth: {
     storage: AsyncStorage,
     autoRefreshToken: true,

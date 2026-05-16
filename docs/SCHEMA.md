@@ -255,6 +255,7 @@ Append-only audit trail. **Insert here to award XP; trigger auto-updates `profil
 
 - `xp_ledger AFTER INSERT` → updates `profiles.xp_total`, recomputes `current_rank` via `compute_rank_from_xp(xp)` function
 - `teacher_notes BEFORE UPDATE` → sets `updated_at = now()`
+- `student_assessments BEFORE UPDATE` → sets `updated_at = now()` via `set_updated_at()`
 
 ---
 
