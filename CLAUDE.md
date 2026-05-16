@@ -147,6 +147,7 @@ See `docs/PLAN.md` for full detail. Quick reference:
 - **Components:** Co-located, `app/_components/` for shared
 - **Types:** Generated from Supabase via `supabase gen types typescript --project-id dicufymnejhrkrakgluu` into `lib/database.types.ts`. Regenerate after every schema change.
 - **Supabase client:** Single instance, `lib/supabase.ts`, exports typed client
+- **Env vars:** Expo CLI auto-loads `.env` and exports `EXPO_PUBLIC_*` vars. No dotenv package needed.
 - **Naming:** snake_case in DB and SQL, camelCase in TypeScript (Supabase JS client auto-converts via `db.schema.ts` config)
 - **Commits:** Small and frequent. Conventional commits style preferred (`feat:`, `fix:`, `db:`, `docs:`).
 - **Branches:** `main` is deployable. Phase work in `phase-N-description` branches.
