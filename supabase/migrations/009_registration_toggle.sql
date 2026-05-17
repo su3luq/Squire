@@ -1,0 +1,3 @@
+-- Migration 009: Registration toggle and registration helper function.
+-- WILL BE FILLED BY ARCHITECT VIA MCP. This is a placeholder so the migration file exists in version control.
+-- Do not modify this file; the architect will deliver the SQL in the next architect prompt.
