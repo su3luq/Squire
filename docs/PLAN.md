@@ -178,9 +178,9 @@ Recomputed nightly. Quiz answers in last 30 days, weighted by card age (1.0/1.5/
 - Generate types via Supabase MCP into `src/lib/database.types.ts`
 - RLS migration (all 16 tables, all policies, `public_profiles` view, `student_assessments` split) — applied as migration 008
 - Auth flow:
-  - Username → internal `{username}@squire.local` email shim for Supabase Auth
-  - Self-registration: class dropdown gated by a global `registration_open` toggle (migration 009) → Server Action creates auth user + profile row
-  - Login screen (client component)
+  - Email + password (no username shim — migration 010 dropped the shim and the username/display_name columns; `full_name` is the public display)
+  - Self-registration: class dropdown gated by a global `registration_open` toggle (migration 009) → Server Action calls `auth.signUp()` then the gated `register_student` RPC to insert the profile row
+  - Login screen (client component, email + password)
 - Server-enforced role guard in `src/middleware.ts`: not-signed-in → `/login`; signed-in students can only reach `/student/*`; signed-in teachers can only reach `/teacher/*`. Redirects happen before any render.
 - Placeholder home screens for both roles
 - Vercel deploy

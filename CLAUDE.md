@@ -56,12 +56,12 @@ Squire is a gamified learning platform for a single teacher (the developer/autho
 | `teacher_notes.*` | ✅ | ❌ | ❌ |
 | `student_assessments.english_proficiency_pearson` | ✅ | ❌ | ❌ |
 | `student_assessments.english_proficiency_cefr` | ✅ | ❌ | ❌ |
-| `profiles.full_name` | ✅ | ✅ | ❌ |
 | `profiles.email` | ✅ | ✅ | ❌ |
+| `profiles.full_name` | ✅ | ✅ | ✅ (public display name) |
 | `profiles.age` | ✅ | ✅ | ✅ (within class) |
 | `profiles.learning_velocity` | ✅ | ✅ | ✅ (within class) |
 | `profiles.xp_total`, `current_rank` | ✅ | ✅ | ✅ (global leaderboard) |
-| `profiles.username`, `display_name`, `avatar_url` | ✅ | ✅ | ✅ (global) |
+| `profiles.avatar_url` | ✅ | ✅ | ✅ (global) |
 | `profiles.interest_tags` | ✅ | ✅ | ✅ (within class) |
 | `card_quiz_questions.correct_choice` | ✅ | ❌ | ❌ |
 

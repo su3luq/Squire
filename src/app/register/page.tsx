@@ -18,8 +18,6 @@ export default function RegisterPage() {
   const [classes, setClasses] = useState<ClassOption[]>([]);
   const [classesLoading, setClassesLoading] = useState(true);
   const [classId, setClassId] = useState('');
-  const [username, setUsername] = useState('');
-  const [displayName, setDisplayName] = useState('');
   const [fullName, setFullName] = useState('');
   const [age, setAge] = useState('');
   const [email, setEmail] = useState('');
@@ -27,8 +25,6 @@ export default function RegisterPage() {
   const [confirmPassword, setConfirmPassword] = useState('');
   const [error, setError] = useState<string | null>(null);
 
-  // Load registration state on mount. The gated RPC returns {open, classes} atomically.
-  // If registration is closed or no classes available → redirect to /registration-closed.
   useEffect(() => {
     const supabase = createClient();
     supabase.rpc('get_registration_state').then(({ data, error }) => {
@@ -51,12 +47,6 @@ export default function RegisterPage() {
     setError(null);
 
     if (!classId) return setError('Please select a class.');
-    if (!username) return setError('Username is required.');
-    if (username.length < 3) return setError('Username must be at least 3 characters.');
-    if (!/^[a-z][a-z0-9_]*$/i.test(username)) {
-      return setError('Username must start with a letter and contain only letters, numbers, and underscores.');
-    }
-    if (!displayName.trim()) return setError('Display name is required.');
     if (!fullName.trim()) return setError('Full name is required.');
     const ageNum = parseInt(age, 10);
     if (isNaN(ageNum) || ageNum < 1 || ageNum > 120) return setError('Please enter a valid age.');
@@ -67,11 +57,9 @@ export default function RegisterPage() {
     startTransition(async () => {
       const result = await registerStudentAction({
         classId,
-        username: username.toLowerCase(),
-        displayName: displayName.trim(),
         fullName: fullName.trim(),
         age: ageNum,
-        email: email.trim(),
+        email: email.trim().toLowerCase(),
         password,
       });
       if (result.error) {
@@ -113,33 +101,8 @@ export default function RegisterPage() {
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="username">Username</Label>
-              <Input
-                id="username"
-                autoCapitalize="off"
-                autoCorrect="off"
-                autoComplete="username"
-                value={username}
-                onChange={(e) => setUsername(e.target.value)}
-                disabled={isPending}
-              />
-            </div>
-
-            <div className="space-y-2">
-              <Label htmlFor="displayName">
-                Display name <span className="text-xs text-slate-500">(what classmates see)</span>
-              </Label>
-              <Input
-                id="displayName"
-                value={displayName}
-                onChange={(e) => setDisplayName(e.target.value)}
-                disabled={isPending}
-              />
-            </div>
-
-            <div className="space-y-2">
               <Label htmlFor="fullName">
-                Full name <span className="text-xs text-slate-500">(only your teacher sees this)</span>
+                Full name <span className="text-xs text-slate-500">(displayed to classmates)</span>
               </Label>
               <Input
                 id="fullName"
@@ -168,6 +131,8 @@ export default function RegisterPage() {
                   id="email"
                   type="email"
                   autoComplete="email"
+                  autoCapitalize="off"
+                  autoCorrect="off"
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
                   disabled={isPending}

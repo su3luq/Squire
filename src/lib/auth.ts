@@ -1,38 +1,11 @@
 import { createClient } from './supabase/client';
 
-const EMAIL_SHIM_DOMAIN = 'squire.local';
+// Auth is email + password. No username shim — Supabase Auth uses the user's real email
+// directly. The username column was removed in migration 010; full_name is the public display.
 
-export function usernameToEmail(username: string): string {
-  return `${username.toLowerCase().trim()}@${EMAIL_SHIM_DOMAIN}`;
-}
-
-export function emailToUsername(email: string): string {
-  return email.replace(`@${EMAIL_SHIM_DOMAIN}`, '');
-}
-
-export function validateUsername(username: string): { ok: true } | { ok: false; reason: string } {
-  if (username.length < 3) return { ok: false, reason: 'Username must be at least 3 characters.' };
-  if (username.length > 30) return { ok: false, reason: 'Username must be 30 characters or fewer.' };
-  if (!/^[a-z][a-z0-9_]*$/i.test(username)) {
-    return { ok: false, reason: 'Username must start with a letter and contain only letters, numbers, and underscores.' };
-  }
-  return { ok: true };
-}
-
-export async function checkUsernameAvailable(username: string): Promise<{ ok: true } | { ok: false; reason: string }> {
-  const fmt = validateUsername(username);
-  if (!fmt.ok) return fmt;
+export async function signInWithEmail(email: string, password: string) {
   const supabase = createClient();
-  const { data, error } = await supabase.rpc('is_username_available', { uname: username.toLowerCase() });
-  if (error) return { ok: false, reason: `Could not check username: ${error.message}` };
-  if (data === false) return { ok: false, reason: 'Username is already taken.' };
-  return { ok: true };
-}
-
-export async function signInWithUsername(username: string, password: string) {
-  const supabase = createClient();
-  const email = usernameToEmail(username);
-  return supabase.auth.signInWithPassword({ email, password });
+  return supabase.auth.signInWithPassword({ email: email.trim().toLowerCase(), password });
 }
 
 export async function signOut() {
@@ -40,6 +13,5 @@ export async function signOut() {
   return supabase.auth.signOut();
 }
 
-// registerStudent intentionally removed from this file.
-// The new registration flow uses a Server Action (see app/register/actions.ts) so the
-// registration_open check is enforced server-side.
+// registerStudent intentionally lives in app/register/actions.ts (server action)
+// so the registration_open check runs server-side via the register_student RPC.

@@ -40,10 +40,8 @@ Extends `auth.users` (id matches `auth.users.id`).
 |---|---|---|---|
 | id | uuid PK = auth.users.id | | |
 | role | user_role NOT NULL | public | |
-| username | text UNIQUE NOT NULL | public | 3-30 chars |
-| display_name | text NOT NULL | public | |
-| full_name | text | self + teacher | |
-| email | text | self + teacher | nullable |
+| full_name | text NOT NULL | public | public display name (shown to classmates) |
+| email | text NOT NULL | self + teacher | also the auth identity |
 | avatar_url | text | public | |
 | age | int | class | |
 | class_id | uuid FK classes | self + teacher | nullable on creation |
@@ -54,7 +52,9 @@ Extends `auth.users` (id matches `auth.users.id`).
 | created_at | timestamptz | self + teacher | |
 | last_active_at | timestamptz | teacher | |
 
-Note: previously had `english_proficiency_pearson` / `english_proficiency_cefr` columns. These were moved to the new `student_assessments` table in migration 008 — Postgres RLS is row-level, not column-level, so any field students must not see lives on a separately-policied table.
+Notes:
+- Previously had `english_proficiency_pearson` / `english_proficiency_cefr` columns. Moved to `student_assessments` in migration 008 (Postgres RLS is row-level, not column-level).
+- Previously had `username` and `display_name` columns. Dropped in migration 010 when the auth model switched to email + password; `full_name` is now the public display field.
 
 ### `student_assessments`
 **Teacher-only at all times.** Row-level home for fields previously in `profiles` whose privacy could not be enforced by RLS while they shared a row with student-readable columns.
@@ -264,9 +264,9 @@ Append-only audit trail. **Insert here to award XP; trigger auto-updates `profil
 ### `public_profiles`
 Security-barrier view over `profiles`. Student-facing surface for classmate and leaderboard reads — never query `profiles` directly from a student session. Built with `WITH (security_barrier = true)` to prevent leak via crafted predicates.
 
-**Columns (12, all from `profiles`):** `id`, `role`, `username`, `display_name`, `avatar_url`, `age`, `class_id`, `interest_tags`, `xp_total`, `current_rank`, `learning_velocity`, `created_at`.
+**Columns (11, all from `profiles`):** `id`, `role`, `full_name`, `avatar_url`, `age`, `class_id`, `interest_tags`, `xp_total`, `current_rank`, `learning_velocity`, `created_at`.
 
-Excluded vs. `profiles`: `full_name`, `email`, `last_active_at`. The previously-protected English-proficiency columns no longer live on `profiles` at all — they're in `student_assessments`.
+Excluded vs. `profiles`: `email`, `last_active_at`. (`username` and `display_name` were dropped from `profiles` in migration 010 — `full_name` is now the public display field.)
 
 **Visibility (WHERE clause):**
 - Teacher → all rows
@@ -287,8 +287,10 @@ All `SECURITY DEFINER` with explicit `SET search_path = public`. `EXECUTE` is re
 | `is_teacher(uid uuid DEFAULT auth.uid())` | `boolean` | authenticated | Role check; used inside RLS `USING` / `WITH CHECK` |
 | `user_class_id(uid uuid DEFAULT auth.uid())` | `uuid` | authenticated | Class lookup; used inside RLS clauses |
 | `users_share_class(a uuid, b uuid)` | `boolean` | authenticated | Same-class predicate (or either side is teacher) |
-| `lookup_class_by_invite(code text)` | `TABLE(id uuid, name text)` | **anon** + authenticated | Pre-registration: validate invite code → resolve class. Invite codes are treated as secrets. |
-| `is_username_available(uname text)` | `boolean` | **anon** + authenticated | Pre-registration: username availability check |
+| `lookup_class_by_invite(code text)` | `TABLE(id uuid, name text)` | **anon** + authenticated | Validate invite code → resolve class (unused in v1; kept for future "secret class" optionality) |
+| `is_registration_open()` | `boolean` | **anon** + authenticated | Read `app_settings.registration_open` (added in migration 009) |
+| `get_registration_state()` | `jsonb {open, classes}` | **anon** + authenticated | Combined state for the registration page (added in migration 009) |
+| `register_student(p_user_id uuid, p_full_name text, p_age int, p_email text, p_class_id uuid)` | `jsonb {ok, error?}` | authenticated | Gated atomic student-profile insert. Server-enforced gates: caller identity (`auth.uid`), `registration_open`, class exists (added in migration 009, simplified in migration 010) |
 
 Internal trigger functions (`apply_xp_change`, `set_updated_at`, `compute_rank_from_xp`) have `EXECUTE` revoked from every role — they run only via triggers.
 

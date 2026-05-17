@@ -3,14 +3,14 @@
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
-import { signInWithUsername } from '@/lib/auth';
+import { signInWithEmail } from '@/lib/auth';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 
 export default function LoginPage() {
   const router = useRouter();
-  const [username, setUsername] = useState('');
+  const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
@@ -18,15 +18,15 @@ export default function LoginPage() {
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     setError(null);
-    if (!username || !password) {
-      setError('Please enter your username and password.');
+    if (!email || !password) {
+      setError('Please enter your email and password.');
       return;
     }
     setLoading(true);
-    const { error } = await signInWithUsername(username, password);
+    const { error } = await signInWithEmail(email, password);
     setLoading(false);
     if (error) {
-      setError('Sign-in failed. Check your username and password.');
+      setError('Sign-in failed. Check your email and password.');
       return;
     }
     router.refresh();
@@ -37,19 +37,19 @@ export default function LoginPage() {
       <div className="w-full max-w-md space-y-6 rounded-lg bg-white p-8 shadow-sm">
         <div className="space-y-1 text-center">
           <h1 className="text-2xl font-bold">Welcome to Squire</h1>
-          <p className="text-sm text-slate-600">Sign in with your username and password.</p>
+          <p className="text-sm text-slate-600">Sign in with your email and password.</p>
         </div>
         <form onSubmit={handleSubmit} className="space-y-4">
           <div className="space-y-2">
-            <Label htmlFor="username">Username</Label>
+            <Label htmlFor="email">Email</Label>
             <Input
-              id="username"
-              type="text"
+              id="email"
+              type="email"
               autoCapitalize="off"
               autoCorrect="off"
-              autoComplete="username"
-              value={username}
-              onChange={(e) => setUsername(e.target.value)}
+              autoComplete="email"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
               disabled={loading}
             />
           </div>

@@ -380,15 +380,13 @@ export type Database = {
           class_id: string | null
           created_at: string
           current_rank: number
-          display_name: string
-          email: string | null
-          full_name: string | null
+          email: string
+          full_name: string
           id: string
           interest_tags: string[] | null
           last_active_at: string | null
           learning_velocity: number
           role: Database["public"]["Enums"]["user_role"]
-          username: string
           xp_total: number
         }
         Insert: {
@@ -397,15 +395,13 @@ export type Database = {
           class_id?: string | null
           created_at?: string
           current_rank?: number
-          display_name: string
-          email?: string | null
-          full_name?: string | null
+          email: string
+          full_name: string
           id: string
           interest_tags?: string[] | null
           last_active_at?: string | null
           learning_velocity?: number
           role: Database["public"]["Enums"]["user_role"]
-          username: string
           xp_total?: number
         }
         Update: {
@@ -414,15 +410,13 @@ export type Database = {
           class_id?: string | null
           created_at?: string
           current_rank?: number
-          display_name?: string
-          email?: string | null
-          full_name?: string | null
+          email?: string
+          full_name?: string
           id?: string
           interest_tags?: string[] | null
           last_active_at?: string | null
           learning_velocity?: number
           role?: Database["public"]["Enums"]["user_role"]
-          username?: string
           xp_total?: number
         }
         Relationships: [
@@ -845,12 +839,11 @@ export type Database = {
           class_id: string | null
           created_at: string | null
           current_rank: number | null
-          display_name: string | null
+          full_name: string | null
           id: string | null
           interest_tags: string[] | null
           learning_velocity: number | null
           role: Database["public"]["Enums"]["user_role"] | null
-          username: string | null
           xp_total: number | null
         }
         Insert: {
@@ -859,12 +852,11 @@ export type Database = {
           class_id?: string | null
           created_at?: string | null
           current_rank?: number | null
-          display_name?: string | null
+          full_name?: string | null
           id?: string | null
           interest_tags?: string[] | null
           learning_velocity?: number | null
           role?: Database["public"]["Enums"]["user_role"] | null
-          username?: string | null
           xp_total?: number | null
         }
         Update: {
@@ -873,12 +865,11 @@ export type Database = {
           class_id?: string | null
           created_at?: string | null
           current_rank?: number | null
-          display_name?: string | null
+          full_name?: string | null
           id?: string | null
           interest_tags?: string[] | null
           learning_velocity?: number | null
           role?: Database["public"]["Enums"]["user_role"] | null
-          username?: string | null
           xp_total?: number | null
         }
         Relationships: [
@@ -897,7 +888,6 @@ export type Database = {
       get_registration_state: { Args: never; Returns: Json }
       is_registration_open: { Args: never; Returns: boolean }
       is_teacher: { Args: { uid?: string }; Returns: boolean }
-      is_username_available: { Args: { uname: string }; Returns: boolean }
       lookup_class_by_invite: {
         Args: { code: string }
         Returns: {
@@ -909,11 +899,9 @@ export type Database = {
         Args: {
           p_age: number
           p_class_id: string
-          p_display_name: string
           p_email: string
           p_full_name: string
           p_user_id: string
-          p_username: string
         }
         Returns: Json
       }
