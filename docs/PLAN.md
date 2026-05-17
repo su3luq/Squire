@@ -8,7 +8,7 @@ Full project plan as agreed between teacher and architect (Claude). This is the 
 
 **Users:** 1 teacher (the author), up to 500 high school students at an international school in Saigon, Vietnam. Course is 40 weeks.
 
-**Platforms:** Web (laptop), iOS, Android — single Expo codebase.
+**Platforms:** Web only (laptop, tablet, mobile browser). No native apps.
 
 **Languages:** UI in English only (ESL learning context).
 
@@ -18,26 +18,28 @@ Full project plan as agreed between teacher and architect (Claude). This is the 
 
 ## 2. Tech Stack
 
-- **Frontend / mobile:** Expo SDK + Expo Router + TypeScript + NativeWind
-- **Web:** Expo for Web → Vercel free tier
-- **Backend / DB / Auth / Storage / Realtime:** Supabase (project `dicufymnejhrkrakgluu`)
-- **Push:** Expo Notifications
+- **Frontend:** Next.js 16 (App Router, React 19 Server Components) + TypeScript + Tailwind CSS v4 + shadcn/ui
+- **Forms:** react-hook-form + zod
+- **Hosting:** Vercel (free tier)
+- **Backend / DB / Auth / Storage / Realtime:** Supabase (project `dicufymnejhrkrakgluu`) — `@supabase/ssr` with three client patterns (browser, server, middleware)
+- **Push:** Web Push API + Service Worker (Phase 6)
 - **SRS:** `ts-fsrs` (FSRS-4.5)
 - **AI-likelihood detection:** TBD at Phase 5 (open-source classifier)
 
-**Costs (only paid items):**
-- Apple Developer Program — $99/yr (required for iOS TestFlight)
-- Google Play Console — $25 one-time
+**Costs (paid items, all optional):**
+- Vercel hosting — free tier sufficient for 501 users
+- Optional: Supabase Pro ($25/month) if free-tier limits are hit later
+- Optional: Resend ($0–20/month) for email notifications later
 
-Everything else free tier.
+No mandatory paid services. No native-app dev fees.
 
 ---
 
 ## 3. Data Model
 
-15 tables. See `docs/SCHEMA.md` for full column-by-column reference. Logical groupings:
+16 tables. See `docs/SCHEMA.md` for full column-by-column reference. Logical groupings:
 
-**Users & Classes:** `classes`, `profiles`, `teacher_notes`
+**Users & Classes:** `classes`, `profiles`, `teacher_notes`, `student_assessments`
 **Curriculum:** `lessons`, `review_cards`, `card_quiz_questions`, `card_reviews`
 **Quests:** `quests`, `coop_quest_instances`, `quest_acceptances`, `quest_submissions`
 **Engagement:** `daily_quiz_attempts`, `xp_ledger`
@@ -168,21 +170,21 @@ Recomputed nightly. Quiz answers in last 30 days, weighted by card age (1.0/1.5/
 ## 8. Phased Build Order
 
 ### Phase 1 — Foundation (~week 1)
-**Goal:** runnable app, real auth, role-gated routing, students can register.
+**Goal:** runnable app, real auth, role-gated routing, students can self-register.
 
-- Expo project init (TypeScript template)
-- Install: `@supabase/supabase-js`, `expo-router`, `nativewind`, `expo-camera` (for QR scan), `react-native-svg`
-- `lib/supabase.ts` client with typed schema
-- Generate types via `supabase gen types typescript`
-- RLS migration (all 15 tables, all policies, public_profiles view for column-level privacy)
+- Next.js 16 scaffold (App Router, TypeScript, Tailwind v4, `src/` directory)
+- Install: `@supabase/ssr`, shadcn/ui primitives (`button`, `input`, `label`, `card`, `alert`, `form`), `react-hook-form`, `zod`
+- Three Supabase client modules at `src/lib/supabase/{client,server,middleware}.ts` with typed `Database` generic
+- Generate types via Supabase MCP into `src/lib/database.types.ts`
+- RLS migration (all 16 tables, all policies, `public_profiles` view, `student_assessments` split) — applied as migration 008
 - Auth flow:
-  - Username → internal `{username}@squire.local` email for Supabase Auth
-  - Registration: invite-code-or-QR validates class → creates auth user → creates profile row
-  - Login screen
-- Role-gated route groups: `app/(auth)/`, `app/(student)/`, `app/(teacher)/`
+  - Username → internal `{username}@squire.local` email shim for Supabase Auth
+  - Self-registration: class dropdown gated by a global `registration_open` toggle (migration 009) → Server Action creates auth user + profile row
+  - Login screen (client component)
+- Server-enforced role guard in `src/middleware.ts`: not-signed-in → `/login`; signed-in students can only reach `/student/*`; signed-in teachers can only reach `/teacher/*`. Redirects happen before any render.
 - Placeholder home screens for both roles
-- Vercel deploy of web build
-- **Milestone:** real student can scan a QR code and create an account.
+- Vercel deploy
+- **Milestone:** a real student can self-register at the public URL and land in the student app.
 
 ### Phase 2 — Lessons & Cards (~week 2)
 **Goal:** teacher can create lesson content; students can study cards.
@@ -252,14 +254,15 @@ Recomputed nightly. Quiz answers in last 30 days, weighted by card age (1.0/1.5/
 - AI-likelihood classifier: lightweight model or API on text submissions, score stored in `quest_submissions.ai_likelihood_score`, shown in review modal
 - **Milestone:** all v1 features functional.
 
-### Phase 6 — Notifications & Mobile Push (~week 6)
-**Goal:** real notifications on real phones.
+### Phase 6 — Web Push Notifications (~week 6)
+**Goal:** real push notifications delivered to the browser, including PWA / Add-to-Home-Screen for mobile users.
 
-- `push_tokens` registration on app launch via `expo-notifications`
+- Service Worker registration + Web Push API subscription (VAPID keys, stored client-side per browser)
+- `push_tokens` table reused to store browser push subscriptions (endpoint + keys)
 - Edge Function `send-pending-pushes` (cron every 5 min):
   - Query `notifications` where `pushed_at IS NULL`
   - Apply quiet-hour rule unless `override_quiet_hours = true`
-  - Send via Expo Push API
+  - Send via Web Push protocol (e.g. `web-push` library)
   - Update `pushed_at`
 - DB triggers / functions to insert `notifications` rows on relevant events:
   - `AFTER INSERT ON quests` (for class members)
@@ -270,9 +273,8 @@ Recomputed nightly. Quiz answers in last 30 days, weighted by card age (1.0/1.5/
   - Edge Function checks for expiring quests (1hr window) → insert notification
 - Teacher custom push composer UI
 - Settings screen: per-category notification toggles
-- EAS build configuration for iOS / Android
-- TestFlight + Play Internal Testing distribution
-- **Milestone:** real students install the app on their phones and receive push notifications.
+- PWA manifest + service worker so iOS users can Add-to-Home-Screen for native-feeling push support (Safari requires installation before web push works on iOS)
+- **Milestone:** subscribed browser users (and iOS Add-to-Home-Screen users) receive push notifications end-to-end.
 
 ---
 
@@ -285,7 +287,6 @@ Recomputed nightly. Quiz answers in last 30 days, weighted by card age (1.0/1.5/
 | Supabase Egress | 5 GB/month | Low |
 | Supabase MAU | 50K | Far above ceiling |
 | Vercel bandwidth | 100 GB/month | Far above ceiling |
-| EAS builds | 30/month each platform | Manageable; pace dev builds |
 | Expo Push | Unlimited free | None |
 
 ---
@@ -297,6 +298,7 @@ Recomputed nightly. Quiz answers in last 30 days, weighted by card age (1.0/1.5/
 - Rank icons: source / commission / generate? (ask before Phase 1 polish)
 - Card body editor: which rich-text component? (ask at Phase 2 start)
 - Co-op group formation: pure first-come-first-served (current plan), or some matchmaking? (current plan stays for v1)
+- **Rejected for v1:** QR-code class join, multi-step registration with invite-code lookup, and per-class access codes. Replaced by open self-registration with a global `registration_open` toggle and a hardcoded class dropdown. Reasoning: web-only deployment removed the camera-on-mobile use case for QR; the simpler flow is enough for one teacher / 500 students.
 
 ---
 

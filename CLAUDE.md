@@ -6,7 +6,7 @@
 
 ## What This App Is
 
-Squire is a gamified learning platform for a single teacher (the developer/author of this repo) and up to 500 Vietnamese high school ESL/research students at an international school. Course runs 40 weeks. App is web + iOS + Android via a single Expo codebase. Teacher and students both use the same app; UI is role-gated.
+Squire is a gamified learning platform for a single teacher (the developer/author of this repo) and up to 500 Vietnamese high school ESL/research students at an international school. Course runs 40 weeks. Web-only deployment via Next.js (no native apps). Teacher and students both use the same app; UI is role-gated.
 
 **This is the teacher's own app for their own students. They are the only developer and the only teacher (for now).**
 
@@ -16,13 +16,14 @@ Squire is a gamified learning platform for a single teacher (the developer/autho
 
 | Layer | Tool |
 |---|---|
-| Frontend | Expo SDK (React Native) with Expo Router |
-| Web build | Expo for Web → deployed to Vercel |
-| Mobile build | Expo EAS → TestFlight + Play Internal Testing |
+| Frontend | Next.js 16 (App Router, React 19 Server Components) |
+| Web build | Next.js on Vercel |
 | Language | TypeScript everywhere |
-| Styling | NativeWind (Tailwind for React Native) |
-| Backend | Supabase (Postgres + Auth + Realtime + Storage + Edge Functions) |
-| Push notifications | Expo Notifications (free, works iOS + Android) |
+| Styling | Tailwind CSS v4 (CSS-first config via `@theme` in `src/app/globals.css`, no `tailwind.config.ts`) |
+| UI primitives | shadcn/ui (in `src/components/ui/`) |
+| Forms | react-hook-form + zod |
+| Backend | Supabase (Postgres + Auth + Realtime + Storage + Edge Functions) — three client patterns: browser / server / middleware |
+| Push notifications | Web Push API + Service Worker (Phase 6) |
 | SRS algorithm | FSRS-4.5 via `ts-fsrs` package |
 | AI-likelihood detection | Small open-source classifier (decide at Phase 5) |
 
@@ -41,8 +42,10 @@ Squire is a gamified learning platform for a single teacher (the developer/autho
 6. **A student cannot do the same coop quest twice** (no helping classmates). Enforced by unique index.
 7. **All times are Saigon time (Asia/Ho_Chi_Minh).** Store as `timestamptz` (UTC), convert for display.
 8. **English-only UI.** This is an English-learning app. No localization.
-9. **Free tier first.** Don't introduce paid services without flagging. Current paid items: Apple Developer ($99/yr), Google Play one-time ($25). Everything else free.
-10. **Never commit secrets.** `.env` is gitignored. Supabase anon key goes in `.env` for local; production uses Vercel/EAS environment variables.
+9. **Free tier first.** Don't introduce paid services without flagging. Web-only deployment means no native-app dev fees. Optional: Supabase Pro ($25/mo) if free-tier limits are hit later. Everything else free.
+10. **Never commit secrets.** `.env` is gitignored. Supabase anon key goes in `.env` for local; production uses Vercel environment variables.
+11. **Web-only deployment.** No native apps. No iOS/Android dev fees. iOS users who want push notifications use Add-to-Home-Screen (Phase 6).
+12. **Three Supabase client patterns:** `src/lib/supabase/client.ts` (browser, in client components), `src/lib/supabase/server.ts` (server components and actions), `src/lib/supabase/middleware.ts` (middleware session refresh). Never import the wrong one — TypeScript will catch most mistakes.
 
 ---
 
@@ -133,24 +136,24 @@ Key tables: `profiles`, `classes`, `lessons`, `review_cards`, `card_quiz_questio
 
 See `docs/PLAN.md` for full detail. Quick reference:
 
-1. **Phase 1 — Foundation**: Expo init, Supabase client, RLS policies, auth (username/password w/ email shim), QR-code class join, role-gated routing, placeholder home screens
+1. **Phase 1 — Foundation**: Next.js scaffold, Supabase SSR client (browser/server/middleware split), RLS policies (migration 008), auth (username/password w/ email shim), self-registration with class dropdown gated by a global registration toggle, middleware-enforced role guard, placeholder home screens
 2. **Phase 2 — Lessons & Cards**: Lesson CRUD, card creator (headline + body + MCQs), card library, FSRS review session with 4-button rating
 3. **Phase 3 — Daily Quiz & XP Engine**: Daily quiz generation Edge Function, quiz UI, XP awards via ledger, leaderboard, velocity nightly cron
 4. **Phase 4 — Quests Core**: Solo quest creator + acceptance + submission, teacher review queue, audio submissions
 5. **Phase 5 — Co-op Quests & Polish**: Coop quest spawning, teacher analytics dashboard, AI-likelihood classifier
-6. **Phase 6 — Notifications & Mobile Push**: Expo push tokens, all notification triggers, quiet hours, mobile builds for TestFlight/Play
+6. **Phase 6 — Web Push Notifications**: Web Push API subscriptions + Service Worker, all notification triggers, quiet hours, in-app notifications inbox, encourage iOS users to Add-to-Home-Screen for native-feeling push support
 
 ---
 
 ## Conventions
 
-- **File structure:** Expo Router file-based, `app/(teacher)/...` and `app/(student)/...` for role-gated routes
-- **Components:** Co-located, `app/_components/` for shared
-- **Types:** Generated from Supabase via `supabase gen types typescript --project-id dicufymnejhrkrakgluu` into `lib/database.types.ts`. Regenerate after every schema change.
-- **Supabase client:** Single instance, `lib/supabase.ts`, exports typed client
+- **File structure:** Next.js App Router under `src/app/`. Pages at `src/app/login/page.tsx`, `src/app/student/page.tsx`, etc. Role gating enforced server-side by `src/middleware.ts` — redirects happen before any render.
+- **Components:** `src/components/`, with shadcn/ui primitives in `src/components/ui/`.
+- **Types:** Generated from Supabase MCP into `src/lib/database.types.ts`. Regenerate after every schema change.
+- **Supabase client:** Three patterns — `src/lib/supabase/client.ts` (browser, client components), `src/lib/supabase/server.ts` (server components + server actions + route handlers), `src/lib/supabase/middleware.ts` (middleware session refresh).
 - **Profile reads:** Student-facing queries on user profiles should use `public_profiles` view, not the `profiles` table directly. Teacher queries can use `profiles` for full column access plus `student_assessments` for sensitive metadata.
-- **Env vars:** Expo CLI auto-loads `.env` and exports `EXPO_PUBLIC_*` vars. No dotenv package needed.
-- **Naming:** snake_case in DB and SQL, camelCase in TypeScript (Supabase JS client auto-converts via `db.schema.ts` config)
+- **Env vars:** Next.js auto-loads `.env`. Public vars use `NEXT_PUBLIC_*` prefix (exposed to the browser bundle). Server-only secrets stay unprefixed.
+- **Naming:** snake_case in DB and SQL, camelCase in TypeScript
 - **Commits:** Small and frequent. Conventional commits style preferred (`feat:`, `fix:`, `db:`, `docs:`).
 - **Branches:** `main` is deployable. Phase work in `phase-N-description` branches.
 
@@ -169,6 +172,5 @@ See `docs/PLAN.md` for full detail. Quick reference:
 - Secret quests (visibility conditions)
 - Student-created cards
 - Multi-teacher / multi-class-per-teacher
-- Web push notifications (mobile push only in v1; web users use in-app inbox)
 - Automatic AI grading of text quality
 - Localization
