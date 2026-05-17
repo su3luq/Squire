@@ -167,6 +167,67 @@ See `docs/PLAN.md` for full detail. Quick reference:
 
 ---
 
+## Operating Protocol
+
+This project runs with one Claude Code session as primary builder. An architect (chat-based Claude session at https://claude.ai) is on call but not in the day-to-day loop. The protocol below defines when each operates.
+
+### Default mode: autonomous execution
+
+You operate autonomously for the vast majority of work. This includes:
+- Building new screens that follow established patterns
+- Wiring forms, hooking realtime, adding UI
+- Bug fixes and refactors within an established pattern
+- Routine feature additions per the PLAN.md
+- Writing tests
+- Dependency installs that are unambiguous (e.g., needed for a feature already approved)
+- Database schema work via Supabase MCP (subject to the rules below)
+
+For autonomous work: build, validate (typecheck + lint + relevant smoke tests), commit, push, report.
+
+### Summon the architect (chat-based Claude session) when:
+
+1. A genuinely new architectural decision arises — a library choice with 3+ defensible answers, a schema pattern that'll repeat across many features, a framework-level pivot.
+2. You're stuck for more than ~10 minutes on a problem and don't have a clear next step.
+3. Phase boundaries — before starting Phase 2, 3, 4, etc., the user typically wants a brief check-in with the architect.
+4. Security-sensitive new work — auth flow changes, new RLS policies on new tables, anything touching `xp_ledger` or `student_assessments`.
+5. The user explicitly says "ask the architect."
+
+### Supabase MCP rules
+
+The `mcp__claude_ai_Supabase__*` tools are available. Use them for all database work — no more relaying SQL through the architect.
+
+**HARD RULES on MCP usage:**
+
+a) **Never always-approve `mcp__claude_ai_Supabase__execute_sql`, `mcp__claude_ai_Supabase__apply_migration`, or any other MCP write tool.** The user must see and approve every SQL statement before it runs. This is the security backbone — silent schema changes are unacceptable.
+
+b) **Migration workflow:**
+   i. Draft the SQL in a code block inside your response. State what it does and why.
+   ii. Wait for explicit user approval ("yes apply" or "approved").
+   iii. Apply via `mcp__claude_ai_Supabase__apply_migration` with a descriptive name like `NNN_short_description`.
+   iv. Commit the SQL file to `supabase/migrations/NNN_short_description.sql` in the repo.
+   v. After ANY schema change, regenerate types via `mcp__claude_ai_Supabase__generate_typescript_types` and write the result to `src/lib/database.types.ts`. Commit the types update separately or as part of the same migration commit.
+   vi. Run `mcp__claude_ai_Supabase__get_advisors` with `type="security"` after the migration and flag any new lints in your report.
+
+c) **Read-only MCP tools** (`list_tables`, `execute_sql` with SELECT-only, `get_advisors`, `generate_typescript_types`) can be called freely — these don't mutate state.
+
+d) **Never run `DELETE` / `DROP` / `TRUNCATE` / `ALTER` without explicit user approval**, even if the user asked for a refactor. State what you'll drop, wait for "approved".
+
+### Escalation discipline (unchanged from prior calibration)
+
+- Dep additions, config changes, and structural moves bubble up to user attention even if the fix is "obvious."
+- A user "continue" is NOT a substitute for architect review on architectural decisions — it covers resuming authorized work and operational recovery only.
+- When in doubt, flag rather than improvise.
+- Bias toward escalation; loops are cheap, bad foundations are expensive.
+
+### Validation discipline (unchanged)
+
+Every commit-blocking smoke test goes through:
+1. `npm run typecheck` → must exit 0
+2. `npm run lint` → must pass or only warn on accepted items
+3. `npm run dev` → curl smoke + bundle-grep validation as appropriate
+
+---
+
 ## Things NOT in v1 (v2 backlog — do not build)
 
 - Secret quests (visibility conditions)
