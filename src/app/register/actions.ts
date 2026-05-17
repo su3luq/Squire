@@ -13,13 +13,12 @@ export type RegisterPayload = {
   password: string;
 };
 
+type RegisterStudentResult = { ok: true } | { ok: false; error: string };
+
 export async function registerStudentAction(payload: RegisterPayload): Promise<{ error: string | null }> {
   const supabase = await createClient();
 
-  // TODO (after migration 009 lands): call the SECURITY DEFINER register_student function
-  // which enforces the registration_open check server-side. For now, perform the
-  // signup + profile insert directly. This is a temporary placeholder until 009.
-
+  // 1. Create the auth.users row (Supabase Auth requirement).
   const email = usernameToEmail(payload.username);
   const { data: authData, error: authError } = await supabase.auth.signUp({
     email,
@@ -28,19 +27,25 @@ export async function registerStudentAction(payload: RegisterPayload): Promise<{
   if (authError) return { error: authError.message };
   if (!authData.user) return { error: 'Sign-up succeeded but no user returned.' };
 
-  const { error: profileError } = await supabase.from('profiles').insert({
-    id: authData.user.id,
-    role: 'student',
-    username: payload.username,
-    display_name: payload.displayName,
-    full_name: payload.fullName,
-    age: payload.age,
-    email: payload.email,
-    class_id: payload.classId,
+  // 2. Call the gated register_student RPC to insert the profile row.
+  // Server-side gates: caller identity (auth.uid), registration_open, class exists, username available.
+  const { data, error: rpcError } = await supabase.rpc('register_student', {
+    p_user_id: authData.user.id,
+    p_username: payload.username,
+    p_display_name: payload.displayName,
+    p_full_name: payload.fullName,
+    p_age: payload.age,
+    p_email: payload.email,
+    p_class_id: payload.classId,
   });
 
-  if (profileError) {
-    return { error: `Account created but profile failed: ${profileError.message}` };
+  if (rpcError) {
+    return { error: `Registration RPC failed: ${rpcError.message}` };
+  }
+
+  const result = data as RegisterStudentResult;
+  if (!result.ok) {
+    return { error: result.error };
   }
 
   return { error: null };

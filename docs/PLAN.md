@@ -287,7 +287,7 @@ Recomputed nightly. Quiz answers in last 30 days, weighted by card age (1.0/1.5/
 | Supabase Egress | 5 GB/month | Low |
 | Supabase MAU | 50K | Far above ceiling |
 | Vercel bandwidth | 100 GB/month | Far above ceiling |
-| Expo Push | Unlimited free | None |
+| Web Push API | Unlimited free | None |
 
 ---
 

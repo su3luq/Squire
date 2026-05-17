@@ -10,6 +10,7 @@ import { Label } from '@/components/ui/label';
 import { registerStudentAction } from './actions';
 
 type ClassOption = { id: string; name: string };
+type RegistrationState = { open: boolean; classes: ClassOption[] };
 
 export default function RegisterPage() {
   const router = useRouter();
@@ -26,27 +27,23 @@ export default function RegisterPage() {
   const [confirmPassword, setConfirmPassword] = useState('');
   const [error, setError] = useState<string | null>(null);
 
-  // Load classes on mount. If registration is closed, the API will return empty + we redirect.
+  // Load registration state on mount. The gated RPC returns {open, classes} atomically.
+  // If registration is closed or no classes available → redirect to /registration-closed.
   useEffect(() => {
     const supabase = createClient();
-    supabase
-      .from('classes')
-      .select('id, name')
-      .is('archived_at', null)
-      .order('name')
-      .then(({ data, error }) => {
-        if (error) {
-          // Most likely RLS blocked — registration may be closed
-          router.replace('/registration-closed');
-          return;
-        }
-        if (!data || data.length === 0) {
-          router.replace('/registration-closed');
-          return;
-        }
-        setClasses(data);
-        setClassesLoading(false);
-      });
+    supabase.rpc('get_registration_state').then(({ data, error }) => {
+      if (error) {
+        router.replace('/registration-closed');
+        return;
+      }
+      const state = data as RegistrationState;
+      if (!state.open || state.classes.length === 0) {
+        router.replace('/registration-closed');
+        return;
+      }
+      setClasses(state.classes);
+      setClassesLoading(false);
+    });
   }, [router]);
 
   async function handleSubmit(e: React.FormEvent) {
