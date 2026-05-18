@@ -2,7 +2,7 @@
 
 import { useRef } from 'react';
 import { Textarea } from '@/components/ui/textarea';
-import { MarkdownPreview } from './markdown-preview';
+import { MarkdownRenderer } from './markdown-renderer';
 import { MarkdownToolbar, applyAction, type MarkdownAction } from './markdown-toolbar';
 
 // Side-by-side markdown editor: toolbar on top, textarea on the left, live preview
@@ -70,7 +70,7 @@ export function MarkdownEditor({
             className="overflow-y-auto rounded-md border border-slate-200 bg-white p-4 shadow-sm"
             style={{ minHeight: `${rows * 1.6}rem` }}
           >
-            <MarkdownPreview source={value} />
+            <MarkdownRenderer source={value} emptyPlaceholder="Preview will appear here." />
           </div>
         </div>
       </div>
