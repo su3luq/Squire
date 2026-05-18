@@ -23,3 +23,4 @@ This folder is the source of truth for database schema changes.
 | 009 | Registration toggle (`app_settings`, `is_registration_open`, `get_registration_state`, `register_student` RPC) | applied |
 | 010 | Drop username/display_name shim — email becomes auth identity; `full_name` becomes public display | applied |
 | 011 | Unify content model as markdown (`review_cards.body` and `quests.description` → text; drop `quiz_questions`, `deliverable_types`, and `'quiz'` enum value) | applied |
+| 012 | `unlock_lesson_cards` RPC (teacher-only, idempotent) and `lesson_card_counts` view | applied |

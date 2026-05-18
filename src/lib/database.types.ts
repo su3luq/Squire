@@ -696,6 +696,13 @@ export type Database = {
             foreignKeyName: "review_cards_lesson_id_fkey"
             columns: ["lesson_id"]
             isOneToOne: false
+            referencedRelation: "lesson_card_counts"
+            referencedColumns: ["lesson_id"]
+          },
+          {
+            foreignKeyName: "review_cards_lesson_id_fkey"
+            columns: ["lesson_id"]
+            isOneToOne: false
             referencedRelation: "lessons"
             referencedColumns: ["id"]
           },
@@ -826,6 +833,14 @@ export type Database = {
       }
     }
     Views: {
+      lesson_card_counts: {
+        Row: {
+          card_count: number | null
+          lesson_id: string | null
+          question_count: number | null
+        }
+        Relationships: []
+      }
       public_profiles: {
         Row: {
           age: number | null
@@ -899,6 +914,7 @@ export type Database = {
         }
         Returns: Json
       }
+      unlock_lesson_cards: { Args: { p_lesson_id: string }; Returns: Json }
       user_class_id: { Args: { uid?: string }; Returns: string }
       users_share_class: { Args: { a: string; b: string }; Returns: boolean }
     }
