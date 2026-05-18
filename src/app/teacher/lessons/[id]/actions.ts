@@ -51,3 +51,25 @@ export async function deleteLesson(
   revalidatePath('/teacher/lessons');
   return { error: null };
 }
+
+// Thin rename used by the inline-rename control on the card editor pages.
+// Only changes the title; other fields are untouched.
+export async function renameLesson(
+  lessonId: string,
+  title: string
+): Promise<{ error: string | null }> {
+  const trimmed = title.trim();
+  if (!trimmed) return { error: 'Title cannot be empty.' };
+
+  const supabase = await createClient();
+  const { error } = await supabase
+    .from('lessons')
+    .update({ title: trimmed })
+    .eq('id', lessonId);
+
+  if (error) return { error: `Failed to rename lesson: ${error.message}` };
+
+  revalidatePath(`/teacher/lessons/${lessonId}`);
+  revalidatePath('/teacher/lessons');
+  return { error: null };
+}

@@ -1,7 +1,7 @@
 import { createClient } from '@/lib/supabase/server';
 import { notFound } from 'next/navigation';
 import Link from 'next/link';
-import { Button } from '@/components/ui/button';
+import { Button, buttonVariants } from '@/components/ui/button';
 import {
   Card,
   CardContent,
@@ -36,6 +36,12 @@ export default async function LessonDetailPage({
   const cardCount = counts?.card_count ?? 0;
   const questionCount = counts?.question_count ?? 0;
 
+  const { data: cards } = await supabase
+    .from('review_cards')
+    .select('id, headline, position')
+    .eq('lesson_id', id)
+    .order('position');
+
   return (
     <main className="container mx-auto max-w-2xl p-6">
       <Link
@@ -53,7 +59,15 @@ export default async function LessonDetailPage({
       <div className="space-y-6">
         <Card>
           <CardHeader>
-            <CardTitle>Cards</CardTitle>
+            <div className="flex items-center justify-between">
+              <CardTitle>Cards</CardTitle>
+              <Link
+                href={`/teacher/lessons/${id}/cards/new`}
+                className={buttonVariants({ size: 'sm' })}
+              >
+                Add card
+              </Link>
+            </div>
           </CardHeader>
           <CardContent>
             <p className="text-sm text-slate-600">
@@ -68,13 +82,29 @@ export default async function LessonDetailPage({
             ) : (
               <p className="mt-2 text-xs text-slate-500">
                 Cards not yet unlocked for students. Add cards and click &quot;Unlock for
-                class&quot;.
+                class&quot; (Phase 2 commit #5).
               </p>
             )}
-            <div className="mt-4 flex gap-2">
-              <Button disabled variant="outline" size="sm">
-                Add cards (Phase 2 commit #3)
-              </Button>
+
+            {cards && cards.length > 0 && (
+              <ul className="mt-4 divide-y divide-slate-200 rounded-md border border-slate-200">
+                {cards.map((card) => (
+                  <li key={card.id}>
+                    <Link
+                      href={`/teacher/lessons/${id}/cards/${card.id}`}
+                      className="flex items-center justify-between gap-3 px-3 py-2 text-sm transition-colors hover:bg-slate-50"
+                    >
+                      <span className="truncate font-medium text-slate-900">
+                        {card.headline}
+                      </span>
+                      <span className="shrink-0 text-xs text-slate-500">Edit →</span>
+                    </Link>
+                  </li>
+                ))}
+              </ul>
+            )}
+
+            <div className="mt-4">
               <Button disabled variant="outline" size="sm">
                 Unlock for class (Phase 2 commit #5)
               </Button>

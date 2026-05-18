@@ -5,14 +5,10 @@ import { redirect } from 'next/navigation';
 import { saigonShortDate } from '@/lib/saigon-date';
 
 // Quick-start a new lesson with a sensible default title + auto-suggested
-// lesson_number, then redirect straight into it. Skips the "fill out form
-// first" friction for teachers who just want to start writing cards.
+// lesson_number, then redirect straight into the card editor.
 //
 // Multi-class teachers: picks the alphabetically-first non-archived class.
 // v1 has one class; revisit if/when multi-class lands.
-//
-// When Phase 2 commit #3 ships the card editor, change the redirect target
-// to `/teacher/lessons/${data.id}/cards/new`.
 export async function quickStartLesson(): Promise<void> {
   const supabase = await createClient();
 
@@ -52,5 +48,5 @@ export async function quickStartLesson(): Promise<void> {
     redirect('/teacher/lessons/new');
   }
 
-  redirect(`/teacher/lessons/${data.id}`);
+  redirect(`/teacher/lessons/${data.id}/cards/new`);
 }
