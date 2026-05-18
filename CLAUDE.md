@@ -47,6 +47,7 @@ Squire is a gamified learning platform for a single teacher (the developer/autho
 11. **Web-only deployment.** No native apps. No iOS/Android dev fees. iOS users who want push notifications use Add-to-Home-Screen (Phase 6).
 12. **Three Supabase client patterns:** `src/lib/supabase/client.ts` (browser, in client components), `src/lib/supabase/server.ts` (server components and actions), `src/lib/supabase/middleware.ts` (middleware session refresh). Never import the wrong one — TypeScript will catch most mistakes.
 13. **All long-form content is authored and stored as markdown text.** Rendered with `react-markdown` + `remark-gfm`. Raw HTML disabled. Custom component map embeds YouTube URLs as iframes and direct video file URLs as `<video>`; images via standard `![](url)` syntax render as `<img>`. There is no structured block editor, no rich-text WYSIWYG, no file upload UI for content authoring. Images and media are referenced via external URLs in markdown.
+14. **Create teacher accounts only via `SELECT public.admin_create_teacher(email, password, full_name)`.** Never INSERT directly into `auth.users` — GoTrue's row-scan crashes on NULL token columns. The function handles this and other GoTrue quirks; see migration 013.
 
 ---
 

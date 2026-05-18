@@ -893,6 +893,10 @@ export type Database = {
       }
     }
     Functions: {
+      admin_create_teacher: {
+        Args: { p_email: string; p_full_name: string; p_password: string }
+        Returns: string
+      }
       compute_rank_from_xp: { Args: { xp: number }; Returns: number }
       get_registration_state: { Args: never; Returns: Json }
       is_registration_open: { Args: never; Returns: boolean }
