@@ -616,14 +616,12 @@ export type Database = {
           class_id: string
           closed_at: string | null
           created_at: string
-          deliverable_types: string[] | null
-          description: Json
+          description: string
           expires_at: string | null
           group_size: number | null
           id: string
           max_instances: number | null
           quest_type: Database["public"]["Enums"]["quest_type"]
-          quiz_questions: Json | null
           title: string
           word_limit_min: number | null
           xp_reward: number
@@ -633,14 +631,12 @@ export type Database = {
           class_id: string
           closed_at?: string | null
           created_at?: string
-          deliverable_types?: string[] | null
-          description?: Json
+          description?: string
           expires_at?: string | null
           group_size?: number | null
           id?: string
           max_instances?: number | null
           quest_type: Database["public"]["Enums"]["quest_type"]
-          quiz_questions?: Json | null
           title: string
           word_limit_min?: number | null
           xp_reward: number
@@ -650,14 +646,12 @@ export type Database = {
           class_id?: string
           closed_at?: string | null
           created_at?: string
-          deliverable_types?: string[] | null
-          description?: Json
+          description?: string
           expires_at?: string | null
           group_size?: number | null
           id?: string
           max_instances?: number | null
           quest_type?: Database["public"]["Enums"]["quest_type"]
-          quiz_questions?: Json | null
           title?: string
           word_limit_min?: number | null
           xp_reward?: number
@@ -674,7 +668,7 @@ export type Database = {
       }
       review_cards: {
         Row: {
-          body: Json
+          body: string
           created_at: string
           headline: string
           id: string
@@ -682,7 +676,7 @@ export type Database = {
           position: number
         }
         Insert: {
-          body?: Json
+          body?: string
           created_at?: string
           headline: string
           id?: string
@@ -690,7 +684,7 @@ export type Database = {
           position?: number
         }
         Update: {
-          body?: Json
+          body?: string
           created_at?: string
           headline?: string
           id?: string
@@ -925,7 +919,7 @@ export type Database = {
         | "whole_class"
         | "limited_instances"
       quest_submission_status: "pending_review" | "passed" | "failed"
-      quest_type: "solo" | "coop" | "quiz" | "daily_quiz"
+      quest_type: "solo" | "coop" | "daily_quiz"
       user_role: "teacher" | "student"
     }
     CompositeTypes: {
@@ -1072,7 +1066,7 @@ export const Constants = {
         "limited_instances",
       ],
       quest_submission_status: ["pending_review", "passed", "failed"],
-      quest_type: ["solo", "coop", "quiz", "daily_quiz"],
+      quest_type: ["solo", "coop", "daily_quiz"],
       user_role: ["teacher", "student"],
     },
   },
