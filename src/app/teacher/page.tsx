@@ -1,5 +1,7 @@
 import { createClient } from '@/lib/supabase/server';
 import { redirect } from 'next/navigation';
+import Link from 'next/link';
+import { buttonVariants } from '@/components/ui/button';
 import SignOutButton from '../student/sign-out-button';
 
 export default async function TeacherHome() {
@@ -19,9 +21,18 @@ export default async function TeacherHome() {
 
   return (
     <main className="flex min-h-screen items-center justify-center p-6">
-      <div className="w-full max-w-md space-y-4 rounded-lg bg-white p-8 text-center shadow-sm">
-        <h1 className="text-2xl font-bold">Teacher Dashboard</h1>
-        <p className="text-sm text-slate-600">Welcome, {profile.full_name}.</p>
+      <div className="w-full max-w-md space-y-6 rounded-lg bg-white p-8 text-center shadow-sm">
+        <div>
+          <h1 className="text-2xl font-bold">Teacher Dashboard</h1>
+          <p className="mt-1 text-sm text-slate-600">Welcome, {profile.full_name}.</p>
+        </div>
+
+        <div className="flex flex-col gap-2">
+          <Link href="/teacher/lessons" className={buttonVariants()}>
+            Lessons
+          </Link>
+        </div>
+
         <SignOutButton />
       </div>
     </main>
