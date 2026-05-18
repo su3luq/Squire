@@ -99,6 +99,12 @@ function VideoEmbed({ src }: { src: string }) {
 // ---- Component map ----
 
 // Get the href of the only-child link inside a paragraph, if any.
+//
+// Note we don't check `only.type === 'a'`: react-markdown renders link nodes
+// through our custom `a` component (defined below), so by the time the `p`
+// component sees the child, its type is our component function — not the
+// string 'a'. Instead we just look for an href prop, which is the unique
+// signal of a link node in react-markdown's output.
 function singleLinkHref(children: ReactNode): string | null {
   const arr = Children.toArray(children).filter(
     (c) => !(typeof c === 'string' && c.trim() === '')
@@ -106,7 +112,6 @@ function singleLinkHref(children: ReactNode): string | null {
   if (arr.length !== 1) return null;
   const only = arr[0];
   if (!isValidElement(only)) return null;
-  if (only.type !== 'a') return null;
   const props = only.props as { href?: unknown };
   return typeof props.href === 'string' ? props.href : null;
 }
