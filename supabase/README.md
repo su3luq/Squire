@@ -25,3 +25,4 @@ This folder is the source of truth for database schema changes.
 | 011 | Unify content model as markdown (`review_cards.body` and `quests.description` → text; drop `quiz_questions`, `deliverable_types`, and `'quiz'` enum value) | applied |
 | 012 | `unlock_lesson_cards` RPC (teacher-only, idempotent) and `lesson_card_counts` view | applied |
 | 013 | `admin_create_teacher(email, password, full_name)` SECURITY DEFINER seed function — gotcha-free teacher account creation | applied |
+| 014 | Per-class lesson unlock model: drop `lessons.class_id`/`cards_unlocked_at`/`taught_at`; new `lesson_unlocks(lesson_id, class_id, unlocked_at)` join table; `unlock_lesson_cards(lesson_id, class_id)` RPC | applied |

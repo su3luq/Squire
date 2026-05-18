@@ -7,16 +7,12 @@ import { Label } from '@/components/ui/label';
 import { Button, buttonVariants } from '@/components/ui/button';
 import { createLesson, type CreateLessonState } from './actions';
 
-type ClassOption = { id: string; name: string };
-
 const initialState: CreateLessonState = { error: null };
 
 export function NewLessonForm({
-  classes,
   nextLessonNumber,
   defaultTitle,
 }: {
-  classes: ClassOption[];
   nextLessonNumber: number;
   defaultTitle: string;
 }) {
@@ -24,31 +20,6 @@ export function NewLessonForm({
 
   return (
     <form action={formAction} className="space-y-4">
-      <div className="space-y-2">
-        <Label htmlFor="class_id">Class</Label>
-        {classes.length === 1 ? (
-          <>
-            <Input id="class_display" value={classes[0].name} disabled />
-            <input type="hidden" name="class_id" value={classes[0].id} />
-          </>
-        ) : (
-          <select
-            id="class_id"
-            name="class_id"
-            defaultValue={classes[0]?.id ?? ''}
-            disabled={isPending}
-            className="flex h-10 w-full rounded-md border border-slate-300 bg-white px-3 py-2 text-sm"
-            required
-          >
-            {classes.map((c) => (
-              <option key={c.id} value={c.id}>
-                {c.name}
-              </option>
-            ))}
-          </select>
-        )}
-      </div>
-
       <div className="space-y-2">
         <Label htmlFor="title">Title</Label>
         <Input
@@ -74,7 +45,7 @@ export function NewLessonForm({
           required
           disabled={isPending}
         />
-        <p className="text-xs text-slate-500">Must be unique within the class.</p>
+        <p className="text-xs text-slate-500">Must be unique across all lessons.</p>
       </div>
 
       {state.error && <p className="text-sm text-red-600">{state.error}</p>}

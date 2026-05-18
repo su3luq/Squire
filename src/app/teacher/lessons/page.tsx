@@ -15,7 +15,7 @@ export default async function LessonsListPage() {
 
   const { data: lessons } = await supabase
     .from('lessons')
-    .select('*, classes(id, name)')
+    .select('*, lesson_unlocks(class_id)')
     .order('lesson_number', { ascending: true });
 
   return (
@@ -46,8 +46,9 @@ export default async function LessonsListPage() {
       </div>
 
       <p className="mb-6 text-xs text-slate-500">
-        Quick start creates an untitled lesson and jumps you straight in. Use &quot;New
-        lesson&quot; if you want to set the title and number up front.
+        Quick start creates an untitled lesson and jumps you straight into a card.
+        Lessons are class-agnostic — when you teach a lesson, you unlock it for the
+        specific class on the lesson&apos;s detail page.
       </p>
 
       {!lessons || lessons.length === 0 ? (
@@ -61,33 +62,31 @@ export default async function LessonsListPage() {
         </Card>
       ) : (
         <div className="space-y-3">
-          {lessons.map((lesson) => (
-            <Link key={lesson.id} href={`/teacher/lessons/${lesson.id}`}>
-              <Card className="transition-colors hover:bg-slate-50">
-                <CardHeader>
-                  <CardTitle>{lesson.title}</CardTitle>
-                  <CardDescription>
-                    Lesson {lesson.lesson_number} · {lesson.classes?.name ?? 'Unknown class'}
-                  </CardDescription>
-                </CardHeader>
-                <CardContent>
-                  <div className="flex items-center gap-3 text-sm text-slate-600">
-                    {lesson.cards_unlocked_at ? (
-                      <span className="font-medium text-green-700">Unlocked</span>
-                    ) : (
-                      <span className="text-slate-500">Draft</span>
-                    )}
-                    {lesson.taught_at && (
-                      <>
-                        <span>·</span>
-                        <span>Taught {new Date(lesson.taught_at).toLocaleDateString()}</span>
-                      </>
-                    )}
-                  </div>
-                </CardContent>
-              </Card>
-            </Link>
-          ))}
+          {lessons.map((lesson) => {
+            const unlockedForCount = lesson.lesson_unlocks?.length ?? 0;
+            return (
+              <Link key={lesson.id} href={`/teacher/lessons/${lesson.id}`}>
+                <Card className="transition-colors hover:bg-slate-50">
+                  <CardHeader>
+                    <CardTitle>{lesson.title}</CardTitle>
+                    <CardDescription>Lesson {lesson.lesson_number}</CardDescription>
+                  </CardHeader>
+                  <CardContent>
+                    <p className="text-sm text-slate-600">
+                      {unlockedForCount === 0 ? (
+                        <span className="text-slate-500">Not unlocked for any class yet</span>
+                      ) : (
+                        <span className="font-medium text-green-700">
+                          Unlocked for {unlockedForCount}{' '}
+                          {unlockedForCount === 1 ? 'class' : 'classes'}
+                        </span>
+                      )}
+                    </p>
+                  </CardContent>
+                </Card>
+              </Link>
+            );
+          })}
         </div>
       )}
     </main>

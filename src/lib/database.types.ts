@@ -11,8 +11,6 @@ export type Json =
   | Json[]
 
 export type Database = {
-  // Allows to automatically instantiate createClient with right options
-  // instead of createClient<Database, { PostgrestVersion: 'XX' }>(URL, KEY)
   __InternalSupabase: {
     PostgrestVersion: "14.5"
   }
@@ -281,43 +279,69 @@ export type Database = {
           },
         ]
       }
-      lessons: {
+      lesson_unlocks: {
         Row: {
-          cards_unlocked_at: string | null
           class_id: string
-          created_at: string
           id: string
-          lesson_number: number
-          taught_at: string | null
-          title: string
+          lesson_id: string
+          unlocked_at: string
         }
         Insert: {
-          cards_unlocked_at?: string | null
           class_id: string
-          created_at?: string
           id?: string
-          lesson_number: number
-          taught_at?: string | null
-          title: string
+          lesson_id: string
+          unlocked_at?: string
         }
         Update: {
-          cards_unlocked_at?: string | null
           class_id?: string
-          created_at?: string
           id?: string
-          lesson_number?: number
-          taught_at?: string | null
-          title?: string
+          lesson_id?: string
+          unlocked_at?: string
         }
         Relationships: [
           {
-            foreignKeyName: "lessons_class_id_fkey"
+            foreignKeyName: "lesson_unlocks_class_id_fkey"
             columns: ["class_id"]
             isOneToOne: false
             referencedRelation: "classes"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "lesson_unlocks_lesson_id_fkey"
+            columns: ["lesson_id"]
+            isOneToOne: false
+            referencedRelation: "lesson_card_counts"
+            referencedColumns: ["lesson_id"]
+          },
+          {
+            foreignKeyName: "lesson_unlocks_lesson_id_fkey"
+            columns: ["lesson_id"]
+            isOneToOne: false
+            referencedRelation: "lessons"
+            referencedColumns: ["id"]
+          },
         ]
+      }
+      lessons: {
+        Row: {
+          created_at: string
+          id: string
+          lesson_number: number
+          title: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          lesson_number: number
+          title: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          lesson_number?: number
+          title?: string
+        }
+        Relationships: []
       }
       notifications: {
         Row: {
@@ -918,7 +942,10 @@ export type Database = {
         }
         Returns: Json
       }
-      unlock_lesson_cards: { Args: { p_lesson_id: string }; Returns: Json }
+      unlock_lesson_cards: {
+        Args: { p_class_id: string; p_lesson_id: string }
+        Returns: Json
+      }
       user_class_id: { Args: { uid?: string }; Returns: string }
       users_share_class: { Args: { a: string; b: string }; Returns: boolean }
     }

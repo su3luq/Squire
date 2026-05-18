@@ -4,31 +4,15 @@ import { createClient } from '@/lib/supabase/server';
 import { redirect } from 'next/navigation';
 import { saigonShortDate } from '@/lib/saigon-date';
 
-// Quick-start a new lesson with a sensible default title + auto-suggested
-// lesson_number, then redirect straight into the card editor.
-//
-// Multi-class teachers: picks the alphabetically-first non-archived class.
-// v1 has one class; revisit if/when multi-class lands.
+// Quick-start a new lesson with a default title + auto lesson_number, then
+// redirect straight into the card editor. Skips the "fill out form first"
+// step. Lessons are class-agnostic now — no class selection needed.
 export async function quickStartLesson(): Promise<void> {
   const supabase = await createClient();
-
-  const { data: classes, error: classesError } = await supabase
-    .from('classes')
-    .select('id')
-    .is('archived_at', null)
-    .order('name')
-    .limit(1);
-
-  if (classesError || !classes || classes.length === 0) {
-    redirect('/teacher/lessons/new');
-  }
-
-  const class_id = classes[0].id;
 
   const { data: maxLesson } = await supabase
     .from('lessons')
     .select('lesson_number')
-    .eq('class_id', class_id)
     .order('lesson_number', { ascending: false })
     .limit(1)
     .maybeSingle();
@@ -38,13 +22,12 @@ export async function quickStartLesson(): Promise<void> {
 
   const { data, error } = await supabase
     .from('lessons')
-    .insert({ class_id, title, lesson_number })
+    .insert({ title, lesson_number })
     .select('id')
     .single();
 
   if (error || !data) {
-    // Fall back to the form so the user can resolve any unique-constraint
-    // collision or other unexpected failure with full context.
+    // Fall back to the regular form so the user can resolve any error.
     redirect('/teacher/lessons/new');
   }
 

@@ -10,7 +10,7 @@ import {
 } from '@/components/ui/card';
 import { EditLessonForm } from './edit-lesson-form';
 import { DeleteLessonButton } from './delete-lesson-button';
-import { UnlockLessonButton } from './unlock-button';
+import { ClassAccessRow } from './class-access-row';
 
 export default async function LessonDetailPage({
   params,
@@ -22,7 +22,7 @@ export default async function LessonDetailPage({
 
   const { data: lesson } = await supabase
     .from('lessons')
-    .select('*, classes(id, name)')
+    .select('*')
     .eq('id', id)
     .single();
 
@@ -43,12 +43,37 @@ export default async function LessonDetailPage({
     .eq('lesson_id', id)
     .order('position');
 
-  const { count: studentCountRaw } = await supabase
-    .from('profiles')
-    .select('id', { count: 'exact', head: true })
-    .eq('class_id', lesson.class_id)
-    .eq('role', 'student');
-  const studentCount = studentCountRaw ?? 0;
+  // All non-archived classes
+  const { data: classes } = await supabase
+    .from('classes')
+    .select('id, name')
+    .is('archived_at', null)
+    .order('name');
+
+  // Existing unlock rows for this lesson
+  const { data: unlocks } = await supabase
+    .from('lesson_unlocks')
+    .select('class_id, unlocked_at')
+    .eq('lesson_id', id);
+
+  // Student counts per class (only count classes that exist)
+  const classIds = (classes ?? []).map((c) => c.id);
+  let studentCountsByClass = new Map<string, number>();
+  if (classIds.length > 0) {
+    const { data: students } = await supabase
+      .from('profiles')
+      .select('class_id')
+      .eq('role', 'student')
+      .in('class_id', classIds);
+    studentCountsByClass = (students ?? []).reduce((acc, s) => {
+      if (s.class_id) acc.set(s.class_id, (acc.get(s.class_id) ?? 0) + 1);
+      return acc;
+    }, new Map<string, number>());
+  }
+
+  const unlockedByClass = new Map<string, string>(
+    (unlocks ?? []).map((u) => [u.class_id, u.unlocked_at])
+  );
 
   return (
     <main className="container mx-auto max-w-2xl p-6">
@@ -60,9 +85,7 @@ export default async function LessonDetailPage({
       </Link>
 
       <h1 className="mb-2 text-3xl font-bold">{lesson.title}</h1>
-      <p className="mb-6 text-sm text-slate-600">
-        Lesson {lesson.lesson_number} · {lesson.classes?.name}
-      </p>
+      <p className="mb-6 text-sm text-slate-600">Lesson {lesson.lesson_number}</p>
 
       <div className="space-y-6">
         <Card>
@@ -82,17 +105,6 @@ export default async function LessonDetailPage({
               {cardCount} {cardCount === 1 ? 'card' : 'cards'} · {questionCount} quiz{' '}
               {questionCount === 1 ? 'question' : 'questions'}
             </p>
-            {lesson.cards_unlocked_at ? (
-              <p className="mt-2 text-sm font-medium text-green-700">
-                Unlocked for class on{' '}
-                {new Date(lesson.cards_unlocked_at).toLocaleDateString()}
-              </p>
-            ) : (
-              <p className="mt-2 text-xs text-slate-500">
-                Cards not yet unlocked for students. Add cards and click &quot;Unlock for
-                class&quot; (Phase 2 commit #5).
-              </p>
-            )}
 
             {cards && cards.length > 0 && (
               <ul className="mt-4 divide-y divide-slate-200 rounded-md border border-slate-200">
@@ -111,15 +123,35 @@ export default async function LessonDetailPage({
                 ))}
               </ul>
             )}
+          </CardContent>
+        </Card>
 
-            <div className="mt-4">
-              <UnlockLessonButton
-                lessonId={id}
-                cardCount={cardCount}
-                studentCount={studentCount}
-                alreadyUnlocked={Boolean(lesson.cards_unlocked_at)}
-              />
-            </div>
+        <Card>
+          <CardHeader>
+            <CardTitle>Class access</CardTitle>
+          </CardHeader>
+          <CardContent>
+            {classes && classes.length > 0 ? (
+              <ul className="divide-y divide-slate-200 rounded-md border border-slate-200">
+                {classes.map((cls) => (
+                  <ClassAccessRow
+                    key={cls.id}
+                    lessonId={id}
+                    classId={cls.id}
+                    className={cls.name}
+                    unlockedAt={unlockedByClass.get(cls.id) ?? null}
+                    cardCount={cardCount}
+                    studentCount={studentCountsByClass.get(cls.id) ?? 0}
+                  />
+                ))}
+              </ul>
+            ) : (
+              <p className="text-sm text-slate-500">No classes available.</p>
+            )}
+            <p className="mt-3 text-xs text-slate-500">
+              Unlock this lesson for each class on the day you teach it. Re-syncing
+              picks up any cards or students added since the last unlock.
+            </p>
           </CardContent>
         </Card>
 

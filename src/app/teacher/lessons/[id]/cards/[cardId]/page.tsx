@@ -18,7 +18,7 @@ export default async function EditCardPage({
 
   const { data: lesson } = await supabase
     .from('lessons')
-    .select('id, title, lesson_number, classes(name)')
+    .select('id, title, lesson_number')
     .eq('id', id)
     .single();
 
@@ -69,7 +69,7 @@ export default async function EditCardPage({
         <LessonTitleRename lessonId={id} initialTitle={lesson.title} />
       </div>
       <p className="mb-6 text-sm text-slate-600">
-        Lesson {lesson.lesson_number} · {lesson.classes?.name} · Edit card
+        Lesson {lesson.lesson_number} · Edit card
       </p>
 
       <Card>

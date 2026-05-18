@@ -10,7 +10,6 @@ type Lesson = {
   id: string;
   title: string;
   lesson_number: number;
-  taught_at: string | null;
 };
 
 const initialState: UpdateLessonState = { error: null, success: false };
@@ -41,20 +40,6 @@ export function EditLessonForm({ lesson }: { lesson: Lesson }) {
           min={1}
           defaultValue={lesson.lesson_number}
           required
-          disabled={isPending}
-        />
-      </div>
-      <div className="space-y-2">
-        <Label htmlFor="taught_at">
-          Taught at <span className="text-xs text-slate-500">(optional)</span>
-        </Label>
-        <Input
-          id="taught_at"
-          name="taught_at"
-          type="date"
-          defaultValue={
-            lesson.taught_at ? new Date(lesson.taught_at).toISOString().split('T')[0] : ''
-          }
           disabled={isPending}
         />
       </div>
