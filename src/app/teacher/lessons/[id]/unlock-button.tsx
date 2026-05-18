@@ -36,7 +36,7 @@ export function UnlockLessonButton({
   const [success, setSuccess] = useState<UnlockSuccess | null>(null);
 
   const disabled = cardCount === 0 || studentCount === 0;
-  const label = alreadyUnlocked ? 'Re-sync class reviews' : 'Unlock for class';
+  const label = alreadyUnlocked ? 'Re-sync class' : 'Unlock for class';
   const buttonVariant = alreadyUnlocked ? 'outline' : 'default';
 
   function handleConfirm() {
@@ -91,24 +91,24 @@ export function UnlockLessonButton({
         <AlertDialogContent>
           <AlertDialogHeader>
             <AlertDialogTitle>
-              {alreadyUnlocked ? 'Re-sync class reviews?' : 'Unlock cards for class?'}
+              {alreadyUnlocked ? 'Re-sync this lesson?' : 'Unlock this lesson for the class?'}
             </AlertDialogTitle>
             <AlertDialogDescription>
               {alreadyUnlocked ? (
                 <>
-                  Picks up any cards or students added since the last unlock and
-                  creates the missing review rows. Existing review state is
-                  preserved. Affects {cardCount}{' '}
-                  {cardCount === 1 ? 'card' : 'cards'} and {studentCount}{' '}
+                  Picks up any cards added since the last unlock and any students
+                  who joined the class. Existing review progress is preserved.
+                  Lesson has {cardCount}{' '}
+                  {cardCount === 1 ? 'card' : 'cards'}; class has {studentCount}{' '}
                   {studentCount === 1 ? 'student' : 'students'}.
                 </>
               ) : (
                 <>
                   Makes the {cardCount} {cardCount === 1 ? 'card' : 'cards'} in
-                  this lesson visible to {studentCount}{' '}
-                  {studentCount === 1 ? 'student' : 'students'} for review. Each
-                  student gets an initial FSRS review row per card. This action is
-                  idempotent — safe to re-run later.
+                  this lesson visible to the whole class ({studentCount}{' '}
+                  {studentCount === 1 ? 'student' : 'students'}). They can start
+                  reviewing immediately. Safe to re-run later — re-syncs pick up
+                  new cards or new students automatically.
                 </>
               )}
             </AlertDialogDescription>
@@ -126,10 +126,10 @@ export function UnlockLessonButton({
       {success && (
         <p className="text-sm text-green-700">
           {success.reviews_created === 0
-            ? 'Already in sync. No new review rows needed.'
-            : `Created ${success.reviews_created} review ${
-                success.reviews_created === 1 ? 'row' : 'rows'
-              }.`}
+            ? 'Class already in sync.'
+            : alreadyUnlocked
+              ? 'Class re-synced.'
+              : 'Class unlocked.'}
         </p>
       )}
       {error && !open && <p className="text-sm text-red-600">{error}</p>}
