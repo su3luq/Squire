@@ -318,3 +318,4 @@ Commits land in this order:
 - In-browser audio recording
 - Image/audio file uploads for content authoring or submissions (use markdown image syntax + external hosting instead)
 - Per-card prev/next navigation inside the card detail modal
+- HaveIBeenPwned leaked-password check during registration (`auth_leaked_password_protection` in Supabase Auth) — defer until either user scale or threat profile changes warrant it
