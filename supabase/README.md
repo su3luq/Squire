@@ -8,6 +8,8 @@ This folder is the source of truth for database schema changes.
 
 **Note:** Migrations 001-007 (initial schema) were applied during pre-Phase-1 setup before this folder existed. They are documented in `docs/SCHEMA.md` rather than reproduced here.
 
+**Protocol:** Every time a migration is applied via MCP, the SQL file is committed under `migrations/` AND a row is added to the table below. The agent's standard migration workflow includes this README update.
+
 | # | Description | Status |
 |---|---|---|
 | 001 | Drop legacy schema | applied |
@@ -17,4 +19,7 @@ This folder is the source of truth for database schema changes.
 | 005 | Quests system | applied |
 | 006 | Quizzes, XP, notifications | applied |
 | 007 | Triggers | applied |
-| 008 | RLS policies + public_profiles view | pending (this commit's target) |
+| 008 | RLS policies + `public_profiles` view + `student_assessments` split | applied |
+| 009 | Registration toggle (`app_settings`, `is_registration_open`, `get_registration_state`, `register_student` RPC) | applied |
+| 010 | Drop username/display_name shim — email becomes auth identity; `full_name` becomes public display | applied |
+| 011 | Unify content model as markdown (`review_cards.body` and `quests.description` → text; drop `quiz_questions`, `deliverable_types`, and `'quiz'` enum value) | applied |

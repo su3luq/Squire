@@ -11,7 +11,7 @@ Authoritative reference for all 16 tables in the `public` schema of the SQUIRE S
 
 ```sql
 user_role           : 'teacher' | 'student'
-quest_type          : 'solo' | 'coop' | 'quiz' | 'daily_quiz'
+quest_type          : 'solo' | 'coop' | 'daily_quiz'
 quest_availability_mode : 'open' | 'timed' | 'whole_class' | 'limited_instances'
 coop_instance_status: 'forming' | 'active' | 'submitted' | 'passed' | 'failed' | 'disbanded'
 quest_acceptance_status : 'active' | 'submitted' | 'passed' | 'failed'
@@ -98,7 +98,7 @@ RLS: single policy `student_assessments_teacher_all` — teachers can do everyth
 | id | uuid PK | |
 | lesson_id | uuid FK lessons | |
 | headline | text NOT NULL | shown in library + used as recall prompt |
-| body | jsonb DEFAULT '{}' | rich content blocks: `{ blocks: [{type, content, url?}] }` |
+| body | text NOT NULL DEFAULT '' | markdown text; rendered with `react-markdown` + `remark-gfm`. Raw HTML disabled. |
 | position | int DEFAULT 0 | display order |
 | created_at | timestamptz | |
 
@@ -136,18 +136,18 @@ FSRS state per (student, card). Unique on (student_id, card_id).
 | id | uuid PK | |
 | class_id | uuid FK classes | |
 | title | text NOT NULL | |
-| description | jsonb DEFAULT '{}' | rich text + media link refs |
-| quest_type | quest_type NOT NULL | |
-| deliverable_types | text[] DEFAULT '{}' | e.g. `['text','audio']` |
+| description | text NOT NULL DEFAULT '' | markdown text; rendered with `react-markdown` + `remark-gfm`. Raw HTML disabled. |
+| quest_type | quest_type NOT NULL | one of 'solo', 'coop', 'daily_quiz' (migration 011 dropped 'quiz') |
 | word_limit_min | int | nullable |
 | xp_reward | int NOT NULL > 0 | |
-| group_size | int | required if `quest_type='coop'`, ≥2 |
+| group_size | int | required if `quest_type='coop'`, ≥2 (enforced by `coop_has_group_size` CHECK) |
 | max_instances | int | nullable; null = unlimited |
 | availability_mode | quest_availability_mode DEFAULT 'open' | |
 | expires_at | timestamptz | for timed quests |
-| quiz_questions | jsonb | for standalone quiz quests (not card-derived) |
 | created_at | timestamptz | |
 | closed_at | timestamptz | nullable; null = active |
+
+Migration 011 dropped `quiz_questions` (jsonb) and `deliverable_types` (text[]). Quizzes only exist as the auto-generated daily quiz; all non-daily-quiz submissions are markdown text (no file uploads, no deliverable-type checkboxes).
 
 ### `coop_quest_instances`
 | Column | Type | Notes |

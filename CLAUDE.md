@@ -46,6 +46,7 @@ Squire is a gamified learning platform for a single teacher (the developer/autho
 10. **Never commit secrets.** `.env` is gitignored. Supabase anon key goes in `.env` for local; production uses Vercel environment variables.
 11. **Web-only deployment.** No native apps. No iOS/Android dev fees. iOS users who want push notifications use Add-to-Home-Screen (Phase 6).
 12. **Three Supabase client patterns:** `src/lib/supabase/client.ts` (browser, in client components), `src/lib/supabase/server.ts` (server components and actions), `src/lib/supabase/middleware.ts` (middleware session refresh). Never import the wrong one — TypeScript will catch most mistakes.
+13. **All long-form content is authored and stored as markdown text.** Rendered with `react-markdown` + `remark-gfm`. Raw HTML disabled. Custom component map embeds YouTube URLs as iframes and direct video file URLs as `<video>`; images via standard `![](url)` syntax render as `<img>`. There is no structured block editor, no rich-text WYSIWYG, no file upload UI for content authoring. Images and media are referenced via external URLs in markdown.
 
 ---
 
@@ -106,13 +107,12 @@ For each student, look at quiz answers in trailing 30 days. Weight each answer b
 
 ### Daily Quiz
 - One per student per calendar day, Saigon TZ. Resets at 06:00 local.
-- Pulls 3–10 questions from `card_quiz_questions` of unlocked cards in student's class. Number is dynamic based on available cards.
+- **Fixed 5 questions**, drawn randomly from `card_quiz_questions` where the underlying card is unlocked for the student's class. If fewer than 5 are available, uses however many exist. If 0 are available, the daily quiz doesn't appear that day.
 - Edge Function cron generates the question set at 06:00 daily for each student.
-- Doesn't exist if the student's class has no unlocked cards yet.
 - Missed days are tracked: 4 misses in a row → teacher gets notification.
 
 ### Daily Quiz XP Award
-- 5 XP for any completion, +3 bonus for 100% correct. No XP if missed.
+- 5 XP flat for completion, +3 bonus for perfect score (all 5 correct). No fail-no-XP state — showing up earns the base XP regardless of correctness. No XP if missed (quiz never opened).
 
 ### Failed Quests
 - Teacher marks `quest_submissions.status = 'failed'` with required `teacher_feedback`.
@@ -235,3 +235,7 @@ Every commit-blocking smoke test goes through:
 - Multi-teacher / multi-class-per-teacher
 - Automatic AI grading of text quality
 - Localization
+- Standalone quiz quests (teacher-authored MCQ quests beyond the daily quiz) — quizzes only exist as the auto-generated daily quest in v1
+- In-browser audio recording for any purpose
+- Image/audio file uploads for content authoring or submissions (use markdown image syntax + external hosting instead)
+- Per-card prev/next navigation inside the card detail modal

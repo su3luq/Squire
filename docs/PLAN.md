@@ -156,8 +156,8 @@ Column-level rule: students cannot select `english_proficiency_pearson` or `engl
 ### XP awards (tunable)
 | Source | XP |
 |---|---|
-| Daily quiz (any score) | 5 |
-| Daily quiz perfect bonus | +3 |
+| Daily quiz (any score, 5 questions fixed) | 5 |
+| Daily quiz perfect bonus (all 5 correct) | +3 |
 | Solo quest (standard) | 20–35 (teacher sets) |
 | Coop quest | 50–80 per member |
 | Special quest | 150–300 |
@@ -189,15 +189,18 @@ Recomputed nightly. Quiz answers in last 30 days, weighted by card age (1.0/1.5/
 ### Phase 2 — Lessons & Cards (~week 2)
 **Goal:** teacher can create lesson content; students can study cards.
 
-- Teacher: lesson list, "Create Lesson", "Add Cards" workflow
-- Card editor: headline input, rich body editor (text blocks + image upload + audio upload to Supabase Storage), MCQ builder (3-10 questions, 4 choices, correct flag)
-- Storage bucket setup (`cards-media`) with RLS
-- Card library screen (student view): grid of cards grouped by lesson, click → modal with body
-- FSRS integration via `ts-fsrs`
-  - Initialize `card_reviews` rows when card unlocks
-  - Review session screen: headline → tap reveal body → Again/Hard/Good/Easy
-  - Update FSRS state on each rating
-- Teacher "Unlock cards for lesson" button → creates `card_reviews` rows for all class students
+Content model is **unified markdown** (migration 011) — `review_cards.body` and `quests.description` are markdown text rendered with `react-markdown` + `remark-gfm`. No structured block editor, no image/audio uploads, no Supabase Storage bucket. External media is referenced via standard markdown image/link syntax with custom embed for YouTube and direct video URLs. See `docs/PHASE-2-PLAN.md` for the detailed reference document.
+
+Commits land in this order:
+
+1. `feat(db): migration 012 — unlock_lesson_cards RPC and lesson_card_counts view` (no bucket setup)
+2. `feat(phase-2): teacher lesson CRUD`
+3. `feat(phase-2): markdown editor component + card editor (headline + markdown body + MCQ form)`
+4. `feat(phase-2): markdown renderer component + YouTube/video embed support`
+5. `feat(phase-2): teacher unlock action (wires unlock_lesson_cards RPC)`
+6. `feat(phase-2): student card library + intercepting-route card detail modal + copy-markdown button`
+7. `feat(phase-2): student FSRS review session with ts-fsrs and rating tests`
+
 - **Milestone:** teacher teaches a lesson and students study the cards.
 
 ### Phase 3 — Daily Quiz & XP Engine (~week 3)
@@ -217,16 +220,15 @@ Recomputed nightly. Quiz answers in last 30 days, weighted by card age (1.0/1.5/
 **Goal:** solo quest loop fully working.
 
 - Quest creator UI (multi-step modal):
-  - Step 1: type (solo / coop / quiz)
-  - Step 2: title, description (rich text + image / video link)
-  - Step 3: deliverables checklist (text / audio / image)
-  - Step 4: XP, word limit, conditions (timed expiry)
-  - Step 5: preview & publish
+  - Step 1: type (solo / coop) — `quiz` quest type was removed in migration 011; quizzes only exist as the auto-generated daily quiz
+  - Step 2: title, description (markdown — same editor component as Phase 2's card body)
+  - Step 3: XP, word limit, conditions (timed expiry)
+  - Step 4: preview & publish
 - Quest board screen (student view): list of available quests, badge for daily quiz
 - Quest detail modal + Accept button (validates one-active-solo constraint)
-- Submission UI: text editor (with word counter), audio recorder, image picker, YouTube link field — fields shown based on `deliverable_types`
+- Submission UI: a single markdown editor (reused from Phase 2). All submissions are markdown text — no file uploads. Students embed YouTube or external image links via markdown syntax. Word counter on the textarea.
 - Teacher review queue: list of `quest_submissions` with `status = 'pending_review'`
-- Review modal: view submission, write feedback, pass/fail buttons
+- Review modal: view submission (rendered markdown), write teacher feedback (markdown), pass/fail buttons
 - Pass → insert `xp_ledger` row → student notification
 - Fail → update submission status + feedback → student keeps acceptance, can resubmit
 - **Milestone:** full solo quest loop works for at least one quest end-to-end.
@@ -296,9 +298,9 @@ Recomputed nightly. Quiz answers in last 30 days, weighted by card age (1.0/1.5/
 - Exact open-source AI classifier choice (decide Phase 5)
 - Daily quiz UI: one-by-one with immediate feedback, or batch all then results (ask at Phase 3 start)
 - Rank icons: source / commission / generate? (ask before Phase 1 polish)
-- Card body editor: which rich-text component? (ask at Phase 2 start)
 - Co-op group formation: pure first-come-first-served (current plan), or some matchmaking? (current plan stays for v1)
 - **Rejected for v1:** QR-code class join, multi-step registration with invite-code lookup, and per-class access codes. Replaced by open self-registration with a global `registration_open` toggle and a hardcoded class dropdown. Reasoning: web-only deployment removed the camera-on-mobile use case for QR; the simpler flow is enough for one teacher / 500 students.
+- **Rejected for v1 (migration 011):** structured block editor, in-browser audio recording, image/audio file uploads for content authoring or submissions, standalone quiz quests, drag-and-drop card reorder. Card bodies and quest descriptions/submissions are markdown text with external URL embeds.
 
 ---
 
@@ -312,3 +314,7 @@ Recomputed nightly. Quiz answers in last 30 days, weighted by card age (1.0/1.5/
 - Localization
 - Cross-class quests
 - Parent/guardian view
+- Standalone quiz quests (teacher-authored MCQ quests beyond the daily quiz)
+- In-browser audio recording
+- Image/audio file uploads for content authoring or submissions (use markdown image syntax + external hosting instead)
+- Per-card prev/next navigation inside the card detail modal
