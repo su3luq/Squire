@@ -14,9 +14,11 @@ const initialState: CreateLessonState = { error: null };
 export function NewLessonForm({
   classes,
   nextLessonNumber,
+  defaultTitle,
 }: {
   classes: ClassOption[];
   nextLessonNumber: number;
+  defaultTitle: string;
 }) {
   const [state, formAction, isPending] = useActionState(createLesson, initialState);
 
@@ -49,7 +51,15 @@ export function NewLessonForm({
 
       <div className="space-y-2">
         <Label htmlFor="title">Title</Label>
-        <Input id="title" name="title" required autoFocus disabled={isPending} />
+        <Input
+          id="title"
+          name="title"
+          defaultValue={defaultTitle}
+          required
+          autoFocus
+          disabled={isPending}
+        />
+        <p className="text-xs text-slate-500">You can rename this any time.</p>
       </div>
 
       <div className="space-y-2">

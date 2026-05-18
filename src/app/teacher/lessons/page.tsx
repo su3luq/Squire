@@ -8,6 +8,7 @@ import {
   CardHeader,
   CardTitle,
 } from '@/components/ui/card';
+import { quickStartLesson } from './actions';
 
 export default async function LessonsListPage() {
   const supabase = await createClient();
@@ -19,7 +20,7 @@ export default async function LessonsListPage() {
 
   return (
     <main className="container mx-auto max-w-4xl p-6">
-      <div className="mb-6 flex items-center justify-between">
+      <div className="mb-6 flex items-start justify-between gap-4">
         <div>
           <Link
             href="/teacher"
@@ -29,10 +30,25 @@ export default async function LessonsListPage() {
           </Link>
           <h1 className="text-3xl font-bold">Lessons</h1>
         </div>
-        <Link href="/teacher/lessons/new" className={buttonVariants()}>
-          New lesson
-        </Link>
+        <div className="flex gap-2">
+          <form action={quickStartLesson}>
+            <button type="submit" className={buttonVariants()}>
+              Quick start
+            </button>
+          </form>
+          <Link
+            href="/teacher/lessons/new"
+            className={buttonVariants({ variant: 'outline' })}
+          >
+            New lesson
+          </Link>
+        </div>
       </div>
+
+      <p className="mb-6 text-xs text-slate-500">
+        Quick start creates an untitled lesson and jumps you straight in. Use &quot;New
+        lesson&quot; if you want to set the title and number up front.
+      </p>
 
       {!lessons || lessons.length === 0 ? (
         <Card>

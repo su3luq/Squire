@@ -7,6 +7,7 @@ import {
   CardHeader,
   CardTitle,
 } from '@/components/ui/card';
+import { saigonShortDate } from '@/lib/saigon-date';
 import { NewLessonForm } from './new-lesson-form';
 
 export default async function NewLessonPage() {
@@ -50,6 +51,7 @@ export default async function NewLessonPage() {
     .maybeSingle();
 
   const nextLessonNumber = (maxLesson?.lesson_number ?? 0) + 1;
+  const defaultTitle = `Untitled lesson — ${saigonShortDate()}`;
 
   return (
     <main className="container mx-auto max-w-2xl p-6">
@@ -63,7 +65,11 @@ export default async function NewLessonPage() {
 
       <Card>
         <CardContent className="pt-6">
-          <NewLessonForm classes={classes} nextLessonNumber={nextLessonNumber} />
+          <NewLessonForm
+            classes={classes}
+            nextLessonNumber={nextLessonNumber}
+            defaultTitle={defaultTitle}
+          />
         </CardContent>
       </Card>
     </main>
