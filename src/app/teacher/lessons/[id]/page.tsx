@@ -1,7 +1,7 @@
 import { createClient } from '@/lib/supabase/server';
 import { notFound } from 'next/navigation';
 import Link from 'next/link';
-import { Button, buttonVariants } from '@/components/ui/button';
+import { buttonVariants } from '@/components/ui/button';
 import {
   Card,
   CardContent,
@@ -10,6 +10,7 @@ import {
 } from '@/components/ui/card';
 import { EditLessonForm } from './edit-lesson-form';
 import { DeleteLessonButton } from './delete-lesson-button';
+import { UnlockLessonButton } from './unlock-button';
 
 export default async function LessonDetailPage({
   params,
@@ -41,6 +42,13 @@ export default async function LessonDetailPage({
     .select('id, headline, position')
     .eq('lesson_id', id)
     .order('position');
+
+  const { count: studentCountRaw } = await supabase
+    .from('profiles')
+    .select('id', { count: 'exact', head: true })
+    .eq('class_id', lesson.class_id)
+    .eq('role', 'student');
+  const studentCount = studentCountRaw ?? 0;
 
   return (
     <main className="container mx-auto max-w-2xl p-6">
@@ -105,9 +113,12 @@ export default async function LessonDetailPage({
             )}
 
             <div className="mt-4">
-              <Button disabled variant="outline" size="sm">
-                Unlock for class (Phase 2 commit #5)
-              </Button>
+              <UnlockLessonButton
+                lessonId={id}
+                cardCount={cardCount}
+                studentCount={studentCount}
+                alreadyUnlocked={Boolean(lesson.cards_unlocked_at)}
+              />
             </div>
           </CardContent>
         </Card>

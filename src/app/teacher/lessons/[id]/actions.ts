@@ -52,6 +52,48 @@ export async function deleteLesson(
   return { error: null };
 }
 
+// Wire the "Unlock for class" button to the unlock_lesson_cards RPC (migration 012).
+// Idempotent — safe to re-run after adding cards or enrolling new students.
+export type UnlockResult =
+  | {
+      ok: true;
+      cards_count: number;
+      students_count: number;
+      reviews_created: number;
+    }
+  | { ok: false; error: string };
+
+export async function unlockLessonCards(lessonId: string): Promise<UnlockResult> {
+  const supabase = await createClient();
+  const { data, error } = await supabase.rpc('unlock_lesson_cards', {
+    p_lesson_id: lessonId,
+  });
+
+  if (error) return { ok: false, error: `Unlock RPC failed: ${error.message}` };
+
+  // RPC returns jsonb { ok, ...counts } or { ok: false, error }.
+  const result = data as {
+    ok: boolean;
+    cards_count?: number;
+    students_count?: number;
+    reviews_created?: number;
+    error?: string;
+  };
+
+  if (!result.ok) {
+    return { ok: false, error: result.error ?? 'Unlock failed.' };
+  }
+
+  revalidatePath(`/teacher/lessons/${lessonId}`);
+  revalidatePath('/teacher/lessons');
+  return {
+    ok: true,
+    cards_count: result.cards_count ?? 0,
+    students_count: result.students_count ?? 0,
+    reviews_created: result.reviews_created ?? 0,
+  };
+}
+
 // Thin rename used by the inline-rename control on the card editor pages.
 // Only changes the title; other fields are untouched.
 export async function renameLesson(
