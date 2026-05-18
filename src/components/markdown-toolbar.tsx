@@ -102,11 +102,37 @@ export function applyAction(
 
   if (spec.kind === 'inline-wrap') {
     const selected = value.slice(selStart, selEnd);
-    const inner = selected || spec.placeholder;
-    const inserted = `${spec.prefix}${inner}${spec.suffix}`;
+
+    // Empty / no selection → insert markers with placeholder pre-selected.
+    if (!selected) {
+      const inserted = `${spec.prefix}${spec.placeholder}${spec.suffix}`;
+      const newValue = value.slice(0, selStart) + inserted + value.slice(selEnd);
+      const innerStart = selStart + spec.prefix.length;
+      const innerEnd = innerStart + spec.placeholder.length;
+      return { value: newValue, selStart: innerStart, selEnd: innerEnd };
+    }
+
+    // Trim leading/trailing whitespace and keep it outside the markers.
+    // Markdown emphasis disallows whitespace adjacent to delimiters, so
+    // wrapping `Cell    ` (e.g. from a double-clicked table cell) as
+    // `**Cell    **` would not render. We produce `**Cell**    ` instead.
+    const leading = selected.match(/^\s*/)?.[0] ?? '';
+    const trailing = selected.match(/\s*$/)?.[0] ?? '';
+    const trimmed = selected.slice(leading.length, selected.length - trailing.length);
+
+    // Selection was entirely whitespace: behave as if no selection.
+    if (!trimmed) {
+      const inserted = `${spec.prefix}${spec.placeholder}${spec.suffix}`;
+      const newValue = value.slice(0, selStart) + inserted + value.slice(selEnd);
+      const innerStart = selStart + spec.prefix.length;
+      const innerEnd = innerStart + spec.placeholder.length;
+      return { value: newValue, selStart: innerStart, selEnd: innerEnd };
+    }
+
+    const inserted = `${leading}${spec.prefix}${trimmed}${spec.suffix}${trailing}`;
     const newValue = value.slice(0, selStart) + inserted + value.slice(selEnd);
-    const innerStart = selStart + spec.prefix.length;
-    const innerEnd = innerStart + inner.length;
+    const innerStart = selStart + leading.length + spec.prefix.length;
+    const innerEnd = innerStart + trimmed.length;
     return { value: newValue, selStart: innerStart, selEnd: innerEnd };
   }
 
