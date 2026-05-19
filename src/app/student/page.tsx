@@ -31,7 +31,13 @@ export default async function StudentHome() {
         </div>
 
         <div className="flex flex-col gap-2">
-          <Link href="/student/library" className={buttonVariants()}>
+          <Link href="/student/review" className={buttonVariants()}>
+            Start review
+          </Link>
+          <Link
+            href="/student/library"
+            className={buttonVariants({ variant: 'outline' })}
+          >
             Library
           </Link>
         </div>
