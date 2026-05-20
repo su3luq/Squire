@@ -59,6 +59,8 @@ export type UnlockResult =
       cards_count: number;
       students_count: number;
       reviews_created: number;
+      cards_skipped_no_mcq: number;
+      skipped_card_headlines: string[];
     }
   | { ok: false; error: string };
 
@@ -79,6 +81,8 @@ export async function unlockLessonForClass(
     cards_count?: number;
     students_count?: number;
     reviews_created?: number;
+    cards_skipped_no_mcq?: number;
+    skipped_card_headlines?: string[];
     error?: string;
   };
 
@@ -91,6 +95,8 @@ export async function unlockLessonForClass(
     cards_count: result.cards_count ?? 0,
     students_count: result.students_count ?? 0,
     reviews_created: result.reviews_created ?? 0,
+    cards_skipped_no_mcq: result.cards_skipped_no_mcq ?? 0,
+    skipped_card_headlines: result.skipped_card_headlines ?? [],
   };
 }
 

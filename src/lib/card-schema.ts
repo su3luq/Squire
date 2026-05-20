@@ -11,12 +11,15 @@ export const mcqSchema = z.object({
 
 export type Mcq = z.infer<typeof mcqSchema>;
 
+// Cards can be saved with 0 MCQs (draft state) but cannot enter the review
+// system without at least one. The unlock_lesson_cards RPC enforces the
+// strict-MCQ rule at unlock time: cards with 0 MCQs are skipped and
+// reported back to the teacher. See migration 016.
 export const cardSchema = z.object({
   headline: z.string().trim().min(1, 'Headline is required'),
   body: z.string(),
   questions: z
     .array(mcqSchema)
-    .min(3, 'At least 3 questions are required')
     .max(10, 'Maximum 10 questions per card'),
 });
 
@@ -34,5 +37,5 @@ export const emptyMcq: Mcq = {
 export const emptyCard: CardFormValues = {
   headline: '',
   body: '',
-  questions: [emptyMcq, emptyMcq, emptyMcq],
+  questions: [],
 };

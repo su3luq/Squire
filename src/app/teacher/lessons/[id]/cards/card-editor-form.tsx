@@ -100,7 +100,10 @@ export function CardEditorForm({
         <div className="flex items-center justify-between">
           <div>
             <Label>Quiz questions</Label>
-            <p className="text-xs text-slate-500">3–10 multiple choice questions.</p>
+            <p className="text-xs text-slate-500">
+              Up to 10 multiple choice questions. At least one is required for
+              the card to enter the review system when its lesson is unlocked.
+            </p>
           </div>
           <button
             type="button"
@@ -111,6 +114,12 @@ export function CardEditorForm({
             Add question
           </button>
         </div>
+        {fields.length === 0 && (
+          <div className="rounded-md border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-800">
+            This card has no quiz questions. It can be saved as a draft but
+            will not appear in student reviews until you add at least one.
+          </div>
+        )}
         {errors.questions && !Array.isArray(errors.questions) && (
           <p className="text-xs text-red-600">
             {(errors.questions as { message?: string }).message}
@@ -128,7 +137,7 @@ export function CardEditorForm({
                 <button
                   type="button"
                   onClick={() => remove(idx)}
-                  disabled={isPending || fields.length <= 3}
+                  disabled={isPending}
                   className="text-xs text-red-600 hover:underline disabled:cursor-not-allowed disabled:opacity-40"
                 >
                   Remove
