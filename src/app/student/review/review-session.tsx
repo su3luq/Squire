@@ -11,6 +11,7 @@ import { MarkdownRenderer } from '@/components/markdown-renderer';
 import { Check, X, Loader2 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { scheduleNext, type DbCardReview } from '@/lib/fsrs';
+import { NextReviewCountdown } from '@/components/next-review-countdown';
 import type { Database } from '@/lib/database.types';
 
 type Choice = 'a' | 'b' | 'c' | 'd';
@@ -228,6 +229,12 @@ export function ReviewSession({ cards }: { cards: SessionCard[] }) {
   if (sessionDone) {
     const accuracy =
       totalAnswered === 0 ? 0 : Math.round((totalCorrect / totalAnswered) * 100);
+    // Soonest next-due across all cards reviewed in this session. If any
+    // were rated Again, this will be 1–10 minutes; if all were Good, days.
+    const sessionNextDueAt = cards
+      .map((c) => progress[c.card_review_id]?.nextDueAt)
+      .filter((d): d is string => !!d)
+      .sort()[0];
     return (
       <Card>
         <CardContent className="flex flex-col items-center gap-4 py-12 text-center">
@@ -250,6 +257,11 @@ export function ReviewSession({ cards }: { cards: SessionCard[] }) {
               <p className="text-xs text-slate-500">XP earned</p>
             </div>
           </div>
+          {sessionNextDueAt && (
+            <p className="text-xs text-slate-500">
+              Next card <NextReviewCountdown dueAt={sessionNextDueAt} />
+            </p>
+          )}
           <div className="flex flex-wrap justify-center gap-2 pt-2">
             <Link href="/student" className={buttonVariants({ variant: 'outline' })}>
               Home
@@ -259,7 +271,7 @@ export function ReviewSession({ cards }: { cards: SessionCard[] }) {
               onClick={() => router.refresh()}
               className={buttonVariants()}
             >
-              Check for more
+              Continue
             </button>
           </div>
         </CardContent>

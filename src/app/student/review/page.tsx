@@ -1,6 +1,7 @@
 import { createClient } from '@/lib/supabase/server';
 import Link from 'next/link';
 import { Card, CardContent } from '@/components/ui/card';
+import { NextReviewCountdown } from '@/components/next-review-countdown';
 import { ReviewSession, type SessionCard } from './review-session';
 
 // Server component. Pulls the full review payload via list_review_session RPC
@@ -110,7 +111,7 @@ export default async function ReviewPage() {
               {nextDueAt && (
                 <>
                   {' '}
-                  Next review {formatRelative(nextDueAt)}.
+                  Next review <NextReviewCountdown dueAt={nextDueAt} />.
                 </>
               )}
             </p>
@@ -121,17 +122,4 @@ export default async function ReviewPage() {
       )}
     </main>
   );
-}
-
-function formatRelative(iso: string): string {
-  const target = new Date(iso).getTime();
-  const now = Date.now();
-  const diffMs = target - now;
-  if (diffMs <= 0) return 'now';
-  const minutes = Math.round(diffMs / 60_000);
-  if (minutes < 60) return `in ${minutes} ${minutes === 1 ? 'minute' : 'minutes'}`;
-  const hours = Math.round(minutes / 60);
-  if (hours < 24) return `in ${hours} ${hours === 1 ? 'hour' : 'hours'}`;
-  const days = Math.round(hours / 24);
-  return `in ${days} ${days === 1 ? 'day' : 'days'}`;
 }
