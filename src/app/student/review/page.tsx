@@ -79,6 +79,15 @@ export default async function ReviewPage() {
     nextDueAt = nextRow?.due_at ?? null;
   }
 
+  // Fresh key per server render. router.refresh() from the client triggers a
+  // new server render → new key → ReviewSession remounts with empty internal
+  // state. Without this, after a "Wrong"-rated card re-surfaces as still due,
+  // ReviewSession keeps its previous cardIndex/sessionDone and the summary
+  // screen sticks instead of starting the new session. The page is
+  // force-dynamic so this runs per request, which is the intended behavior.
+  // eslint-disable-next-line react-hooks/purity
+  const sessionKey = Date.now().toString();
+
   return (
     <main className="container mx-auto max-w-3xl p-6">
       <Link
@@ -108,7 +117,7 @@ export default async function ReviewPage() {
           </CardContent>
         </Card>
       ) : (
-        <ReviewSession cards={cards} />
+        <ReviewSession key={sessionKey} cards={cards} />
       )}
     </main>
   );

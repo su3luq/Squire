@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useTransition } from 'react';
+import { useEffect, useState, useTransition } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { createClient } from '@/lib/supabase/client';
@@ -203,15 +203,23 @@ export function ReviewSession({ cards }: { cards: SessionCard[] }) {
     });
   }
 
-  function advanceMcq() {
-    setMcqStepIndex((i) => i + 1);
-  }
-
   function advanceCard() {
     setCardIndex((i) => i + 1);
     setMcqStepIndex(0);
     setPendingChoice(null);
   }
+
+  // Auto-advance to the next question 1 second after an answer is recorded.
+  // Gives the student a moment to register the result without requiring a
+  // manual click between questions.
+  const currentStepAnswer = currentProgress?.answers[mcqStepIndex];
+  useEffect(() => {
+    if (!currentStepAnswer) return;
+    const timer = setTimeout(() => {
+      setMcqStepIndex((i) => i + 1);
+    }, 1000);
+    return () => clearTimeout(timer);
+  }, [currentStepAnswer, mcqStepIndex]);
 
   // ============================================================================
   // RENDER
@@ -299,7 +307,6 @@ export function ReviewSession({ cards }: { cards: SessionCard[] }) {
           pendingChoice={pendingChoice}
           answer={currentAnswer ?? null}
           onSubmit={submitAnswer}
-          onContinue={advanceMcq}
         />
       ) : (
         <CardWrapUp
@@ -324,13 +331,11 @@ function McqStep({
   pendingChoice,
   answer,
   onSubmit,
-  onContinue,
 }: {
   mcq: SessionCard['mcqs'][number];
   pendingChoice: Choice | null;
   answer: Answer | null;
   onSubmit: (choice: Choice) => void;
-  onContinue: () => void;
 }) {
   const isAnswered = answer !== null;
   const isPending = pendingChoice !== null && answer === null;
@@ -343,32 +348,28 @@ function McqStep({
         <div className="grid grid-cols-1 gap-2">
           {CHOICES.map((letter) => {
             const isSelected = answer?.selected === letter;
-            const isCorrect = answer?.correct_choice === letter;
             const isPendingThis = pendingChoice === letter && answer === null;
 
-            // Style by phase. Order matters: answered > pending > idle.
+            // We never reveal the correct answer through button styling — the
+            // student stays in the dark about which choice was right, so
+            // they're forced to think the next time the card surfaces.
             let styleClasses = '';
             let icon: React.ReactNode = null;
 
-            if (isAnswered) {
-              if (isCorrect && isSelected) {
+            if (isAnswered && isSelected) {
+              if (answer.is_correct) {
                 styleClasses = 'border-green-400 bg-green-50 text-green-900';
                 icon = <Check className="size-4 text-green-700" />;
-              } else if (isCorrect && !isSelected) {
-                // Reveal correct answer when user got it wrong
-                styleClasses = 'border-green-400 bg-green-50/60 text-green-900';
-                icon = <Check className="size-4 text-green-700" />;
-              } else if (!isCorrect && isSelected) {
+              } else {
                 styleClasses = 'border-red-400 bg-red-50 text-red-900';
                 icon = <X className="size-4 text-red-700" />;
-              } else {
-                styleClasses = 'border-slate-200 bg-slate-50 text-slate-500 opacity-60';
               }
+            } else if (isAnswered && !isSelected) {
+              styleClasses = 'border-slate-200 bg-slate-50 text-slate-500 opacity-60';
             } else if (isPendingThis) {
               styleClasses = 'border-blue-400 bg-blue-50 text-blue-900';
               icon = <Loader2 className="size-4 animate-spin text-blue-700" />;
             } else if (isPending) {
-              // Another choice is pending — dim this one
               styleClasses = 'border-slate-200 bg-white text-slate-400 opacity-50';
             }
 
@@ -399,21 +400,14 @@ function McqStep({
         </div>
 
         {isAnswered && answer && (
-          <div className="flex items-center justify-between gap-3 border-t border-slate-200 pt-3">
-            <p
-              className={cn(
-                'text-sm font-medium',
-                answer.is_correct ? 'text-green-700' : 'text-red-700'
-              )}
-            >
-              {answer.is_correct
-                ? `Correct — +${answer.xp_awarded} XP`
-                : `Wrong — the answer was ${answer.correct_choice.toUpperCase()}`}
-            </p>
-            <Button type="button" size="sm" onClick={onContinue}>
-              Continue
-            </Button>
-          </div>
+          <p
+            className={cn(
+              'border-t border-slate-200 pt-3 text-sm font-medium',
+              answer.is_correct ? 'text-green-700' : 'text-red-700'
+            )}
+          >
+            {answer.is_correct ? `Correct — +${answer.xp_awarded} XP` : 'Wrong'}
+          </p>
         )}
       </CardContent>
     </Card>
