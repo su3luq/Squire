@@ -936,6 +936,7 @@ export type Database = {
       get_registration_state: { Args: never; Returns: Json }
       is_registration_open: { Args: never; Returns: boolean }
       is_teacher: { Args: { uid?: string }; Returns: boolean }
+      list_review_session: { Args: never; Returns: Json }
       lookup_class_by_invite: {
         Args: { code: string }
         Returns: {
