@@ -37,12 +37,12 @@ No mandatory paid services. No native-app dev fees.
 
 ## 3. Data Model
 
-16 tables. See `docs/SCHEMA.md` for full column-by-column reference. Logical groupings:
+17 tables. See `docs/SCHEMA.md` for full column-by-column reference. Logical groupings:
 
 **Users & Classes:** `classes`, `profiles`, `teacher_notes`, `student_assessments`
-**Curriculum:** `lessons`, `review_cards`, `card_quiz_questions`, `card_reviews`
+**Curriculum:** `lessons`, `lesson_unlocks`, `review_cards`, `card_quiz_questions`, `card_reviews`
 **Quests:** `quests`, `coop_quest_instances`, `quest_acceptances`, `quest_submissions`
-**Engagement:** `daily_quiz_attempts`, `xp_ledger`
+**Engagement:** `review_attempts`, `xp_ledger`
 **Comms:** `notifications`, `push_tokens`
 
 Already created in Supabase. RLS to be added in Phase 1.
@@ -64,7 +64,7 @@ Already created in Supabase. RLS to be added in Phase 1.
 | `coop_quest_instances` | own class | — | all | all |
 | `quest_acceptances` | self + classmates in same instance | self insert | all | all |
 | `quest_submissions` | self + own coop members | self insert | all | grade only |
-| `daily_quiz_attempts` | self | self | all | — |
+| `review_attempts` | self | ❌ (only via `submit_mcq_answer` RPC) | all | — |
 | `notifications` | self | self mark-read | self only | — |
 | `push_tokens` | self | self | — | — |
 | `xp_ledger` | self | ❌ | all | ❌ (system only) |
@@ -84,18 +84,17 @@ Column-level rule: students cannot select `english_proficiency_pearson` or `engl
 - Login (username + password)
 
 **Main tabs (bottom nav)**
-1. Quest Board — solo quests, coop instances (`n/m`), daily quiz badge
+1. Quest Board — solo quests, coop instances (`n/m`)
 2. My Quest — current solo + coop with submission UI, feedback after grading
-3. Review — card library by lesson, "Due" badge, FSRS review session
-4. Leaderboard — global rank list, sticky "you" row, rank icons
-5. Profile — own stats, classmate list
+3. Review — FSRS-driven MCQ session for due cards; "Due: N" badge
+4. Library — card library by lesson, full bodies viewable any time
+5. Leaderboard — global rank list, sticky "you" row, rank icons
+6. Profile — own stats, classmate list
 
 **Modals**
 - Quest detail
-- Quest submission (text editor / audio recorder / image picker / YouTube field)
-- Card detail (full body)
-- Card review session (FSRS 4-button)
-- Daily quiz session (one question at a time)
+- Quest submission (markdown editor)
+- Card detail (full body, library view)
 - Classmate public profile
 - Notifications inbox
 - Settings
@@ -124,7 +123,6 @@ Column-level rule: students cannot select `english_proficiency_pearson` or `engl
 | Trigger | Recipient | Quiet hours (22-06)? |
 |---|---|---|
 | New quest posted | Class students | Suppressed |
-| Daily quiz available (06:00) | Students w/ unlocked cards | N/A |
 | Cards due for review | Student | Suppressed |
 | Quest approved | Student / coop members | Suppressed |
 | Quest rejected | Student / coop members | Suppressed |
@@ -133,7 +131,7 @@ Column-level rule: students cannot select `english_proficiency_pearson` or `engl
 | Top-10 leaderboard movement | Student | In-app only (no push) |
 | Quest expiring in 1hr | Active acceptor | **Override quiet hours** |
 | Teacher custom push | Selected students | **Override quiet hours** |
-| 4-day quiz miss streak | Teacher | Suppressed |
+| 4-day review miss streak (student has due cards, didn't open review) | Teacher | Suppressed |
 | New submission to review | Teacher | Suppressed |
 
 **Implementation:** DB triggers + Edge Function workers. Notifications go into `notifications` table immediately; a cron'd worker reads `pushed_at IS NULL` rows, applies quiet-hour logic, sends via Expo Push API, sets `pushed_at`.
@@ -156,11 +154,12 @@ Column-level rule: students cannot select `english_proficiency_pearson` or `engl
 ### XP awards (tunable)
 | Source | XP |
 |---|---|
-| Daily quiz (any score, 5 questions fixed) | 5 |
-| Daily quiz perfect bonus (all 5 correct) | +3 |
+| Review MCQ correct answer | 5 (per correct, no perfect bonus, no daily reset) |
 | Solo quest (standard) | 20–35 (teacher sets) |
 | Coop quest | 50–80 per member |
 | Special quest | 150–300 |
+
+FSRS schedule determines when MCQs reappear. Strong students earn less from review (fewer cards due) but have time freed for solo/coop quests; weak students earn more from review volume — the gamification serves the pedagogy.
 
 ### Learning velocity
 Recomputed nightly. Quiz answers in last 30 days, weighted by card age (1.0/1.5/2.5/4.0 for ≤7/8-30/31-90/90+ days). `velocity = Σ(weight × correct) / Σ(weight)`, clamped [0,1].
@@ -203,18 +202,21 @@ Commits land in this order:
 
 - **Milestone:** teacher teaches a lesson and students study the cards.
 
-### Phase 3 — Daily Quiz & XP Engine (~week 3)
-**Goal:** daily learning loop and gamification spine.
+### Phase 3 — Review-Quiz & XP Engine (~week 3)
+**Goal:** FSRS-driven review-quiz loop + gamification spine + leaderboard + nightly velocity.
 
-- Edge Function `generate-daily-quizzes` (cron 06:00 Asia/Ho_Chi_Minh):
-  - For each student with unlocked cards, pick 3-10 random questions from `card_quiz_questions`
-  - Insert into `daily_quiz_attempts` with snapshot
-- Daily quiz UI: question at a time, 4 choices, immediate feedback or batch results (TBD with user)
-- Award XP via `xp_ledger` insert on completion
-- Trigger updates `profiles.xp_total`, recomputes `current_rank` (already in place)
-- Leaderboard screen: global ranked list, sticky "you" row, top 10 always visible, scrollable below
-- Edge Function `recompute-velocity` (cron daily): formula in §7
-- **Milestone:** the daily loop works end-to-end. XP, ranks, leaderboard visible.
+Post-Plan-B pivot (migration 015 applied). The daily-quiz cron is gone; the system is event-driven by `card_reviews.due_at`.
+
+Commits in this order:
+
+1. `feat(db): migration 015 — unify review and quiz via FSRS-driven model` *(already shipped — see `supabase/migrations/015_*.sql`)*
+2. `feat(phase-3): rebuild /student/review with FSRS-driven MCQ flow` — replaces the broken self-rating UI from Phase 2 commit #7. Fetches due cards (`card_reviews.due_at <= now()`), shows headline-only + sequential MCQs (body hidden until all answered), calls `submit_mcq_answer` per MCQ for live feedback + immediate XP, runs `ts-fsrs` client-side after all MCQs on a card are answered to update `card_reviews` state.
+3. `feat(phase-3): leaderboard page` — global ranked list by `xp_total`, sticky "you" row, top 10 always visible.
+4. `feat(phase-3): nightly velocity recomputation Edge Function` — formula in §7, runs once daily over `review_attempts` from the trailing 30 days.
+
+No 06:00 cron, no `generate-daily-quizzes` Edge Function. Phase 3 is genuinely smaller under Plan B.
+
+**Milestone:** review loop works end-to-end. XP awards per correct MCQ. Rank changes visible. Leaderboard renders. Velocity updates nightly.
 
 ### Phase 4 — Quests Core (~week 4)
 **Goal:** solo quest loop fully working.
@@ -296,7 +298,6 @@ Commits land in this order:
 ## 10. Open Decisions / Future Discussions
 
 - Exact open-source AI classifier choice (decide Phase 5)
-- Daily quiz UI: one-by-one with immediate feedback, or batch all then results (ask at Phase 3 start)
 - Rank icons: source / commission / generate? (ask before Phase 1 polish)
 - Co-op group formation: pure first-come-first-served (current plan), or some matchmaking? (current plan stays for v1)
 - **Rejected for v1:** QR-code class join, multi-step registration with invite-code lookup, and per-class access codes. Replaced by open self-registration with a global `registration_open` toggle and a hardcoded class dropdown. Reasoning: web-only deployment removed the camera-on-mobile use case for QR; the simpler flow is enough for one teacher / 500 students.
@@ -314,7 +315,8 @@ Commits land in this order:
 - Localization
 - Cross-class quests
 - Parent/guardian view
-- Standalone quiz quests (teacher-authored MCQ quests beyond the daily quiz)
+- Standalone quiz quests (teacher-authored MCQ quests beyond the review-quiz flow)
+- Self-rated FSRS difficulty (Hard / Easy buttons) for power users who want finer scheduling control beyond the binary Good/Again that MCQ correctness produces
 - In-browser audio recording
 - Image/audio file uploads for content authoring or submissions (use markdown image syntax + external hosting instead)
 - Per-card prev/next navigation inside the card detail modal

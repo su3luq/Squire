@@ -103,7 +103,7 @@ RLS: single policy `student_assessments_teacher_all` — teachers can do everyth
 | created_at | timestamptz | |
 
 ### `card_quiz_questions`
-**Never shown on cards. Only surface in daily quizzes.**
+**Never shown on the card detail page (library view). Surface only via the FSRS-driven review flow at `/student/review`, where students answer them via the `submit_mcq_answer` RPC (migration 015). `correct_choice` is teacher-only readable; the function does the comparison server-side.**
 | Column | Type | Notes |
 |---|---|---|
 | id | uuid PK | |
@@ -196,21 +196,27 @@ Migration 011 dropped `quiz_questions` (jsonb) and `deliverable_types` (text[]).
 
 **Constraint:** exactly one of `acceptance_id` or `instance_id` must be non-null.
 
-### `daily_quiz_attempts`
-Unique on (student_id, quiz_date).
+### `review_attempts`
+One row per MCQ answer (migration 015). Inserts only via `submit_mcq_answer` SECURITY DEFINER RPC — never directly from client code. RLS: teacher reads all; student reads own. No INSERT/UPDATE/DELETE policies.
 
 | Column | Type | Notes |
 |---|---|---|
 | id | uuid PK | |
-| student_id | uuid FK profiles | |
-| quiz_date | date NOT NULL | Saigon-local date |
-| questions | jsonb NOT NULL | array of question IDs (snapshot) |
-| answers | jsonb | array of selected choices |
-| correct_count | int DEFAULT 0 | |
-| total_count | int NOT NULL | |
-| xp_awarded | int DEFAULT 0 | |
-| completed_at | timestamptz | NULL = missed/pending |
-| created_at | timestamptz | |
+| student_id | uuid FK profiles | `ON DELETE CASCADE` |
+| card_id | uuid FK review_cards | `ON DELETE CASCADE` |
+| quiz_question_id | uuid FK card_quiz_questions | `ON DELETE CASCADE` |
+| selected_choice | char(1) NOT NULL | CHECK `lower(selected_choice) IN ('a','b','c','d')` |
+| is_correct | boolean NOT NULL | computed by `submit_mcq_answer` against teacher-only `correct_choice` |
+| answered_at | timestamptz NOT NULL DEFAULT now() | |
+| xp_awarded | int NOT NULL DEFAULT 0 | 5 if correct, 0 if wrong |
+| card_review_state_at_answer | card_review_state NOT NULL | snapshot of `card_reviews.state` at the moment of the answer; for analytics |
+
+Indexes:
+- `idx_review_attempts_student` on `(student_id, answered_at DESC)`
+- `idx_review_attempts_student_card` on `(student_id, card_id, answered_at DESC)`
+- `idx_review_attempts_card` on `(card_id, answered_at DESC)`
+
+Idempotency: not enforced at the DB. A network retry of `submit_mcq_answer` can produce duplicate ledger rows. Documented v1 trade-off; revisit if it becomes a real problem.
 
 ### `xp_ledger`
 Append-only audit trail. **Insert here to award XP; trigger auto-updates `profiles.xp_total` and `current_rank`.**
@@ -291,6 +297,8 @@ All `SECURITY DEFINER` with explicit `SET search_path = public`. `EXECUTE` is re
 | `is_registration_open()` | `boolean` | **anon** + authenticated | Read `app_settings.registration_open` (added in migration 009) |
 | `get_registration_state()` | `jsonb {open, classes}` | **anon** + authenticated | Combined state for the registration page (added in migration 009) |
 | `register_student(p_user_id uuid, p_full_name text, p_age int, p_email text, p_class_id uuid)` | `jsonb {ok, error?}` | authenticated | Gated atomic student-profile insert. Server-enforced gates: caller identity (`auth.uid`), `registration_open`, class exists (added in migration 009, simplified in migration 010) |
+| `unlock_lesson_cards(p_lesson_id uuid, p_class_id uuid)` | `jsonb {ok, cards_count, students_count, reviews_created}` | authenticated (teacher only — gated inside) | Inserts a `lesson_unlocks` row for `(lesson_id, class_id)` and seeds `card_reviews` rows for every student-card pair in that class. Idempotent. (migration 014) |
+| `submit_mcq_answer(p_quiz_question_id uuid, p_selected_choice char)` | `jsonb {ok, is_correct, correct_choice, xp_awarded, attempt_id}` | authenticated (students; teacher inserts not gated but unused) | Audit chokepoint for review-quiz answers. Verifies card visibility via `lesson_unlocks`, reads teacher-only `correct_choice`, inserts a `review_attempts` row, awards +5 XP via `xp_ledger` if correct. Creates a `card_reviews` row on-demand if missing. **Client code must never INSERT into `review_attempts` directly.** (migration 015) |
 
 Internal trigger functions (`apply_xp_change`, `set_updated_at`, `compute_rank_from_xp`) have `EXECUTE` revoked from every role — they run only via triggers.
 

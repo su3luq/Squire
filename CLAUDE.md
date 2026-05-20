@@ -49,6 +49,7 @@ Squire is a gamified learning platform for a single teacher (the developer/autho
 13. **All long-form content is authored and stored as markdown text.** Rendered with `react-markdown` + `remark-gfm`. Raw HTML disabled. Custom component map embeds YouTube URLs as iframes and direct video file URLs as `<video>`; images via standard `![](url)` syntax render as `<img>`. There is no structured block editor, no rich-text WYSIWYG, no file upload UI for content authoring. Images and media are referenced via external URLs in markdown.
 14. **Create teacher accounts only via `SELECT public.admin_create_teacher(email, password, full_name)`.** Never INSERT directly into `auth.users` — GoTrue's row-scan crashes on NULL token columns. The function handles this and other GoTrue quirks; see migration 013.
 15. **Lessons are class-agnostic content; unlocking is per-class.** A lesson is a bundle of cards with no class affiliation. The `lesson_unlocks(lesson_id, class_id, unlocked_at)` join table records when each lesson is unlocked for each class. Teaching workflow: prep lesson once, unlock for class A when you teach class A, unlock for class B (separately, later) when you teach class B. RLS gates student card access on `lesson_unlocks` rows for the student's class. See migration 014.
+16. **Review-XP must always be awarded via the `submit_mcq_answer` SECURITY DEFINER function.** Never insert into `review_attempts` or `xp_ledger` directly from client code. The function is the audit + validation chokepoint: it verifies card visibility, computes correctness against the teacher-only `correct_choice`, inserts the attempt row, and writes the +5 XP ledger atomically. See migration 015.
 
 ---
 
@@ -87,7 +88,7 @@ RLS policies will enforce all of these. Never expose teacher-only columns in any
 
 XP awarded via `xp_ledger` inserts. A DB trigger auto-updates `profiles.xp_total` and `current_rank`. **Never write to `xp_total` or `current_rank` directly — always insert into `xp_ledger`.**
 
-XP per source: daily quiz attempt = 5 XP (+3 perfect bonus), solo quest = 20–35, coop quest = 50–80 per member, special quest = 150–300.
+XP per source: review MCQ = 5 XP per correct answer (no perfect bonus, no XP for wrong), solo quest = 20–35, coop quest = 50–80 per member, special quest = 150–300.
 
 ### Learning Velocity (recomputed nightly by Edge Function cron)
 For each student, look at quiz answers in trailing 30 days. Weight each answer by card age:
@@ -107,14 +108,18 @@ For each student, look at quiz answers in trailing 30 days. Weight each answer b
 - Teacher can disband a non-full instance via UI → status becomes `disbanded`, members released back to acceptance pool.
 - **The instance-spawn logic needs a Postgres advisory lock or row-level lock to avoid race conditions** when two students hit "accept" simultaneously on the last slot.
 
-### Daily Quiz
-- One per student per calendar day, Saigon TZ. Resets at 06:00 local.
-- **Fixed 5 questions**, drawn randomly from `card_quiz_questions` where the underlying card is unlocked for the student's class. If fewer than 5 are available, uses however many exist. If 0 are available, the daily quiz doesn't appear that day.
-- Edge Function cron generates the question set at 06:00 daily for each student.
-- Missed days are tracked: 4 misses in a row → teacher gets notification.
+### Review (FSRS-driven)
+Review is driven by FSRS scheduling. Cards become reviewable when their `card_reviews.due_at` is past. The student opens `/student/review` and answers MCQs from due cards. There is **no fixed session length, no daily reset, and no 06:00 cron**. The system is event-driven by FSRS due dates.
 
-### Daily Quiz XP Award
-- 5 XP flat for completion, +3 bonus for perfect score (all 5 correct). No fail-no-XP state — showing up earns the base XP regardless of correctness. No XP if missed (quiz never opened).
+Per MCQ:
+- Correct → +5 XP awarded immediately via `xp_ledger`; the answer counts toward the card's "all correct" tally
+- Wrong → 0 XP; the answer counts toward the card's "wrong on any" tally
+
+After all MCQs on a card are answered in one cycle: wrong-on-any → FSRS rating `Again`; correct-on-all → `Good`. The client runs `ts-fsrs` locally to compute the new state and writes back to `card_reviews` via the existing student-update RLS policy. The XP awards and the FSRS rating are independent — XP is per-MCQ; FSRS is per-card.
+
+**Strict requirement:** every card must have ≥1 MCQ before it can be unlocked for a class. If you can't write an MCQ, the card is too vague — fix the card.
+
+Missed reviews are tracked: 4 days in a row where the student has due cards and doesn't open any review session → teacher gets a notification.
 
 ### Failed Quests
 - Teacher marks `quest_submissions.status = 'failed'` with required `teacher_feedback`.
@@ -128,7 +133,7 @@ For each student, look at quiz answers in trailing 30 days. Weight each answer b
 
 16 tables in `public` schema. **Do not run migrations to alter the schema without asking the user first.** Schema reference: see `docs/SCHEMA.md`.
 
-Key tables: `profiles`, `classes`, `lessons`, `review_cards`, `card_quiz_questions`, `card_reviews`, `quests`, `coop_quest_instances`, `quest_acceptances`, `quest_submissions`, `daily_quiz_attempts`, `xp_ledger`, `notifications`, `push_tokens`, `teacher_notes`, `student_assessments`.
+Key tables: `profiles`, `classes`, `lessons`, `lesson_unlocks`, `review_cards`, `card_quiz_questions`, `card_reviews`, `review_attempts`, `quests`, `coop_quest_instances`, `quest_acceptances`, `quest_submissions`, `xp_ledger`, `notifications`, `push_tokens`, `teacher_notes`, `student_assessments`.
 
 **RLS is enabled on all tables via migration 008** (`supabase/migrations/008_rls_policies_and_assessments_split.sql`). Helper functions (`is_teacher`, `user_class_id`, `users_share_class`, `lookup_class_by_invite`, `is_username_available`), the `public_profiles` security-barrier view, and the `student_assessments` split are documented in `docs/SCHEMA.md`.
 
@@ -140,7 +145,7 @@ See `docs/PLAN.md` for full detail. Quick reference:
 
 1. **Phase 1 — Foundation**: Next.js scaffold, Supabase SSR client (browser/server/middleware split), RLS policies (migration 008), auth (username/password w/ email shim), self-registration with class dropdown gated by a global registration toggle, middleware-enforced role guard, placeholder home screens
 2. **Phase 2 — Lessons & Cards**: Lesson CRUD, card creator (headline + body + MCQs), card library, FSRS review session with 4-button rating
-3. **Phase 3 — Daily Quiz & XP Engine**: Daily quiz generation Edge Function, quiz UI, XP awards via ledger, leaderboard, velocity nightly cron
+3. **Phase 3 — Review-Quiz & XP Engine**: FSRS-driven MCQ review (no daily cron), XP awards via ledger, leaderboard, velocity nightly cron
 4. **Phase 4 — Quests Core**: Solo quest creator + acceptance + submission, teacher review queue, audio submissions
 5. **Phase 5 — Co-op Quests & Polish**: Coop quest spawning, teacher analytics dashboard, AI-likelihood classifier
 6. **Phase 6 — Web Push Notifications**: Web Push API subscriptions + Service Worker, all notification triggers, quiet hours, in-app notifications inbox, encourage iOS users to Add-to-Home-Screen for native-feeling push support
@@ -237,7 +242,8 @@ Every commit-blocking smoke test goes through:
 - Multi-teacher / multi-class-per-teacher
 - Automatic AI grading of text quality
 - Localization
-- Standalone quiz quests (teacher-authored MCQ quests beyond the daily quiz) — quizzes only exist as the auto-generated daily quest in v1
+- Standalone quiz quests (teacher-authored MCQ quests beyond the review-quiz flow) — MCQs only exist as card-attached questions surfaced via FSRS-driven review in v1
+- Per-card-question difficulty rating (Hard / Easy buttons). MCQ correctness drives FSRS as Good/Again binary; no nuanced self-rating in v1
 - In-browser audio recording for any purpose
 - Image/audio file uploads for content authoring or submissions (use markdown image syntax + external hosting instead)
 - Per-card prev/next navigation inside the card detail modal
