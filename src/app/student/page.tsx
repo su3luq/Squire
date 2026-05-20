@@ -53,12 +53,20 @@ export default async function StudentHome() {
 
         <div className="flex flex-col items-center gap-3">
           <ReviewLauncher dueCount={dueCount} nextDueAt={nextDueAt} />
-          <Link
-            href="/student/library"
-            className={buttonVariants({ variant: 'outline' })}
-          >
-            Library
-          </Link>
+          <div className="flex gap-2">
+            <Link
+              href="/student/library"
+              className={buttonVariants({ variant: 'outline' })}
+            >
+              Library
+            </Link>
+            <Link
+              href="/student/leaderboard"
+              className={buttonVariants({ variant: 'outline' })}
+            >
+              Leaderboard
+            </Link>
+          </div>
         </div>
 
         <SignOutButton />
