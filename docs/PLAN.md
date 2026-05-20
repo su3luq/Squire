@@ -162,7 +162,11 @@ Column-level rule: students cannot select `english_proficiency_pearson` or `engl
 FSRS schedule determines when MCQs reappear. Strong students earn less from review (fewer cards due) but have time freed for solo/coop quests; weak students earn more from review volume — the gamification serves the pedagogy.
 
 ### Learning velocity
-Recomputed nightly. Quiz answers in last 30 days, weighted by card age (1.0/1.5/2.5/4.0 for ≤7/8-30/31-90/90+ days). `velocity = Σ(weight × correct) / Σ(weight)`, clamped [0,1].
+Recomputed nightly at 03:00 Saigon via `pg_cron` calling the `recompute_learning_velocity()` SECURITY DEFINER function (migration 017). Review-attempts in the trailing **14 days** are weighted by card age: 1.0 for cards ≤7 days old, 1.5 for 8-30d, 2.5 for 31-90d, 4.0 for 90+d. `velocity = Σ(weight × correct) / Σ(weight)`, clamped [0,1]. Students with zero attempts in the window get velocity = 0 (no learning signal). Empty days (weekends, short holidays) naturally contribute nothing to both numerator and denominator, so the ratio is robust without holiday-aware logic; the future analytics dashboard will show attempt count alongside velocity so the teacher can distinguish "struggling" (low velocity, many attempts) from "absent" (zero velocity, zero attempts).
+
+Window decision (14 vs 30 vs 7 days): 30 days was the architect's original spec but too slow to catch deterioration during a 40-week course; 7 days too noisy (one bad day craters the score). 14 days catches sustained drops within a week, surfaces inactivity at 2 weeks, smooths weekend gaps and short holidays.
+
+Edge Function vs pure SQL: the architect's plan literally said "Edge Function recompute-velocity (cron daily)" but we went pure SQL because the computation is one UPDATE and wrapping it in TS would only add an HTTP hop + Vault secret management. An Edge Function wrapper can be added later if needed; the SQL function stays the canonical implementation.
 
 ---
 
@@ -212,7 +216,7 @@ Commits in this order:
 1. `feat(db): migration 015 — unify review and quiz via FSRS-driven model` *(already shipped — see `supabase/migrations/015_*.sql`)*
 2. `feat(phase-3): rebuild /student/review with FSRS-driven MCQ flow` — replaces the broken self-rating UI from Phase 2 commit #7. Fetches due cards (`card_reviews.due_at <= now()`), shows headline-only + sequential MCQs (body hidden until all answered), calls `submit_mcq_answer` per MCQ for live feedback + immediate XP, runs `ts-fsrs` client-side after all MCQs on a card are answered to update `card_reviews` state.
 3. `feat(phase-3): leaderboard page` — global ranked list by `xp_total`, sticky "you" row, top 10 always visible.
-4. `feat(phase-3): nightly velocity recomputation Edge Function` — formula in §7, runs once daily over `review_attempts` from the trailing 30 days.
+4. `feat(db): migration 017 — recompute_learning_velocity() function + pg_cron schedule` — formula in §7, runs once daily at 03:00 Saigon (20:00 UTC) over `review_attempts` from the trailing 14 days. Pure SQL — no Edge Function indirection.
 
 No 06:00 cron, no `generate-daily-quizzes` Edge Function. Phase 3 is genuinely smaller under Plan B.
 
