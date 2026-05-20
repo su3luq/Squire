@@ -1,53 +1,83 @@
 import { createClient } from '@/lib/supabase/server';
 import Link from 'next/link';
-import {
-  Card,
-  CardContent,
-} from '@/components/ui/card';
-import { ReviewSession } from './review-session';
+import { Card, CardContent } from '@/components/ui/card';
+import { ReviewSession, type SessionCard } from './review-session';
 
-// Server component: fetches all card_reviews where due_at <= now() for the
-// current student, joined with the underlying card and lesson. RLS scopes
-// to the signed-in student automatically.
+// Server component. Pulls the full review payload via list_review_session RPC
+// (migration 016) — one round-trip returns due cards, their MCQs (no
+// correct_choice), and FSRS state. The client component then walks the
+// student through one card at a time.
 
 export const dynamic = 'force-dynamic';
 
-type RawRow = {
-  id: string;
-  due_at: string;
-  review_cards: {
-    headline: string;
-    body: string;
-    position: number;
-    lessons: { title: string; lesson_number: number } | null;
-  } | null;
+type SessionResult = {
+  ok: boolean;
+  cards?: SessionCard[];
+  error?: string;
 };
 
 export default async function ReviewPage() {
   const supabase = await createClient();
-  const now = new Date().toISOString();
 
-  const { data } = await supabase
-    .from('card_reviews')
-    .select(
-      'id, due_at, review_cards(headline, body, position, lessons(title, lesson_number))'
-    )
-    .lte('due_at', now)
-    .order('due_at', { ascending: true });
+  const { data, error } = await supabase.rpc('list_review_session');
 
-  const rawRows = (data as RawRow[] | null) ?? [];
+  if (error) {
+    return (
+      <main className="container mx-auto max-w-3xl p-6">
+        <Link
+          href="/student"
+          className="mb-4 inline-block text-sm text-blue-600 hover:underline"
+        >
+          ← Home
+        </Link>
+        <h1 className="mb-2 text-3xl font-bold">Review</h1>
+        <Card>
+          <CardContent className="py-8 text-center">
+            <p className="text-sm text-red-600">
+              Failed to load review session: {error.message}
+            </p>
+          </CardContent>
+        </Card>
+      </main>
+    );
+  }
 
-  // Filter out rows where the join is null (defensive; shouldn't happen in
-  // practice) and shape for the client.
-  const cards = rawRows
-    .filter((r) => r.review_cards !== null)
-    .map((r) => ({
-      cardReviewId: r.id,
-      headline: r.review_cards!.headline,
-      body: r.review_cards!.body,
-      lessonTitle: r.review_cards!.lessons?.title ?? '',
-      lessonNumber: r.review_cards!.lessons?.lesson_number ?? 0,
-    }));
+  const result = (data as SessionResult | null) ?? { ok: false, error: 'No data' };
+
+  if (!result.ok) {
+    return (
+      <main className="container mx-auto max-w-3xl p-6">
+        <Link
+          href="/student"
+          className="mb-4 inline-block text-sm text-blue-600 hover:underline"
+        >
+          ← Home
+        </Link>
+        <h1 className="mb-2 text-3xl font-bold">Review</h1>
+        <Card>
+          <CardContent className="py-8 text-center">
+            <p className="text-sm text-red-600">{result.error ?? 'Failed.'}</p>
+          </CardContent>
+        </Card>
+      </main>
+    );
+  }
+
+  const cards = result.cards ?? [];
+
+  // For the "all caught up — next review in N" hint, get the soonest future due.
+  // Cheap query, runs under student-own-RLS on card_reviews.
+  let nextDueAt: string | null = null;
+  if (cards.length === 0) {
+    const { data: nextRow } = await supabase
+      .from('card_reviews')
+      .select('due_at')
+      .gt('due_at', new Date().toISOString())
+      .order('due_at', { ascending: true })
+      .limit(1)
+      .maybeSingle();
+    nextDueAt = nextRow?.due_at ?? null;
+  }
 
   return (
     <main className="container mx-auto max-w-3xl p-6">
@@ -59,7 +89,7 @@ export default async function ReviewPage() {
       </Link>
       <h1 className="mb-1 text-3xl font-bold">Review</h1>
       <p className="mb-6 text-sm text-slate-600">
-        Cards due now from your unlocked lessons.
+        Answer the questions for each due card. Each correct answer earns 5 XP.
       </p>
 
       {cards.length === 0 ? (
@@ -67,7 +97,13 @@ export default async function ReviewPage() {
           <CardContent className="flex flex-col items-center gap-2 py-12 text-center">
             <p className="text-lg font-semibold text-slate-900">All caught up</p>
             <p className="text-sm text-slate-600">
-              No cards due right now. Check back later.
+              No cards due right now.
+              {nextDueAt && (
+                <>
+                  {' '}
+                  Next review {formatRelative(nextDueAt)}.
+                </>
+              )}
             </p>
           </CardContent>
         </Card>
@@ -76,4 +112,17 @@ export default async function ReviewPage() {
       )}
     </main>
   );
+}
+
+function formatRelative(iso: string): string {
+  const target = new Date(iso).getTime();
+  const now = Date.now();
+  const diffMs = target - now;
+  if (diffMs <= 0) return 'now';
+  const minutes = Math.round(diffMs / 60_000);
+  if (minutes < 60) return `in ${minutes} ${minutes === 1 ? 'minute' : 'minutes'}`;
+  const hours = Math.round(minutes / 60);
+  if (hours < 24) return `in ${hours} ${hours === 1 ? 'hour' : 'hours'}`;
+  const days = Math.round(hours / 24);
+  return `in ${days} ${days === 1 ? 'day' : 'days'}`;
 }
