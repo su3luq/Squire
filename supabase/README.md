@@ -26,3 +26,4 @@ This folder is the source of truth for database schema changes.
 | 012 | `unlock_lesson_cards` RPC (teacher-only, idempotent) and `lesson_card_counts` view | applied |
 | 013 | `admin_create_teacher(email, password, full_name)` SECURITY DEFINER seed function — gotcha-free teacher account creation | applied |
 | 014 | Per-class lesson unlock model: drop `lessons.class_id`/`cards_unlocked_at`/`taught_at`; new `lesson_unlocks(lesson_id, class_id, unlocked_at)` join table; `unlock_lesson_cards(lesson_id, class_id)` RPC | applied |
+| 015 | Unify review and quiz via FSRS-driven model. Drop `daily_quiz_attempts`; new `review_attempts` (one row per MCQ answer) + `submit_mcq_answer(quiz_question_id, selected_choice)` SECURITY DEFINER RPC. Correct → +5 XP via xp_ledger | applied |

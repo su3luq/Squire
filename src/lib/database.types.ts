@@ -225,60 +225,6 @@ export type Database = {
           },
         ]
       }
-      daily_quiz_attempts: {
-        Row: {
-          answers: Json | null
-          completed_at: string | null
-          correct_count: number
-          created_at: string
-          id: string
-          questions: Json
-          quiz_date: string
-          student_id: string
-          total_count: number
-          xp_awarded: number
-        }
-        Insert: {
-          answers?: Json | null
-          completed_at?: string | null
-          correct_count?: number
-          created_at?: string
-          id?: string
-          questions: Json
-          quiz_date: string
-          student_id: string
-          total_count: number
-          xp_awarded?: number
-        }
-        Update: {
-          answers?: Json | null
-          completed_at?: string | null
-          correct_count?: number
-          created_at?: string
-          id?: string
-          questions?: Json
-          quiz_date?: string
-          student_id?: string
-          total_count?: number
-          xp_awarded?: number
-        }
-        Relationships: [
-          {
-            foreignKeyName: "daily_quiz_attempts_student_id_fkey"
-            columns: ["student_id"]
-            isOneToOne: false
-            referencedRelation: "profiles"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "daily_quiz_attempts_student_id_fkey"
-            columns: ["student_id"]
-            isOneToOne: false
-            referencedRelation: "public_profiles"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
       lesson_unlocks: {
         Row: {
           class_id: string
@@ -690,6 +636,71 @@ export type Database = {
           },
         ]
       }
+      review_attempts: {
+        Row: {
+          answered_at: string
+          card_id: string
+          card_review_state_at_answer: Database["public"]["Enums"]["card_review_state"]
+          id: string
+          is_correct: boolean
+          quiz_question_id: string
+          selected_choice: string
+          student_id: string
+          xp_awarded: number
+        }
+        Insert: {
+          answered_at?: string
+          card_id: string
+          card_review_state_at_answer: Database["public"]["Enums"]["card_review_state"]
+          id?: string
+          is_correct: boolean
+          quiz_question_id: string
+          selected_choice: string
+          student_id: string
+          xp_awarded?: number
+        }
+        Update: {
+          answered_at?: string
+          card_id?: string
+          card_review_state_at_answer?: Database["public"]["Enums"]["card_review_state"]
+          id?: string
+          is_correct?: boolean
+          quiz_question_id?: string
+          selected_choice?: string
+          student_id?: string
+          xp_awarded?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "review_attempts_card_id_fkey"
+            columns: ["card_id"]
+            isOneToOne: false
+            referencedRelation: "review_cards"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "review_attempts_quiz_question_id_fkey"
+            columns: ["quiz_question_id"]
+            isOneToOne: false
+            referencedRelation: "card_quiz_questions"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "review_attempts_student_id_fkey"
+            columns: ["student_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "review_attempts_student_id_fkey"
+            columns: ["student_id"]
+            isOneToOne: false
+            referencedRelation: "public_profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       review_cards: {
         Row: {
           body: string
@@ -940,6 +951,10 @@ export type Database = {
           p_full_name: string
           p_user_id: string
         }
+        Returns: Json
+      }
+      submit_mcq_answer: {
+        Args: { p_quiz_question_id: string; p_selected_choice: string }
         Returns: Json
       }
       unlock_lesson_cards: {
