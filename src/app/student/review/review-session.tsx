@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useRef, useState, useTransition } from 'react';
+import { useState, useTransition } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { createClient } from '@/lib/supabase/client';
@@ -8,7 +8,7 @@ import { Button, buttonVariants } from '@/components/ui/button';
 import { Progress } from '@/components/ui/progress';
 import { Card, CardContent } from '@/components/ui/card';
 import { MarkdownRenderer } from '@/components/markdown-renderer';
-import { Check, X } from 'lucide-react';
+import { Check, X, Loader2 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { scheduleNext, type DbCardReview } from '@/lib/fsrs';
 import type { Database } from '@/lib/database.types';
@@ -63,6 +63,7 @@ export function ReviewSession({ cards }: { cards: SessionCard[] }) {
   const supabase = createClient();
   const router = useRouter();
   const [cardIndex, setCardIndex] = useState(0);
+  const [mcqStepIndex, setMcqStepIndex] = useState(0);
   const [progress, setProgress] = useState<Record<string, CardProgress>>(() =>
     Object.fromEntries(
       cards.map((c) => [
@@ -71,15 +72,11 @@ export function ReviewSession({ cards }: { cards: SessionCard[] }) {
       ])
     )
   );
-  // When non-null, we're showing the feedback overlay for the answer at this index.
-  // User clicks "Continue" to dismiss, which advances to the next MCQ (or wrap-up).
-  const [feedbackForIndex, setFeedbackForIndex] = useState<number | null>(null);
+  // Choice the student just clicked, before the RPC returns. Drives the
+  // pending visual state on the MCQ button.
+  const [pendingChoice, setPendingChoice] = useState<Choice | null>(null);
   const [error, setError] = useState<string | null>(null);
-  const [isSubmitting, startSubmit] = useTransition();
-  // Track which card_review_ids are currently having their FSRS state written.
-  // Prevents the auto-complete effect from double-firing.
-  const completingRef = useRef<Set<string>>(new Set());
-  const [completingTick, setCompletingTick] = useState(0); // forces re-render after Set mutation
+  const [, startSubmit] = useTransition();
 
   const totalCards = cards.length;
   const sessionDone = cardIndex >= totalCards;
@@ -94,28 +91,19 @@ export function ReviewSession({ cards }: { cards: SessionCard[] }) {
   const totalCorrect = allAnswers.filter((a) => a.is_correct).length;
   const totalAnswered = allAnswers.length;
 
-  // ---- Auto-complete FSRS state once all MCQs for a card are answered and feedback dismissed ----
-  useEffect(() => {
-    if (!currentCard || !currentProgress) return;
-    if (currentProgress.completed) return;
-    if (currentProgress.answers.length < currentCard.mcqs.length) return;
-    if (feedbackForIndex !== null) return;
-    if (completingRef.current.has(currentCard.card_review_id)) return;
-
-    completingRef.current.add(currentCard.card_review_id);
-    setCompletingTick((t) => t + 1);
-
-    void (async () => {
-      const allCorrect = currentProgress.answers.every((a) => a.is_correct);
+  // ---- Compute & write FSRS state for the card. Returns when done. ----
+  async function completeCard(card: SessionCard, finalAnswers: Answer[]) {
+    try {
+      const allCorrect = finalAnswers.every((a) => a.is_correct);
       const choice = allCorrect ? 'good' : 'again';
 
       const row: DbCardReview = {
-        difficulty: currentCard.fsrs.difficulty,
-        stability: currentCard.fsrs.stability,
-        state: currentCard.fsrs.state,
-        due_at: currentCard.fsrs.due_at,
-        last_reviewed_at: currentCard.fsrs.last_reviewed_at,
-        review_count: currentCard.fsrs.review_count,
+        difficulty: card.fsrs.difficulty,
+        stability: card.fsrs.stability,
+        state: card.fsrs.state,
+        due_at: card.fsrs.due_at,
+        last_reviewed_at: card.fsrs.last_reviewed_at,
+        review_count: card.fsrs.review_count,
       };
 
       const update = scheduleNext(row, choice);
@@ -130,50 +118,47 @@ export function ReviewSession({ cards }: { cards: SessionCard[] }) {
           review_count: update.review_count,
           state: update.state,
         })
-        .eq('id', currentCard.card_review_id);
-
-      completingRef.current.delete(currentCard.card_review_id);
-      setCompletingTick((t) => t + 1);
+        .eq('id', card.card_review_id);
 
       if (updateError) {
-        setError(`Failed to save FSRS state: ${updateError.message}`);
+        setError(`Failed to save schedule: ${updateError.message}`);
         return;
       }
 
-      setProgress((prev) => {
-        const cur = prev[currentCard.card_review_id];
-        return {
-          ...prev,
-          [currentCard.card_review_id]: {
-            ...cur,
-            completed: true,
-            nextDueAt: update.due_at,
-            nextState: update.state,
-          },
-        };
-      });
-    })();
-  }, [
-    currentCard,
-    currentProgress,
-    feedbackForIndex,
-    supabase,
-    completingTick,
-  ]);
+      setProgress((prev) => ({
+        ...prev,
+        [card.card_review_id]: {
+          ...prev[card.card_review_id],
+          completed: true,
+          nextDueAt: update.due_at,
+          nextState: update.state,
+        },
+      }));
+    } catch (err) {
+      setError(
+        `Schedule update threw: ${err instanceof Error ? err.message : String(err)}`
+      );
+    }
+  }
 
   // ---- Submit one MCQ answer ----
-  function submitAnswer(mcqId: string, choice: Choice) {
+  function submitAnswer(choice: Choice) {
     if (!currentCard || !currentProgress) return;
+    const mcq = currentCard.mcqs[mcqStepIndex];
+    if (!mcq) return;
+
     setError(null);
+    setPendingChoice(choice);
 
     startSubmit(async () => {
       const { data, error: rpcError } = await supabase.rpc('submit_mcq_answer', {
-        p_quiz_question_id: mcqId,
+        p_quiz_question_id: mcq.id,
         p_selected_choice: choice,
       });
 
       if (rpcError) {
         setError(`Failed to submit: ${rpcError.message}`);
+        setPendingChoice(null);
         return;
       }
 
@@ -187,6 +172,7 @@ export function ReviewSession({ cards }: { cards: SessionCard[] }) {
 
       if (!result.ok) {
         setError(result.error ?? 'Submit failed.');
+        setPendingChoice(null);
         return;
       }
 
@@ -197,29 +183,34 @@ export function ReviewSession({ cards }: { cards: SessionCard[] }) {
         xp_awarded: result.xp_awarded ?? 0,
       };
 
-      let newAnswerIndex = -1;
-      setProgress((prev) => {
-        const cur = prev[currentCard.card_review_id];
-        newAnswerIndex = cur.answers.length;
-        return {
-          ...prev,
-          [currentCard.card_review_id]: {
-            ...cur,
-            answers: [...cur.answers, answer],
-          },
-        };
-      });
-      // Show feedback for the just-given answer.
-      setFeedbackForIndex(newAnswerIndex);
+      const newAnswers = [...currentProgress.answers, answer];
+
+      setProgress((prev) => ({
+        ...prev,
+        [currentCard.card_review_id]: {
+          ...prev[currentCard.card_review_id],
+          answers: newAnswers,
+        },
+      }));
+      setPendingChoice(null);
+
+      // If this was the last MCQ for the card, kick off the FSRS state write
+      // immediately so the wrap-up has it ready (or close to ready) by the
+      // time the student clicks Continue.
+      if (newAnswers.length === currentCard.mcqs.length) {
+        await completeCard(currentCard, newAnswers);
+      }
     });
   }
 
-  function dismissFeedback() {
-    setFeedbackForIndex(null);
+  function advanceMcq() {
+    setMcqStepIndex((i) => i + 1);
   }
 
-  function advanceToNextCard() {
+  function advanceCard() {
     setCardIndex((i) => i + 1);
+    setMcqStepIndex(0);
+    setPendingChoice(null);
   }
 
   // ============================================================================
@@ -270,19 +261,11 @@ export function ReviewSession({ cards }: { cards: SessionCard[] }) {
 
   if (!currentCard || !currentProgress) return null;
 
-  const mcqIndex = currentProgress.answers.length;
-  const allMcqsAnswered = mcqIndex >= currentCard.mcqs.length;
-  const showingFeedback = feedbackForIndex !== null;
-  const feedbackAnswer =
-    feedbackForIndex !== null ? currentProgress.answers[feedbackForIndex] : null;
-  const currentMcq = !allMcqsAnswered ? currentCard.mcqs[mcqIndex] : undefined;
+  const allMcqsAnswered = mcqStepIndex >= currentCard.mcqs.length;
+  const currentMcq = !allMcqsAnswered ? currentCard.mcqs[mcqStepIndex] : undefined;
+  const currentAnswer: Answer | undefined = currentProgress.answers[mcqStepIndex];
 
   const progressValue = (cardIndex / totalCards) * 100;
-
-  // Display the 1-based index of the question the user is on (or just answered).
-  const displayedQuestionNumber = showingFeedback
-    ? (feedbackForIndex ?? 0) + 1
-    : Math.min(mcqIndex + 1, currentCard.mcqs.length);
 
   return (
     <div className="flex flex-col gap-4">
@@ -302,7 +285,7 @@ export function ReviewSession({ cards }: { cards: SessionCard[] }) {
           <h2 className="text-2xl font-bold text-slate-900">{currentCard.headline}</h2>
           {!allMcqsAnswered && (
             <p className="text-xs text-slate-500">
-              Question {displayedQuestionNumber} of {currentCard.mcqs.length}
+              Question {mcqStepIndex + 1} of {currentCard.mcqs.length}
             </p>
           )}
         </CardContent>
@@ -310,15 +293,13 @@ export function ReviewSession({ cards }: { cards: SessionCard[] }) {
 
       {error && <p className="text-sm text-red-600">{error}</p>}
 
-      {/* Branch on session state: feedback, MCQ, or wrap-up. */}
-      {showingFeedback && feedbackAnswer ? (
-        <AnswerFeedback answer={feedbackAnswer} onNext={dismissFeedback} />
-      ) : !allMcqsAnswered && currentMcq ? (
+      {!allMcqsAnswered && currentMcq ? (
         <McqStep
-          key={currentMcq.id}
           mcq={currentMcq}
-          onSubmit={(choice) => submitAnswer(currentMcq.id, choice)}
-          disabled={isSubmitting}
+          pendingChoice={pendingChoice}
+          answer={currentAnswer ?? null}
+          onSubmit={submitAnswer}
+          onContinue={advanceMcq}
         />
       ) : (
         <CardWrapUp
@@ -327,8 +308,7 @@ export function ReviewSession({ cards }: { cards: SessionCard[] }) {
           completed={currentProgress.completed}
           nextDueAt={currentProgress.nextDueAt}
           nextState={currentProgress.nextState}
-          onNextCard={advanceToNextCard}
-          pending={!currentProgress.completed}
+          onNextCard={advanceCard}
         />
       )}
     </div>
@@ -336,78 +316,105 @@ export function ReviewSession({ cards }: { cards: SessionCard[] }) {
 }
 
 // ============================================================================
-// MCQ step — 4 choice buttons
+// McqStep — buttons + inline feedback all in one card
 // ============================================================================
 
 function McqStep({
   mcq,
+  pendingChoice,
+  answer,
   onSubmit,
-  disabled,
+  onContinue,
 }: {
   mcq: SessionCard['mcqs'][number];
+  pendingChoice: Choice | null;
+  answer: Answer | null;
   onSubmit: (choice: Choice) => void;
-  disabled: boolean;
+  onContinue: () => void;
 }) {
+  const isAnswered = answer !== null;
+  const isPending = pendingChoice !== null && answer === null;
+
   return (
     <Card>
       <CardContent className="flex flex-col gap-4 pt-6">
         <p className="text-base font-medium text-slate-900">{mcq.question_text}</p>
+
         <div className="grid grid-cols-1 gap-2">
-          {CHOICES.map((letter) => (
-            <Button
-              key={letter}
-              type="button"
-              variant="outline"
-              onClick={() => onSubmit(letter)}
-              disabled={disabled}
-              className="h-auto justify-start whitespace-normal py-3 text-left"
+          {CHOICES.map((letter) => {
+            const isSelected = answer?.selected === letter;
+            const isCorrect = answer?.correct_choice === letter;
+            const isPendingThis = pendingChoice === letter && answer === null;
+
+            // Style by phase. Order matters: answered > pending > idle.
+            let styleClasses = '';
+            let icon: React.ReactNode = null;
+
+            if (isAnswered) {
+              if (isCorrect && isSelected) {
+                styleClasses = 'border-green-400 bg-green-50 text-green-900';
+                icon = <Check className="size-4 text-green-700" />;
+              } else if (isCorrect && !isSelected) {
+                // Reveal correct answer when user got it wrong
+                styleClasses = 'border-green-400 bg-green-50/60 text-green-900';
+                icon = <Check className="size-4 text-green-700" />;
+              } else if (!isCorrect && isSelected) {
+                styleClasses = 'border-red-400 bg-red-50 text-red-900';
+                icon = <X className="size-4 text-red-700" />;
+              } else {
+                styleClasses = 'border-slate-200 bg-slate-50 text-slate-500 opacity-60';
+              }
+            } else if (isPendingThis) {
+              styleClasses = 'border-blue-400 bg-blue-50 text-blue-900';
+              icon = <Loader2 className="size-4 animate-spin text-blue-700" />;
+            } else if (isPending) {
+              // Another choice is pending — dim this one
+              styleClasses = 'border-slate-200 bg-white text-slate-400 opacity-50';
+            }
+
+            return (
+              <button
+                key={letter}
+                type="button"
+                onClick={() => onSubmit(letter)}
+                disabled={isAnswered || isPending}
+                className={cn(
+                  'flex items-center gap-3 rounded-md border bg-white px-4 py-3 text-left text-sm transition-colors',
+                  'disabled:cursor-default',
+                  !isAnswered && !isPending &&
+                    'border-slate-200 text-slate-900 hover:border-blue-300 hover:bg-blue-50/40',
+                  styleClasses
+                )}
+              >
+                <span className="font-semibold text-slate-500">
+                  {letter.toUpperCase()}
+                </span>
+                <span className="flex-1">
+                  {mcq[`choice_${letter}` as const]}
+                </span>
+                {icon}
+              </button>
+            );
+          })}
+        </div>
+
+        {isAnswered && answer && (
+          <div className="flex items-center justify-between gap-3 border-t border-slate-200 pt-3">
+            <p
+              className={cn(
+                'text-sm font-medium',
+                answer.is_correct ? 'text-green-700' : 'text-red-700'
+              )}
             >
-              <span className="mr-2 font-semibold text-slate-500">
-                {letter.toUpperCase()}
-              </span>
-              <span>{mcq[`choice_${letter}` as const]}</span>
+              {answer.is_correct
+                ? `Correct — +${answer.xp_awarded} XP`
+                : `Wrong — the answer was ${answer.correct_choice.toUpperCase()}`}
+            </p>
+            <Button type="button" size="sm" onClick={onContinue}>
+              Continue
             </Button>
-          ))}
-        </div>
-      </CardContent>
-    </Card>
-  );
-}
-
-// ============================================================================
-// Feedback after an MCQ — Continue dismisses
-// ============================================================================
-
-function AnswerFeedback({ answer, onNext }: { answer: Answer; onNext: () => void }) {
-  return (
-    <Card
-      className={cn(
-        answer.is_correct
-          ? 'border-green-300 bg-green-50/40'
-          : 'border-red-300 bg-red-50/40'
-      )}
-    >
-      <CardContent className="flex flex-col gap-3 py-4 sm:flex-row sm:items-center sm:justify-between">
-        <div className="flex items-center gap-2">
-          {answer.is_correct ? (
-            <>
-              <Check className="size-5 text-green-700" />
-              <span className="text-sm font-medium text-green-800">
-                Correct — +{answer.xp_awarded} XP
-              </span>
-            </>
-          ) : (
-            <>
-              <X className="size-5 text-red-700" />
-              <span className="text-sm font-medium text-red-800">
-                Wrong — the answer was {answer.correct_choice.toUpperCase()}
-              </span>
-            </>
-          )}
-        </div>
-        <Button type="button" size="sm" onClick={onNext}>
-          Continue
-        </Button>
+          </div>
+        )}
       </CardContent>
     </Card>
   );
@@ -424,7 +431,6 @@ function CardWrapUp({
   nextDueAt,
   nextState,
   onNextCard,
-  pending,
 }: {
   card: SessionCard;
   answers: Answer[];
@@ -432,7 +438,6 @@ function CardWrapUp({
   nextDueAt: string | null;
   nextState: DbState | null;
   onNextCard: () => void;
-  pending: boolean;
 }) {
   const correctCount = answers.filter((a) => a.is_correct).length;
   const total = answers.length;
@@ -461,7 +466,10 @@ function CardWrapUp({
               {nextState && ` · state: ${nextState}`}
             </p>
           ) : (
-            <p className="text-xs text-slate-500">Updating schedule…</p>
+            <p className="flex items-center gap-2 text-xs text-slate-500">
+              <Loader2 className="size-3 animate-spin" />
+              Updating schedule…
+            </p>
           )}
         </CardContent>
       </Card>
@@ -480,8 +488,8 @@ function CardWrapUp({
       </Card>
 
       <div className="flex justify-end">
-        <Button type="button" onClick={onNextCard} disabled={pending}>
-          {pending ? 'Saving…' : 'Next card'}
+        <Button type="button" onClick={onNextCard} disabled={!completed}>
+          {completed ? 'Next card' : 'Saving…'}
         </Button>
       </div>
     </>
