@@ -31,6 +31,9 @@ export default async function TeacherHome() {
           <Link href="/teacher/lessons" className={buttonVariants()}>
             Lessons
           </Link>
+          <Link href="/teacher/quests" className={buttonVariants({ variant: 'outline' })}>
+            Quests
+          </Link>
         </div>
 
         <SignOutButton />
