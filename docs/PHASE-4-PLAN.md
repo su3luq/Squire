@@ -424,7 +424,7 @@ After commit 6, **solo quest loop is end-to-end**. Co-op enrollment works (rows 
 | 8 | `feat(phase-5): coop post-matchmaking UI` | Team panel, shared submission editor, disbanded state, member list |
 | 9 | `feat(phase-5): teacher disband action + coop status detail panel` | Disband button + confirmation modal, `disband_coop_instance` RPC wiring |
 | 10 | `feat(phase-5): teacher analytics dashboard` | Weekly XP, completion rates, activity heatmap, card retention, live feed (per `PLAN.md §8 Phase 5`) |
-| 11 | `feat(phase-5): AI-likelihood classifier integration` | Score populated into `quest_submissions.ai_likelihood_score`, surfaced in review modal. Classifier choice TBD per `PLAN.md §10` |
+| 11 | **DEFERRED to v1.5** — `ai_likelihood_score` stays NULL. Decided 2026-05-22: no current cheating problem to solve, cleaner to skip a half-accurate signal than to ship something the teacher would need to mentally discount. Three options on the table if revisited: local heuristic (free, ~60-70%), HF Inference API (free tier ~30k/mo), paid API. |
 
 ---
 
