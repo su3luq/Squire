@@ -138,7 +138,6 @@ FSRS state per (student, card). Unique on (student_id, card_id).
 | Column | Type | Notes |
 |---|---|---|
 | id | uuid PK | |
-| class_id | uuid FK classes | |
 | title | text NOT NULL | |
 | description | text NOT NULL DEFAULT '' | markdown text; rendered with `react-markdown` + `remark-gfm`. Raw HTML disabled. |
 | quest_type | quest_type NOT NULL | one of 'solo', 'coop', 'daily_quiz' (migration 011 dropped 'quiz') |
@@ -153,16 +152,21 @@ FSRS state per (student, card). Unique on (student_id, card_id).
 
 Migration 011 dropped `quiz_questions` (jsonb) and `deliverable_types` (text[]). Quizzes only exist as the auto-generated daily quiz; all non-daily-quiz submissions are markdown text (no file uploads, no deliverable-type checkboxes).
 
+Migration 021 dropped `class_id` — quests are now class-agnostic. Every class sees every open quest. Class scoping moved to `coop_quest_instances.class_id` (for coop teams) and to submissions via the submitter's profile (for solo).
+
 ### `coop_quest_instances`
 | Column | Type | Notes |
 |---|---|---|
 | id | uuid PK | |
 | quest_id | uuid FK quests | |
+| class_id | uuid FK classes NOT NULL | the class this team belongs to. Matchmaking forms teams per class; no cross-class teams. (migration 021) |
 | status | coop_instance_status DEFAULT 'active' | matchmaking spawns instances directly at `'active'`; there is no `'forming'` phase (migration 018b) |
 | started_at | timestamptz | set at insert time by matchmaking |
 | submitted_at | timestamptz | |
 | reviewed_at | timestamptz | |
 | created_at | timestamptz | |
+
+Index: `idx_coop_instances_class` on `(class_id)` (migration 021).
 
 ### `quest_acceptances`
 | Column | Type | Notes |

@@ -17,10 +17,9 @@ export default async function QuestsListPage() {
     .from('quests')
     .select(
       `
-        id, title, quest_type, xp_reward, expires_at, closed_at, max_team_size, created_at, class_id,
-        classes(name),
+        id, title, quest_type, xp_reward, expires_at, closed_at, max_team_size, created_at,
         quest_acceptances(id, status, instance_id),
-        coop_quest_instances(id, status)
+        coop_quest_instances(id, status, class_id)
       `
     )
     .neq('quest_type', 'daily_quiz')
@@ -70,8 +69,8 @@ export default async function QuestsListPage() {
       </div>
 
       <p className="mb-6 text-xs text-slate-500">
-        Solo quests can be accepted by individual students. Co-op quests collect
-        enrollments until the matchmaking deadline, then form teams.
+        Quests are visible to every class. For co-op, matchmaking forms teams
+        inside each class independently at the deadline.
       </p>
 
       {!quests || quests.length === 0 ? (
@@ -96,39 +95,43 @@ export default async function QuestsListPage() {
             let indicator: React.ReactNode = null;
             if (q.quest_type === 'solo') {
               const active = acceptances.filter((a) => a.status === 'active').length;
-              indicator = <span>{active} active</span>;
+              indicator = <span>{active} active across all classes</span>;
             } else {
               const matchmakingDone = instances.length > 0;
               if (matchmakingDone) {
-                const sizes = instances
-                  .filter((i) => i.status !== 'disbanded')
-                  .map(
-                    (i) =>
-                      acceptances.filter(
-                        (a) => a.instance_id === i.id && a.status !== 'disbanded'
-                      ).length
-                  )
-                  .filter((n) => n > 0);
-                if (sizes.length === 0) {
+                const teamsByClass = new Map<string, number>();
+                for (const inst of instances) {
+                  if (inst.status === 'disbanded') continue;
+                  teamsByClass.set(
+                    inst.class_id,
+                    (teamsByClass.get(inst.class_id) ?? 0) + 1
+                  );
+                }
+                if (teamsByClass.size === 0) {
                   indicator = <span className="text-slate-500">All teams disbanded</span>;
                 } else {
-                  const counts = sizes.reduce<Map<number, number>>((acc, n) => {
-                    acc.set(n, (acc.get(n) ?? 0) + 1);
-                    return acc;
-                  }, new Map());
-                  const parts = Array.from(counts.entries())
-                    .sort((a, b) => b[0] - a[0])
-                    .map(([size, n]) => `${n} team${n === 1 ? '' : 's'} of ${size}`);
-                  indicator = <span>{parts.join(', ')}</span>;
+                  const totalTeams = Array.from(teamsByClass.values()).reduce(
+                    (a, b) => a + b,
+                    0
+                  );
+                  indicator = (
+                    <span>
+                      {totalTeams} {totalTeams === 1 ? 'team' : 'teams'} across{' '}
+                      {teamsByClass.size}{' '}
+                      {teamsByClass.size === 1 ? 'class' : 'classes'}
+                    </span>
+                  );
                 }
               } else {
-                const enrolled = acceptances.filter((a) => a.status === 'enrolled').length;
+                const enrolled = acceptances.filter((a) => a.status === 'enrolled')
+                  .length;
                 if (q.expires_at) {
                   const target = new Date(q.expires_at).getTime();
                   const cd = formatLongCountdown(target, now);
                   indicator = (
                     <span>
-                      {enrolled} enrolled · matchmaking {cd === 'now' ? 'pending' : `in ${cd}`}
+                      {enrolled} enrolled · matchmaking{' '}
+                      {cd === 'now' ? 'pending' : `in ${cd}`}
                     </span>
                   );
                 } else {
@@ -151,7 +154,7 @@ export default async function QuestsListPage() {
                             {q.quest_type}
                           </span>
                           <span className="text-xs text-slate-500">
-                            {q.classes?.name ?? 'Unknown class'} · +{q.xp_reward} XP
+                            +{q.xp_reward} XP
                           </span>
                         </CardDescription>
                       </div>

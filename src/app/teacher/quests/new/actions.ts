@@ -22,7 +22,6 @@ export async function createQuest(
   const { data, error } = await supabase
     .from('quests')
     .insert({
-      class_id: v.class_id,
       title: v.title.trim(),
       description: v.description ?? '',
       quest_type: v.quest_type,

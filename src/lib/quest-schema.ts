@@ -3,7 +3,6 @@ import { z } from 'zod';
 export const questFormSchema = z
   .object({
     quest_type: z.enum(['solo', 'coop']),
-    class_id: z.string().uuid({ message: 'Select a class.' }),
     title: z.string().trim().min(1, { message: 'Title is required.' }).max(200),
     description: z.string().default(''),
     xp_reward: z.coerce
@@ -43,7 +42,6 @@ export type QuestFormValues = z.infer<typeof questFormSchema>;
 
 export const emptyQuest: QuestFormValues = {
   quest_type: 'solo',
-  class_id: '',
   title: '',
   description: '',
   xp_reward: 20,

@@ -37,13 +37,14 @@ export default async function ReviewSubmissionPage({
       `
         id, status, text_content, word_count, teacher_feedback, submitted_at, reviewed_at,
         submitted_by, acceptance_id, instance_id,
-        profiles:submitted_by ( id, full_name ),
+        profiles:submitted_by ( id, full_name, class_id ),
         quest_acceptances:acceptance_id (
           id,
           quests:quest_id ( id, title, xp_reward, word_limit_min, quest_type )
         ),
         coop_quest_instances:instance_id (
           id,
+          class_id,
           quests:quest_id ( id, title, xp_reward, word_limit_min, quest_type )
         )
       `
@@ -61,10 +62,24 @@ export default async function ReviewSubmissionPage({
     quest_type: 'solo' | 'coop' | 'daily_quiz';
   };
   const accept = submission.quest_acceptances as { quests: Quest | null } | null;
-  const inst = submission.coop_quest_instances as { quests: Quest | null } | null;
+  const inst = submission.coop_quest_instances as {
+    class_id: string;
+    quests: Quest | null;
+  } | null;
   const quest = accept?.quests ?? inst?.quests ?? null;
-  const submitter = submission.profiles as { full_name: string } | null;
+  const submitter = submission.profiles as { full_name: string; class_id: string | null } | null;
   const isCoop = submission.instance_id !== null;
+  const classId = inst?.class_id ?? submitter?.class_id ?? null;
+
+  let className: string | null = null;
+  if (classId) {
+    const { data: cls } = await supabase
+      .from('classes')
+      .select('name')
+      .eq('id', classId)
+      .maybeSingle();
+    className = cls?.name ?? null;
+  }
 
   // For coop, surface the rest of the team for context
   let teamMembers: string[] = [];
@@ -97,6 +112,11 @@ export default async function ReviewSubmissionPage({
           >
             {isCoop ? 'co-op' : 'solo'}
           </span>
+          {className && (
+            <span className="rounded-full bg-slate-100 px-2 py-0.5 text-xs font-medium text-slate-700">
+              {className}
+            </span>
+          )}
           <span>+{quest?.xp_reward ?? 0} XP</span>
           <span>·</span>
           <span>

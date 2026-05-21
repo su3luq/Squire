@@ -191,6 +191,7 @@ export type Database = {
       }
       coop_quest_instances: {
         Row: {
+          class_id: string
           created_at: string
           id: string
           quest_id: string
@@ -200,6 +201,7 @@ export type Database = {
           submitted_at: string | null
         }
         Insert: {
+          class_id: string
           created_at?: string
           id?: string
           quest_id: string
@@ -209,6 +211,7 @@ export type Database = {
           submitted_at?: string | null
         }
         Update: {
+          class_id?: string
           created_at?: string
           id?: string
           quest_id?: string
@@ -218,6 +221,13 @@ export type Database = {
           submitted_at?: string | null
         }
         Relationships: [
+          {
+            foreignKeyName: "coop_quest_instances_class_id_fkey"
+            columns: ["class_id"]
+            isOneToOne: false
+            referencedRelation: "classes"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "coop_quest_instances_quest_id_fkey"
             columns: ["quest_id"]
@@ -579,7 +589,6 @@ export type Database = {
       quests: {
         Row: {
           availability_mode: Database["public"]["Enums"]["quest_availability_mode"]
-          class_id: string
           closed_at: string | null
           created_at: string
           description: string
@@ -594,7 +603,6 @@ export type Database = {
         }
         Insert: {
           availability_mode?: Database["public"]["Enums"]["quest_availability_mode"]
-          class_id: string
           closed_at?: string | null
           created_at?: string
           description?: string
@@ -609,7 +617,6 @@ export type Database = {
         }
         Update: {
           availability_mode?: Database["public"]["Enums"]["quest_availability_mode"]
-          class_id?: string
           closed_at?: string | null
           created_at?: string
           description?: string
@@ -622,15 +629,7 @@ export type Database = {
           word_limit_min?: number | null
           xp_reward?: number
         }
-        Relationships: [
-          {
-            foreignKeyName: "quests_class_id_fkey"
-            columns: ["class_id"]
-            isOneToOne: false
-            referencedRelation: "classes"
-            referencedColumns: ["id"]
-          },
-        ]
+        Relationships: []
       }
       review_attempts: {
         Row: {
@@ -934,6 +933,8 @@ export type Database = {
       count_words: { Args: { p_text: string }; Returns: number }
       disband_coop_instance: { Args: { p_instance_id: string }; Returns: Json }
       get_registration_state: { Args: never; Returns: Json }
+      is_my_acceptance: { Args: { p_acceptance_id: string }; Returns: boolean }
+      is_my_coop_instance: { Args: { p_instance_id: string }; Returns: boolean }
       is_registration_open: { Args: never; Returns: boolean }
       is_teacher: { Args: { uid?: string }; Returns: boolean }
       list_review_session: { Args: never; Returns: Json }

@@ -48,7 +48,6 @@ export async function updateQuest(
   }
 
   const update: QuestUpdate = {
-    class_id: v.class_id,
     title: v.title.trim(),
     description: v.description ?? '',
     xp_reward: v.xp_reward,

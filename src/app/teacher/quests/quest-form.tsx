@@ -18,21 +18,17 @@ import {
 
 type FormInput = z.input<typeof questFormSchema>;
 
-type ClassOption = { id: string; name: string };
-
 type QuestFormAction = (
   values: QuestFormValues
 ) => Promise<{ error: string | null; id?: string }>;
 
 export function QuestForm({
-  classes,
   initial,
   mode,
   action,
   cancelHref,
   lockCoopFields = false,
 }: {
-  classes: ClassOption[];
   initial?: QuestFormValues;
   mode: 'new' | 'edit';
   action: QuestFormAction;
@@ -56,11 +52,7 @@ export function QuestForm({
     formState: { errors },
   } = useForm<FormInput, unknown, QuestFormValues>({
     resolver: zodResolver(questFormSchema),
-    defaultValues:
-      initial ??
-      (classes.length === 1
-        ? { ...emptyQuest, class_id: classes[0].id }
-        : emptyQuest),
+    defaultValues: initial ?? emptyQuest,
   });
 
   const questType = watch('quest_type');
@@ -92,7 +84,8 @@ export function QuestForm({
         <header>
           <h2 className="text-lg font-semibold">Basics</h2>
           <p className="text-xs text-slate-500">
-            Type, class, title, and description.
+            Quests are visible to every class. For co-op, matchmaking forms teams
+            inside each class separately.
           </p>
         </header>
 
@@ -115,7 +108,7 @@ export function QuestForm({
                 {...register('quest_type')}
                 disabled={mode === 'edit'}
               />
-              <span>Co-op — teams formed via matchmaking</span>
+              <span>Co-op — teams formed via matchmaking (per class)</span>
             </label>
           </div>
           {mode === 'edit' && (
@@ -127,26 +120,6 @@ export function QuestForm({
             <p className="text-xs text-red-600">{errors.quest_type.message}</p>
           )}
         </fieldset>
-
-        <div className="space-y-2">
-          <Label htmlFor="class_id">Class</Label>
-          <select
-            id="class_id"
-            {...register('class_id')}
-            disabled={isPending}
-            className="w-full rounded-md border border-slate-300 bg-white px-3 py-2 text-sm shadow-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
-          >
-            <option value="">Select a class...</option>
-            {classes.map((c) => (
-              <option key={c.id} value={c.id}>
-                {c.name}
-              </option>
-            ))}
-          </select>
-          {errors.class_id && (
-            <p className="text-xs text-red-600">{errors.class_id.message}</p>
-          )}
-        </div>
 
         <div className="space-y-2">
           <Label htmlFor="title">Title</Label>

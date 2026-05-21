@@ -35,29 +35,34 @@ export default async function QuestDetailPage({
 
   const { data: quest } = await supabase
     .from('quests')
-    .select('*, classes(name)')
+    .select('*')
     .eq('id', id)
     .single();
 
   if (!quest) notFound();
 
+  // All non-archived classes (used to label per-class groupings)
   const { data: classes } = await supabase
     .from('classes')
     .select('id, name')
     .is('archived_at', null)
     .order('name');
 
+  const classNameById = new Map<string, string>(
+    (classes ?? []).map((c) => [c.id, c.name])
+  );
+
   const { data: acceptances } = await supabase
     .from('quest_acceptances')
     .select(
-      'id, status, instance_id, accepted_at, completed_at, profiles:student_id(id, full_name)'
+      'id, status, instance_id, accepted_at, completed_at, profiles:student_id(id, full_name, class_id)'
     )
     .eq('quest_id', id)
     .order('accepted_at', { ascending: false });
 
   const { data: instances } = await supabase
     .from('coop_quest_instances')
-    .select('id, status, started_at, submitted_at, reviewed_at')
+    .select('id, status, class_id, started_at, submitted_at, reviewed_at')
     .eq('quest_id', id)
     .order('started_at', { ascending: true });
 
@@ -66,9 +71,9 @@ export default async function QuestDetailPage({
     .select(
       `
         id, status, submitted_at, reviewed_at, word_count, acceptance_id, instance_id, submitted_by,
-        profiles:submitted_by(id, full_name),
+        profiles:submitted_by(id, full_name, class_id),
         quest_acceptances:acceptance_id(quest_id),
-        coop_quest_instances:instance_id(quest_id)
+        coop_quest_instances:instance_id(quest_id, class_id)
       `
     )
     .or(
@@ -76,8 +81,6 @@ export default async function QuestDetailPage({
     )
     .order('submitted_at', { ascending: false });
 
-  // The .or filter above sometimes returns rows whose join filtered to null;
-  // post-filter just to be safe.
   const filteredSubmissions = (submissions ?? []).filter((s) => {
     const a = s.quest_acceptances as { quest_id: string } | null;
     const i = s.coop_quest_instances as { quest_id: string } | null;
@@ -95,6 +98,30 @@ export default async function QuestDetailPage({
     quest.expires_at !== null &&
     // eslint-disable-next-line react-hooks/purity -- Server Component rendered per request; "now" is deliberate.
     new Date(quest.expires_at).getTime() <= Date.now();
+
+  // Group acceptances by class (for coop pre-matchmaking + general overview)
+  type AcceptanceRow = NonNullable<typeof acceptances>[number];
+  const acceptancesByClass = new Map<string, AcceptanceRow[]>();
+  for (const a of acceptances ?? []) {
+    const profile = a.profiles as { class_id: string | null } | null;
+    const cid = profile?.class_id ?? '__unknown__';
+    if (!acceptancesByClass.has(cid)) acceptancesByClass.set(cid, []);
+    acceptancesByClass.get(cid)!.push(a);
+  }
+
+  // Group instances by class
+  type InstanceRow = NonNullable<typeof instances>[number];
+  const instancesByClass = new Map<string, InstanceRow[]>();
+  for (const inst of instances ?? []) {
+    if (!instancesByClass.has(inst.class_id))
+      instancesByClass.set(inst.class_id, []);
+    instancesByClass.get(inst.class_id)!.push(inst);
+  }
+
+  function classLabel(classId: string): string {
+    if (classId === '__unknown__') return 'Unassigned';
+    return classNameById.get(classId) ?? 'Unknown class';
+  }
 
   return (
     <main className="container mx-auto max-w-4xl p-6">
@@ -114,8 +141,6 @@ export default async function QuestDetailPage({
             >
               {quest.quest_type}
             </span>
-            <span>{quest.classes?.name ?? 'Unknown class'}</span>
-            <span>·</span>
             <span>+{quest.xp_reward} XP</span>
             {quest.quest_type === 'coop' && quest.max_team_size && (
               <>
@@ -159,7 +184,7 @@ export default async function QuestDetailPage({
           </CardContent>
         </Card>
 
-        {/* Acceptances */}
+        {/* Acceptances / enrollments — grouped by class */}
         <Card>
           <CardHeader>
             <CardTitle>
@@ -174,83 +199,113 @@ export default async function QuestDetailPage({
                 {quest.quest_type === 'coop' ? 'enrolled' : 'accepted'} yet.
               </p>
             ) : (
-              <ul className="divide-y divide-slate-200 rounded-md border border-slate-200">
-                {(acceptances ?? []).map((a) => {
-                  const student = a.profiles as { id: string; full_name: string } | null;
-                  return (
-                    <li
-                      key={a.id}
-                      className="flex items-center justify-between px-3 py-2 text-sm"
-                    >
-                      <span className="font-medium text-slate-900">
-                        {student?.full_name ?? '(unknown student)'}
-                      </span>
-                      <span className="text-xs text-slate-500">
-                        {a.status}
-                        {a.completed_at && ` · ${formatSaigon(a.completed_at)}`}
-                      </span>
-                    </li>
-                  );
-                })}
-              </ul>
+              <div className="space-y-4">
+                {Array.from(acceptancesByClass.entries())
+                  .sort(([a], [b]) =>
+                    classLabel(a).localeCompare(classLabel(b))
+                  )
+                  .map(([classId, list]) => (
+                    <div key={classId}>
+                      <h3 className="mb-2 text-sm font-semibold text-slate-700">
+                        {classLabel(classId)} ({list.length})
+                      </h3>
+                      <ul className="divide-y divide-slate-200 rounded-md border border-slate-200">
+                        {list.map((a) => {
+                          const student = a.profiles as
+                            | { id: string; full_name: string }
+                            | null;
+                          return (
+                            <li
+                              key={a.id}
+                              className="flex items-center justify-between px-3 py-2 text-sm"
+                            >
+                              <span className="font-medium text-slate-900">
+                                {student?.full_name ?? '(unknown student)'}
+                              </span>
+                              <span className="text-xs text-slate-500">
+                                {a.status}
+                                {a.completed_at &&
+                                  ` · ${formatSaigon(a.completed_at)}`}
+                              </span>
+                            </li>
+                          );
+                        })}
+                      </ul>
+                    </div>
+                  ))}
+              </div>
             )}
           </CardContent>
         </Card>
 
-        {/* Coop instances */}
+        {/* Coop instances — grouped by class */}
         {quest.quest_type === 'coop' && matchmakingDone && (
           <Card>
             <CardHeader>
               <CardTitle>Teams ({(instances ?? []).length})</CardTitle>
             </CardHeader>
             <CardContent>
-              <ul className="space-y-3">
-                {(instances ?? []).map((inst) => {
-                  const members = (acceptances ?? []).filter(
-                    (a) => a.instance_id === inst.id
-                  );
-                  return (
-                    <li
-                      key={inst.id}
-                      className="rounded-md border border-slate-200 p-3"
-                    >
-                      <div className="flex items-start justify-between gap-3">
-                        <div className="min-w-0 flex-1">
-                          <p className="text-sm font-medium">
-                            Team of {members.length} ·{' '}
-                            <span
-                              className={
-                                inst.status === 'disbanded'
-                                  ? 'text-slate-500'
-                                  : inst.status === 'passed'
-                                    ? 'text-green-700'
-                                    : 'text-slate-700'
-                              }
+              <div className="space-y-4">
+                {Array.from(instancesByClass.entries())
+                  .sort(([a], [b]) =>
+                    classLabel(a).localeCompare(classLabel(b))
+                  )
+                  .map(([classId, list]) => (
+                    <div key={classId}>
+                      <h3 className="mb-2 text-sm font-semibold text-slate-700">
+                        {classLabel(classId)} ({list.length}{' '}
+                        {list.length === 1 ? 'team' : 'teams'})
+                      </h3>
+                      <ul className="space-y-3">
+                        {list.map((inst) => {
+                          const members = (acceptances ?? []).filter(
+                            (a) => a.instance_id === inst.id
+                          );
+                          return (
+                            <li
+                              key={inst.id}
+                              className="rounded-md border border-slate-200 p-3"
                             >
-                              {inst.status}
-                            </span>
-                          </p>
-                          <ul className="mt-1 text-xs text-slate-600">
-                            {members.map((m) => {
-                              const s = m.profiles as
-                                | { id: string; full_name: string }
-                                | null;
-                              return (
-                                <li key={m.id}>
-                                  • {s?.full_name ?? '(unknown)'} ({m.status})
-                                </li>
-                              );
-                            })}
-                          </ul>
-                        </div>
-                        {inst.status === 'active' && (
-                          <DisbandInstanceButton instanceId={inst.id} />
-                        )}
-                      </div>
-                    </li>
-                  );
-                })}
-              </ul>
+                              <div className="flex items-start justify-between gap-3">
+                                <div className="min-w-0 flex-1">
+                                  <p className="text-sm font-medium">
+                                    Team of {members.length} ·{' '}
+                                    <span
+                                      className={
+                                        inst.status === 'disbanded'
+                                          ? 'text-slate-500'
+                                          : inst.status === 'passed'
+                                            ? 'text-green-700'
+                                            : 'text-slate-700'
+                                      }
+                                    >
+                                      {inst.status}
+                                    </span>
+                                  </p>
+                                  <ul className="mt-1 text-xs text-slate-600">
+                                    {members.map((m) => {
+                                      const s = m.profiles as
+                                        | { id: string; full_name: string }
+                                        | null;
+                                      return (
+                                        <li key={m.id}>
+                                          • {s?.full_name ?? '(unknown)'} ({m.status})
+                                        </li>
+                                      );
+                                    })}
+                                  </ul>
+                                </div>
+                                {inst.status === 'active' && (
+                                  <DisbandInstanceButton instanceId={inst.id} />
+                                )}
+                              </div>
+                            </li>
+                          );
+                        })}
+                      </ul>
+                    </div>
+                  ))}
+              </div>
             </CardContent>
           </Card>
         )}
@@ -270,7 +325,7 @@ export default async function QuestDetailPage({
               <ul className="divide-y divide-slate-200 rounded-md border border-slate-200">
                 {filteredSubmissions.map((s) => {
                   const submitter = s.profiles as
-                    | { id: string; full_name: string }
+                    | { id: string; full_name: string; class_id: string | null }
                     | null;
                   return (
                     <li
@@ -282,6 +337,9 @@ export default async function QuestDetailPage({
                           {submitter?.full_name ?? '(unknown)'}
                         </span>
                         <span className="ml-2 text-xs text-slate-500">
+                          {submitter?.class_id
+                            ? `${classLabel(submitter.class_id)} · `
+                            : ''}
                           {s.word_count ?? 0} words · {formatSaigon(s.submitted_at)}
                         </span>
                       </div>
@@ -310,11 +368,7 @@ export default async function QuestDetailPage({
             <CardTitle>Edit</CardTitle>
           </CardHeader>
           <CardContent>
-            <EditQuestForm
-              quest={quest}
-              classes={classes ?? []}
-              lockCoopFields={lockCoopFields}
-            />
+            <EditQuestForm quest={quest} lockCoopFields={lockCoopFields} />
           </CardContent>
         </Card>
 
