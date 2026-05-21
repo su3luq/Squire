@@ -448,6 +448,7 @@ export type Database = {
           id: string
           instance_id: string | null
           quest_id: string
+          quest_type: Database["public"]["Enums"]["quest_type"]
           status: Database["public"]["Enums"]["quest_acceptance_status"]
           student_id: string
         }
@@ -457,6 +458,7 @@ export type Database = {
           id?: string
           instance_id?: string | null
           quest_id: string
+          quest_type: Database["public"]["Enums"]["quest_type"]
           status?: Database["public"]["Enums"]["quest_acceptance_status"]
           student_id: string
         }
@@ -466,6 +468,7 @@ export type Database = {
           id?: string
           instance_id?: string | null
           quest_id?: string
+          quest_type?: Database["public"]["Enums"]["quest_type"]
           status?: Database["public"]["Enums"]["quest_acceptance_status"]
           student_id?: string
         }
@@ -504,9 +507,7 @@ export type Database = {
         Row: {
           acceptance_id: string | null
           ai_likelihood_score: number | null
-          audio_url: string | null
           id: string
-          image_urls: string[] | null
           instance_id: string | null
           reviewed_at: string | null
           status: Database["public"]["Enums"]["quest_submission_status"]
@@ -515,14 +516,11 @@ export type Database = {
           teacher_feedback: string | null
           text_content: string | null
           word_count: number | null
-          youtube_link: string | null
         }
         Insert: {
           acceptance_id?: string | null
           ai_likelihood_score?: number | null
-          audio_url?: string | null
           id?: string
-          image_urls?: string[] | null
           instance_id?: string | null
           reviewed_at?: string | null
           status?: Database["public"]["Enums"]["quest_submission_status"]
@@ -531,14 +529,11 @@ export type Database = {
           teacher_feedback?: string | null
           text_content?: string | null
           word_count?: number | null
-          youtube_link?: string | null
         }
         Update: {
           acceptance_id?: string | null
           ai_likelihood_score?: number | null
-          audio_url?: string | null
           id?: string
-          image_urls?: string[] | null
           instance_id?: string | null
           reviewed_at?: string | null
           status?: Database["public"]["Enums"]["quest_submission_status"]
@@ -547,7 +542,6 @@ export type Database = {
           teacher_feedback?: string | null
           text_content?: string | null
           word_count?: number | null
-          youtube_link?: string | null
         }
         Relationships: [
           {
@@ -588,9 +582,9 @@ export type Database = {
           created_at: string
           description: string
           expires_at: string | null
-          group_size: number | null
           id: string
           max_instances: number | null
+          max_team_size: number | null
           quest_type: Database["public"]["Enums"]["quest_type"]
           title: string
           word_limit_min: number | null
@@ -603,9 +597,9 @@ export type Database = {
           created_at?: string
           description?: string
           expires_at?: string | null
-          group_size?: number | null
           id?: string
           max_instances?: number | null
+          max_team_size?: number | null
           quest_type: Database["public"]["Enums"]["quest_type"]
           title: string
           word_limit_min?: number | null
@@ -618,9 +612,9 @@ export type Database = {
           created_at?: string
           description?: string
           expires_at?: string | null
-          group_size?: number | null
           id?: string
           max_instances?: number | null
+          max_team_size?: number | null
           quest_type?: Database["public"]["Enums"]["quest_type"]
           title?: string
           word_limit_min?: number | null
@@ -944,6 +938,7 @@ export type Database = {
           name: string
         }[]
       }
+      recompute_learning_velocity: { Args: never; Returns: Json }
       register_student: {
         Args: {
           p_age: number
@@ -967,15 +962,15 @@ export type Database = {
     }
     Enums: {
       card_review_state: "new" | "learning" | "review" | "relearning"
-      coop_instance_status:
-        | "forming"
+      coop_instance_status: "active" | "submitted" | "passed" | "disbanded"
+      push_platform: "ios" | "android" | "web"
+      quest_acceptance_status:
         | "active"
         | "submitted"
         | "passed"
         | "failed"
+        | "enrolled"
         | "disbanded"
-      push_platform: "ios" | "android" | "web"
-      quest_acceptance_status: "active" | "submitted" | "passed" | "failed"
       quest_availability_mode:
         | "open"
         | "timed"
@@ -1112,16 +1107,16 @@ export const Constants = {
   public: {
     Enums: {
       card_review_state: ["new", "learning", "review", "relearning"],
-      coop_instance_status: [
-        "forming",
+      coop_instance_status: ["active", "submitted", "passed", "disbanded"],
+      push_platform: ["ios", "android", "web"],
+      quest_acceptance_status: [
         "active",
         "submitted",
         "passed",
         "failed",
+        "enrolled",
         "disbanded",
       ],
-      push_platform: ["ios", "android", "web"],
-      quest_acceptance_status: ["active", "submitted", "passed", "failed"],
       quest_availability_mode: [
         "open",
         "timed",

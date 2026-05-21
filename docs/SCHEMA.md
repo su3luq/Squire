@@ -13,12 +13,16 @@ Authoritative reference for all 16 tables in the `public` schema of the SQUIRE S
 user_role           : 'teacher' | 'student'
 quest_type          : 'solo' | 'coop' | 'daily_quiz'
 quest_availability_mode : 'open' | 'timed' | 'whole_class' | 'limited_instances'
-coop_instance_status: 'forming' | 'active' | 'submitted' | 'passed' | 'failed' | 'disbanded'
-quest_acceptance_status : 'active' | 'submitted' | 'passed' | 'failed'
+coop_instance_status: 'active' | 'submitted' | 'passed' | 'disbanded'
+quest_acceptance_status : 'active' | 'enrolled' | 'submitted' | 'passed' | 'failed' | 'disbanded'
 quest_submission_status : 'pending_review' | 'passed' | 'failed'
 card_review_state   : 'new' | 'learning' | 'review' | 'relearning'
 push_platform       : 'ios' | 'android' | 'web'
 ```
+
+**Lifecycle notes (post-migration 018):**
+- `coop_instance_status` lost `'forming'` and `'failed'`. Matchmaking spawns instances directly at `'active'`; failure lives only at the submission level.
+- `quest_acceptance_status` gained `'enrolled'` (student enrolled in a pre-matchmaking coop quest, no team yet) and `'disbanded'` (teacher released the instance; the row is preserved for audit but does not block re-enrollment).
 
 ---
 
@@ -140,7 +144,7 @@ FSRS state per (student, card). Unique on (student_id, card_id).
 | quest_type | quest_type NOT NULL | one of 'solo', 'coop', 'daily_quiz' (migration 011 dropped 'quiz') |
 | word_limit_min | int | nullable |
 | xp_reward | int NOT NULL > 0 | |
-| group_size | int | required if `quest_type='coop'`, ≥2 (enforced by `coop_has_group_size` CHECK) |
+| max_team_size | int | required if `quest_type='coop'`, ≥2 (enforced by `coop_has_max_team_size` CHECK). Renamed from `group_size` in migration 018b — semantic clarity: this is the cap, not a guaranteed group size, since matchmaking may form smaller teams when enrollment doesn't divide evenly. |
 | max_instances | int | nullable; null = unlimited |
 | availability_mode | quest_availability_mode DEFAULT 'open' | |
 | expires_at | timestamptz | for timed quests |
@@ -154,8 +158,8 @@ Migration 011 dropped `quiz_questions` (jsonb) and `deliverable_types` (text[]).
 |---|---|---|
 | id | uuid PK | |
 | quest_id | uuid FK quests | |
-| status | coop_instance_status DEFAULT 'forming' | |
-| started_at | timestamptz | set when status flips to 'active' |
+| status | coop_instance_status DEFAULT 'active' | matchmaking spawns instances directly at `'active'`; there is no `'forming'` phase (migration 018b) |
+| started_at | timestamptz | set at insert time by matchmaking |
 | submitted_at | timestamptz | |
 | reviewed_at | timestamptz | |
 | created_at | timestamptz | |
@@ -166,15 +170,16 @@ Migration 011 dropped `quiz_questions` (jsonb) and `deliverable_types` (text[]).
 | id | uuid PK | |
 | student_id | uuid FK profiles | |
 | quest_id | uuid FK quests | |
-| instance_id | uuid FK coop_quest_instances | NULL for solo |
+| instance_id | uuid FK coop_quest_instances | NULL for solo and for pre-matchmaking coop (`status='enrolled'`); set when matchmaking assigns the row to a team |
 | status | quest_acceptance_status DEFAULT 'active' | |
+| quest_type | quest_type NOT NULL | denormalized from `quests.quest_type`; auto-populated by `trg_quest_acceptances_set_quest_type` BEFORE INSERT trigger. Required because Postgres partial unique index predicates cannot use subqueries or joins (migration 018b) |
 | accepted_at | timestamptz DEFAULT now() | |
 | completed_at | timestamptz | |
 
-**Constraints via partial unique indexes:**
-- One active solo per student
-- One active coop per student
-- A student cannot accept the same coop quest twice (incl. completed)
+**Constraints via partial unique indexes (rebuilt in migration 018b):**
+- `idx_one_active_solo_per_student` — `WHERE quest_type = 'solo' AND status = 'active'`
+- `idx_one_active_coop_per_student` — `WHERE quest_type = 'coop' AND status IN ('active', 'enrolled')`
+- `idx_no_repeat_coop_per_student` — `(student_id, quest_id) WHERE quest_type = 'coop' AND status IN ('active', 'passed')`. Excludes `'disbanded'` and `'enrolled'`, so a student whose team was disbanded by the teacher can re-enroll in the same quest.
 
 ### `quest_submissions`
 | Column | Type | Notes |
@@ -183,18 +188,20 @@ Migration 011 dropped `quiz_questions` (jsonb) and `deliverable_types` (text[]).
 | acceptance_id | uuid FK quest_acceptances | for solo submissions |
 | instance_id | uuid FK coop_quest_instances | for coop submissions |
 | submitted_by | uuid FK profiles | which student submitted |
-| text_content | text | |
-| audio_url | text | |
-| image_urls | text[] | |
-| youtube_link | text | |
-| word_count | int | |
-| ai_likelihood_score | numeric(4,3) | 0.000-1.000 |
+| text_content | text | markdown body; media is embedded via standard markdown image / link / iframe syntax |
+| word_count | int | computed server-side in `submit_quest` RPC |
+| ai_likelihood_score | numeric(4,3) | 0.000-1.000; Phase 5 classifier |
 | status | quest_submission_status DEFAULT 'pending_review' | |
 | teacher_feedback | text | required on fail |
 | reviewed_at | timestamptz | |
 | submitted_at | timestamptz DEFAULT now() | |
 
-**Constraint:** exactly one of `acceptance_id` or `instance_id` must be non-null.
+Migration 018b dropped `audio_url`, `image_urls`, `youtube_link` — submissions are markdown-only per Plan B (external URLs in markdown, no file uploads).
+
+**Constraints:**
+- Exactly one of `acceptance_id` or `instance_id` must be non-null.
+- `uq_one_pending_per_acceptance` — partial unique on `(acceptance_id) WHERE status = 'pending_review' AND acceptance_id IS NOT NULL`. Prevents a second pending submission while one is awaiting review (solo).
+- `uq_one_pending_per_instance` — partial unique on `(instance_id) WHERE status = 'pending_review' AND instance_id IS NOT NULL`. Same guarantee for coop (one team submission at a time).
 
 ### `review_attempts`
 One row per MCQ answer (migration 015). Inserts only via `submit_mcq_answer` SECURITY DEFINER RPC — never directly from client code. RLS: teacher reads all; student reads own. No INSERT/UPDATE/DELETE policies.
@@ -262,6 +269,7 @@ Append-only audit trail. **Insert here to award XP; trigger auto-updates `profil
 - `xp_ledger AFTER INSERT` → updates `profiles.xp_total`, recomputes `current_rank` via `compute_rank_from_xp(xp)` function
 - `teacher_notes BEFORE UPDATE` → sets `updated_at = now()`
 - `student_assessments BEFORE UPDATE` → sets `updated_at = now()` via `set_updated_at()`
+- `quest_acceptances BEFORE INSERT` → `trg_quest_acceptances_set_quest_type` populates `quest_type` from the parent quest if NULL (migration 018b)
 
 ---
 
