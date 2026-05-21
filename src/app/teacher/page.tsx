@@ -19,6 +19,11 @@ export default async function TeacherHome() {
 
   if (!profile) redirect('/login');
 
+  const { count: pendingReviewCount } = await supabase
+    .from('quest_submissions')
+    .select('id', { count: 'exact', head: true })
+    .eq('status', 'pending_review');
+
   return (
     <main className="flex min-h-screen items-center justify-center p-6">
       <div className="w-full max-w-md space-y-6 rounded-lg bg-white p-8 text-center shadow-sm">
@@ -33,6 +38,17 @@ export default async function TeacherHome() {
           </Link>
           <Link href="/teacher/quests" className={buttonVariants({ variant: 'outline' })}>
             Quests
+          </Link>
+          <Link
+            href="/teacher/review"
+            className={buttonVariants({ variant: 'outline' })}
+          >
+            Review queue
+            {(pendingReviewCount ?? 0) > 0 && (
+              <span className="ml-2 rounded-full bg-amber-100 px-2 py-0.5 text-xs font-medium text-amber-900">
+                {pendingReviewCount}
+              </span>
+            )}
           </Link>
         </div>
 
