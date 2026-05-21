@@ -11,6 +11,8 @@ export type Json =
   | Json[]
 
 export type Database = {
+  // Allows to automatically instantiate createClient with right options
+  // instead of createClient<Database, { PostgrestVersion: 'XX' }>(URL, KEY)
   __InternalSupabase: {
     PostgrestVersion: "14.5"
   }
@@ -922,11 +924,15 @@ export type Database = {
       }
     }
     Functions: {
+      accept_coop_quest: { Args: { p_quest_id: string }; Returns: Json }
+      accept_solo_quest: { Args: { p_quest_id: string }; Returns: Json }
       admin_create_teacher: {
         Args: { p_email: string; p_full_name: string; p_password: string }
         Returns: string
       }
       compute_rank_from_xp: { Args: { xp: number }; Returns: number }
+      count_words: { Args: { p_text: string }; Returns: number }
+      disband_coop_instance: { Args: { p_instance_id: string }; Returns: Json }
       get_registration_state: { Args: never; Returns: Json }
       is_registration_open: { Args: never; Returns: boolean }
       is_teacher: { Args: { uid?: string }; Returns: boolean }
@@ -949,10 +955,24 @@ export type Database = {
         }
         Returns: Json
       }
+      review_submission: {
+        Args: { p_feedback: string; p_pass: boolean; p_submission_id: string }
+        Returns: Json
+      }
+      run_matchmaking: { Args: { p_quest_id: string }; Returns: Json }
       submit_mcq_answer: {
         Args: { p_quiz_question_id: string; p_selected_choice: string }
         Returns: Json
       }
+      submit_quest: {
+        Args: {
+          p_acceptance_id: string
+          p_instance_id: string
+          p_text_content: string
+        }
+        Returns: Json
+      }
+      unenroll_coop_quest: { Args: { p_quest_id: string }; Returns: Json }
       unlock_lesson_cards: {
         Args: { p_class_id: string; p_lesson_id: string }
         Returns: Json
