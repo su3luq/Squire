@@ -50,6 +50,12 @@ export default async function TeacherHome() {
               </span>
             )}
           </Link>
+          <Link
+            href="/teacher/analytics"
+            className={buttonVariants({ variant: 'outline' })}
+          >
+            Analytics
+          </Link>
         </div>
 
         <SignOutButton />
