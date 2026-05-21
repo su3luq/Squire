@@ -61,6 +61,12 @@ export default async function StudentHome() {
               Quests
             </Link>
             <Link
+              href="/student/my-quests"
+              className={buttonVariants({ variant: 'outline' })}
+            >
+              My Quests
+            </Link>
+            <Link
               href="/student/library"
               className={buttonVariants({ variant: 'outline' })}
             >
