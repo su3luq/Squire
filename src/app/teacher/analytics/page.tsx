@@ -139,7 +139,9 @@ export default async function AnalyticsPage({
   // -----------------------------------------------------------------
   const acceptanceQuery = supabase
     .from('quest_acceptances')
-    .select('id, status, quest_id, student_id, accepted_at, completed_at');
+    .select(
+      'id, status, quest_id, student_id, instance_id, accepted_at, completed_at'
+    );
   const { data: acceptances } =
     studentIds.length > 0
       ? await acceptanceQuery.in('student_id', studentIds)
@@ -340,7 +342,10 @@ export default async function AnalyticsPage({
     key: string;
     when: string;
     kind: 'xp' | 'submission' | 'review';
-    text: string;
+    studentId: string;
+    studentName: string;
+    classId: string | null;
+    detail: string; // what happened, minus the student name
   };
   const feedItems: FeedItem[] = [];
   for (const row of xpFeed ?? []) {
@@ -349,7 +354,10 @@ export default async function AnalyticsPage({
       key: `xp-${row.id}`,
       when: row.created_at,
       kind: 'xp',
-      text: `${student?.full_name ?? '(student)'} earned ${row.amount > 0 ? '+' : ''}${row.amount} XP (${row.reason})`,
+      studentId: row.student_id,
+      studentName: student?.full_name ?? '(student)',
+      classId: student?.class_id ?? null,
+      detail: `earned ${row.amount > 0 ? '+' : ''}${row.amount} XP (${row.reason})`,
     });
   }
   for (const row of subFeed ?? []) {
@@ -358,19 +366,123 @@ export default async function AnalyticsPage({
       key: `sub-${row.id}`,
       when: row.submitted_at,
       kind: 'submission',
-      text: `${student?.full_name ?? '(student)'} submitted a quest`,
+      studentId: row.submitted_by,
+      studentName: student?.full_name ?? '(student)',
+      classId: student?.class_id ?? null,
+      detail: 'submitted a quest',
     });
     if (row.reviewed_at && (row.status === 'passed' || row.status === 'failed')) {
       feedItems.push({
         key: `rev-${row.id}`,
         when: row.reviewed_at,
         kind: 'review',
-        text: `${student?.full_name ?? '(student)'}'s submission was ${row.status}`,
+        studentId: row.submitted_by,
+        studentName: student?.full_name ?? '(student)',
+        classId: student?.class_id ?? null,
+        detail: `submission was ${row.status}`,
       });
     }
   }
   feedItems.sort((a, b) => (a.when < b.when ? 1 : -1));
   const feed = feedItems.slice(0, 25);
+
+  // -----------------------------------------------------------------
+  // Panel 6: Students at risk
+  //   - Low velocity (< 0.3), bottom 10
+  //   - Repeat failers: ≥3 failed submissions on a single quest
+  //     (per-acceptance for solo, per-instance for coop — all team
+  //     members of a failing instance are flagged.)
+  // -----------------------------------------------------------------
+  const failedSubsQuery = supabase
+    .from('quest_submissions')
+    .select('acceptance_id, instance_id, submitted_by')
+    .eq('status', 'failed');
+  const { data: failedSubs } =
+    studentIds.length > 0
+      ? await failedSubsQuery.in('submitted_by', studentIds)
+      : { data: [] };
+
+  const failuresByGroup = new Map<string, number>();
+  for (const s of failedSubs ?? []) {
+    const key = s.acceptance_id
+      ? `a:${s.acceptance_id}`
+      : s.instance_id
+        ? `i:${s.instance_id}`
+        : null;
+    if (!key) continue;
+    failuresByGroup.set(key, (failuresByGroup.get(key) ?? 0) + 1);
+  }
+
+  type AtRiskEntry = {
+    studentId: string;
+    fullName: string;
+    classId: string | null;
+    velocity: number;
+    reasons: string[];
+  };
+  const atRiskByStudent = new Map<string, AtRiskEntry>();
+
+  function flagStudent(studentId: string, reason: string) {
+    const profile = studentById.get(studentId);
+    if (!profile) return;
+    const existing = atRiskByStudent.get(studentId);
+    if (existing) {
+      if (!existing.reasons.includes(reason)) existing.reasons.push(reason);
+      return;
+    }
+    const fullStudent = (allStudents ?? []).find((s) => s.id === studentId);
+    atRiskByStudent.set(studentId, {
+      studentId,
+      fullName: profile.full_name,
+      classId: profile.class_id,
+      velocity: Number(fullStudent?.learning_velocity ?? 0),
+      reasons: [reason],
+    });
+  }
+
+  // Low velocity
+  for (const s of allStudents ?? []) {
+    if (Number(s.learning_velocity ?? 0) < 0.3) {
+      flagStudent(s.id, `velocity ${Number(s.learning_velocity).toFixed(2)}`);
+    }
+  }
+  // Repeat-fail groups
+  for (const [key, count] of failuresByGroup.entries()) {
+    if (count < 3) continue;
+    if (key.startsWith('a:')) {
+      const accId = key.slice(2);
+      const acc = (acceptances ?? []).find((a) => a.id === accId);
+      if (acc) flagStudent(acc.student_id, `${count} fails on one quest`);
+    } else {
+      const instId = key.slice(2);
+      for (const acc of (acceptances ?? []).filter(
+        (a) => a.instance_id === instId
+      )) {
+        flagStudent(acc.student_id, `${count} team fails on one quest`);
+      }
+    }
+  }
+
+  const atRisk = Array.from(atRiskByStudent.values()).sort(
+    (a, b) => a.velocity - b.velocity
+  );
+
+  // -----------------------------------------------------------------
+  // Panel 7: Velocity distribution (5 buckets)
+  // -----------------------------------------------------------------
+  const velocityBuckets = [
+    { range: '0.0–0.2', count: 0 },
+    { range: '0.2–0.4', count: 0 },
+    { range: '0.4–0.6', count: 0 },
+    { range: '0.6–0.8', count: 0 },
+    { range: '0.8–1.0', count: 0 },
+  ];
+  for (const s of allStudents ?? []) {
+    const v = Math.max(0, Math.min(0.9999, Number(s.learning_velocity ?? 0)));
+    const idx = Math.floor(v * 5);
+    velocityBuckets[idx].count += 1;
+  }
+  const maxVelocityBucket = Math.max(1, ...velocityBuckets.map((b) => b.count));
 
   // -----------------------------------------------------------------
   // Top-of-page rollups
@@ -441,6 +553,110 @@ export default async function AnalyticsPage({
       </div>
 
       <div className="space-y-6">
+        {/* Panel 0: Students at risk */}
+        <Card>
+          <CardHeader>
+            <CardTitle>Students at risk</CardTitle>
+            <CardDescription>
+              Low velocity (&lt; 0.3) or ≥3 failed submissions on a single
+              quest. Coop team members are flagged together when their team
+              fails repeatedly.
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            {atRisk.length === 0 ? (
+              <p className="text-sm text-slate-500">
+                Nobody flagged. Either everyone&apos;s on track or there
+                isn&apos;t enough data yet.
+              </p>
+            ) : (
+              <ul className="divide-y divide-slate-200 rounded-md border border-slate-200">
+                {atRisk.map((s) => {
+                  const link = s.classId
+                    ? `/teacher/classes/${s.classId}/students/${s.studentId}`
+                    : null;
+                  return (
+                    <li
+                      key={s.studentId}
+                      className="flex items-center justify-between px-3 py-2 text-sm"
+                    >
+                      <div className="min-w-0 flex-1">
+                        {link ? (
+                          <Link
+                            href={link}
+                            className="font-medium text-slate-900 hover:text-blue-600 hover:underline"
+                          >
+                            {s.fullName}
+                          </Link>
+                        ) : (
+                          <span className="font-medium text-slate-900">
+                            {s.fullName}
+                          </span>
+                        )}
+                        <span className="ml-2 text-xs text-slate-500">
+                          {s.classId
+                            ? (classNameById.get(s.classId) ?? 'Unknown')
+                            : 'Unassigned'}
+                        </span>
+                      </div>
+                      <div className="flex flex-wrap items-center justify-end gap-1">
+                        {s.reasons.map((r) => (
+                          <span
+                            key={r}
+                            className="rounded bg-red-100 px-2 py-0.5 text-xs font-medium text-red-800"
+                          >
+                            {r}
+                          </span>
+                        ))}
+                      </div>
+                    </li>
+                  );
+                })}
+              </ul>
+            )}
+          </CardContent>
+        </Card>
+
+        {/* Panel 0b: Velocity distribution */}
+        <Card>
+          <CardHeader>
+            <CardTitle>Velocity distribution</CardTitle>
+            <CardDescription>
+              How learning velocity is spread across students in the selected
+              scope. An average alone hides bimodal classes.
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            {totalStudents === 0 ? (
+              <p className="text-sm text-slate-500">No students in scope.</p>
+            ) : (
+              <ul className="space-y-2">
+                {velocityBuckets.map((b) => (
+                  <li key={b.range} className="text-xs">
+                    <div className="flex items-center gap-3">
+                      <span className="w-16 shrink-0 font-mono text-slate-500">
+                        {b.range}
+                      </span>
+                      <div className="flex-1">
+                        <div
+                          className="h-5 rounded-md bg-slate-700"
+                          style={{
+                            width: `${Math.max(1, (b.count / maxVelocityBucket) * 100)}%`,
+                          }}
+                        />
+                      </div>
+                      <span className="w-20 text-right tabular-nums text-slate-700">
+                        {b.count}{' '}
+                        {b.count === 1 ? 'student' : 'students'}
+                      </span>
+                    </div>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </CardContent>
+        </Card>
+
         {/* Panel 1: Weekly XP */}
         <Card>
           <CardHeader>
@@ -647,17 +863,15 @@ export default async function AnalyticsPage({
             ) : (
               <ul className="space-y-1 text-sm">
                 {feed.map((item) => {
-                  const student = studentById.get(
-                    // Extract student name out of text for class label below
-                    ''
-                  );
-                  void student;
                   const dot =
                     item.kind === 'xp'
                       ? 'bg-blue-400'
                       : item.kind === 'submission'
                         ? 'bg-amber-400'
                         : 'bg-green-500';
+                  const studentLink = item.classId
+                    ? `/teacher/classes/${item.classId}/students/${item.studentId}`
+                    : null;
                   return (
                     <li
                       key={item.key}
@@ -666,7 +880,21 @@ export default async function AnalyticsPage({
                       <span
                         className={`mt-1 inline-block h-2 w-2 shrink-0 rounded-full ${dot}`}
                       />
-                      <span className="flex-1 text-slate-700">{item.text}</span>
+                      <span className="flex-1 text-slate-700">
+                        {studentLink ? (
+                          <Link
+                            href={studentLink}
+                            className="font-medium text-slate-900 hover:text-blue-600 hover:underline"
+                          >
+                            {item.studentName}
+                          </Link>
+                        ) : (
+                          <span className="font-medium text-slate-900">
+                            {item.studentName}
+                          </span>
+                        )}{' '}
+                        {item.detail}
+                      </span>
                       <span className="shrink-0 text-xs text-slate-400">
                         {formatSaigon(item.when)}
                       </span>
