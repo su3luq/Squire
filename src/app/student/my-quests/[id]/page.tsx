@@ -81,22 +81,30 @@ export default async function MyQuestWorkspacePage({
       .maybeSingle();
     instance = inst ?? null;
 
-    const { data: members } = await supabase
+    // Two-step fetch: PostgREST embeds via the FK on quest_acceptances
+    // resolve to the `profiles` table (whose RLS only exposes own row),
+    // not the `public_profiles` view. Read the ids first, then resolve
+    // names through the view explicitly.
+    const { data: memberRows } = await supabase
       .from('quest_acceptances')
-      .select('public_profiles:student_id(id, full_name)')
+      .select('student_id')
       .eq('instance_id', acceptance.instance_id);
-    teamMembers = (members ?? [])
-      .map(
-        (m) =>
-          m.public_profiles as {
-            id: string | null;
-            full_name: string | null;
-          } | null
-      )
-      .filter(
-        (p): p is { id: string; full_name: string } =>
-          p !== null && p.id !== null && p.full_name !== null
-      );
+    const memberIds = (memberRows ?? [])
+      .map((r) => r.student_id)
+      .filter((id): id is string => id !== null);
+
+    if (memberIds.length > 0) {
+      const { data: memberProfiles } = await supabase
+        .from('public_profiles')
+        .select('id, full_name')
+        .in('id', memberIds);
+      teamMembers = (memberProfiles ?? [])
+        .filter(
+          (p): p is { id: string; full_name: string } =>
+            p.id !== null && p.full_name !== null
+        )
+        .map((p) => ({ id: p.id, full_name: p.full_name }));
+    }
   }
 
   const isCaptain = isCoop && instance?.captain_id === user.id;
@@ -108,12 +116,27 @@ export default async function MyQuestWorkspacePage({
   const submissionQuery = supabase
     .from('quest_submissions')
     .select(
-      'id, status, text_content, word_count, teacher_feedback, submitted_at, reviewed_at, submitted_by, public_profiles:submitted_by(full_name)'
+      'id, status, text_content, word_count, teacher_feedback, submitted_at, reviewed_at, submitted_by'
     )
     .order('submitted_at', { ascending: false });
   const { data: submissions } = isCoop
     ? await submissionQuery.eq('instance_id', acceptance.instance_id!)
     : await submissionQuery.eq('acceptance_id', acceptance.id);
+
+  // Resolve submitter names through the view (cross-student-safe).
+  const submitterIds = Array.from(
+    new Set((submissions ?? []).map((s) => s.submitted_by).filter(Boolean))
+  );
+  const submitterNameById = new Map<string, string>();
+  if (submitterIds.length > 0) {
+    const { data: submitterProfiles } = await supabase
+      .from('public_profiles')
+      .select('id, full_name')
+      .in('id', submitterIds);
+    for (const p of submitterProfiles ?? []) {
+      if (p.id && p.full_name) submitterNameById.set(p.id, p.full_name);
+    }
+  }
 
   const latestSubmission = (submissions ?? [])[0] ?? null;
   const pendingSubmission =
@@ -252,12 +275,8 @@ export default async function MyQuestWorkspacePage({
                 {' · '}
                 {pendingSubmission.word_count} words
                 {isCoop &&
-                  (
-                    pendingSubmission.public_profiles as {
-                      full_name?: string | null;
-                    } | null
-                  )?.full_name &&
-                  ` · by ${(pendingSubmission.public_profiles as { full_name: string }).full_name}`}
+                  submitterNameById.get(pendingSubmission.submitted_by) &&
+                  ` · by ${submitterNameById.get(pendingSubmission.submitted_by)}`}
               </p>
               <div className="rounded-md bg-white p-3 text-sm text-slate-700">
                 <MarkdownRenderer source={pendingSubmission.text_content ?? ''} />
