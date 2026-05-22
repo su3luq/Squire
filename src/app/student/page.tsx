@@ -25,21 +25,27 @@ export default async function StudentHome() {
 
   // Count of currently-due review cards for this student. RLS scopes to own.
   const nowIso = new Date().toISOString();
-  const [{ count: dueCountRaw }, { data: nextRow }] = await Promise.all([
-    supabase
-      .from('card_reviews')
-      .select('id', { count: 'exact', head: true })
-      .lte('due_at', nowIso),
-    supabase
-      .from('card_reviews')
-      .select('due_at')
-      .gt('due_at', nowIso)
-      .order('due_at', { ascending: true })
-      .limit(1)
-      .maybeSingle(),
-  ]);
+  const [{ count: dueCountRaw }, { data: nextRow }, { count: unreadCountRaw }] =
+    await Promise.all([
+      supabase
+        .from('card_reviews')
+        .select('id', { count: 'exact', head: true })
+        .lte('due_at', nowIso),
+      supabase
+        .from('card_reviews')
+        .select('due_at')
+        .gt('due_at', nowIso)
+        .order('due_at', { ascending: true })
+        .limit(1)
+        .maybeSingle(),
+      supabase
+        .from('notifications')
+        .select('id', { count: 'exact', head: true })
+        .is('read_at', null),
+    ]);
   const dueCount = dueCountRaw ?? 0;
   const nextDueAt = nextRow?.due_at ?? null;
+  const unreadCount = unreadCountRaw ?? 0;
 
   return (
     <main className="flex min-h-screen items-center justify-center p-6">
@@ -78,6 +84,17 @@ export default async function StudentHome() {
               className={buttonVariants({ variant: 'outline' })}
             >
               Leaderboard
+            </Link>
+            <Link
+              href="/notifications"
+              className={buttonVariants({ variant: 'outline' })}
+            >
+              Notifications
+              {unreadCount > 0 && (
+                <span className="ml-2 rounded-full bg-blue-100 px-2 py-0.5 text-xs font-medium text-blue-900">
+                  {unreadCount}
+                </span>
+              )}
             </Link>
           </div>
         </div>

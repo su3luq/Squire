@@ -20,10 +20,18 @@ export default async function TeacherHome() {
 
   if (!profile) redirect('/login');
 
-  const { count: pendingReviewCount } = await supabase
-    .from('quest_submissions')
-    .select('id', { count: 'exact', head: true })
-    .eq('status', 'pending_review');
+  const [{ count: pendingReviewCount }, { count: unreadCountRaw }] =
+    await Promise.all([
+      supabase
+        .from('quest_submissions')
+        .select('id', { count: 'exact', head: true })
+        .eq('status', 'pending_review'),
+      supabase
+        .from('notifications')
+        .select('id', { count: 'exact', head: true })
+        .is('read_at', null),
+    ]);
+  const unreadCount = unreadCountRaw ?? 0;
 
   return (
     <main className="flex min-h-screen items-center justify-center p-6">
@@ -59,6 +67,17 @@ export default async function TeacherHome() {
             className={buttonVariants({ variant: 'outline' })}
           >
             Analytics
+          </Link>
+          <Link
+            href="/notifications"
+            className={buttonVariants({ variant: 'outline' })}
+          >
+            Notifications
+            {unreadCount > 0 && (
+              <span className="ml-2 rounded-full bg-blue-100 px-2 py-0.5 text-xs font-medium text-blue-900">
+                {unreadCount}
+              </span>
+            )}
           </Link>
         </div>
 

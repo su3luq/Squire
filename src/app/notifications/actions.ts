@@ -1,5 +1,6 @@
 'use server';
 
+import { revalidatePath } from 'next/cache';
 import { createClient } from '@/lib/supabase/server';
 
 type SubscriptionPayload = {
@@ -51,6 +52,46 @@ export async function saveSubscription(
 
   if (error) return { ok: false, error: error.message };
   return { ok: true };
+}
+
+/** Mark a single notification as read (RLS scopes to own). */
+export async function markNotificationRead(
+  id: string
+): Promise<{ ok: true } | { ok: false; error: string }> {
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) return { ok: false, error: 'not_authenticated' };
+
+  const { error } = await supabase
+    .from('notifications')
+    .update({ read_at: new Date().toISOString() })
+    .eq('id', id)
+    .is('read_at', null);
+  if (error) return { ok: false, error: error.message };
+  revalidatePath('/notifications');
+  return { ok: true };
+}
+
+/** Mark every unread notification of the current user as read. */
+export async function markAllNotificationsRead(): Promise<
+  { ok: true; count: number } | { ok: false; error: string }
+> {
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) return { ok: false, error: 'not_authenticated' };
+
+  const { error, count } = await supabase
+    .from('notifications')
+    .update({ read_at: new Date().toISOString() }, { count: 'exact' })
+    .eq('user_id', user.id)
+    .is('read_at', null);
+  if (error) return { ok: false, error: error.message };
+  revalidatePath('/notifications');
+  return { ok: true, count: count ?? 0 };
 }
 
 /**

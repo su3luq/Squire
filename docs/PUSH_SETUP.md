@@ -73,11 +73,84 @@ The "Enable notifications" button on the student/teacher home pages calls
 `pushManager.subscribe()` with `applicationServerKey` set to the public key.
 If the public key is missing the button will show an error.
 
-## 4. After Commit 3 ships
+## 4. Activate delivery (after commit 3 ships)
 
-The `send-pushes` Edge Function reads `VAPID_PRIVATE_KEY` and
-`VAPID_SUBJECT` to sign each push. A `pg_cron` job runs the function every
-minute to drain `notifications` rows where `pushed_at IS NULL`.
+The Edge Function and the cron schedule both live in the repo but neither
+is live until you do four things, in order:
+
+### 4a. Pick a CRON_SECRET
+
+Any random string. A UUID is fine:
+
+```bash
+# any way of generating a random opaque string
+python -c "import secrets; print(secrets.token_urlsafe(32))"
+```
+
+This value must match exactly in two places: a Postgres setting *and* an
+Edge Function secret. The function checks it on every invocation.
+
+### 4b. Set the Postgres settings
+
+Run these once via the Supabase SQL Editor as a superuser. They survive
+restarts.
+
+```sql
+ALTER DATABASE postgres SET app.settings.functions_url =
+    'https://dicufymnejhrkrakgluu.supabase.co/functions/v1';
+ALTER DATABASE postgres SET app.settings.cron_secret =
+    '<paste the value from 4a>';
+```
+
+Sessions started before these `ALTER`s won't see them — `pg_cron`'s
+session is fine because it's reconnected per tick, but if you're testing
+manually in psql, reconnect first.
+
+### 4c. Set the Edge Function secrets
+
+Supabase dashboard → Edge Functions → `send-pushes` → Secrets (or via CLI
+`supabase secrets set …`):
+
+```
+VAPID_PUBLIC_KEY  = (same as NEXT_PUBLIC_VAPID_PUBLIC_KEY)
+VAPID_PRIVATE_KEY = (private half of the VAPID keypair from step 1)
+VAPID_SUBJECT     = mailto:your-email@example.com
+CRON_SECRET       = (same value as app.settings.cron_secret)
+```
+
+`SUPABASE_URL` and `SUPABASE_SERVICE_ROLE_KEY` are injected automatically
+by Supabase — you don't set those yourself.
+
+### 4d. Deploy the function + apply migration 031
+
+The function source lives at `supabase/functions/send-pushes/index.ts`.
+Deploy via the Supabase CLI (`supabase functions deploy send-pushes`) or
+via the Supabase MCP (`mcp__claude_ai_Supabase__deploy_edge_function`).
+
+Then apply migration 031 to schedule the cron job:
+
+```
+supabase/migrations/031_schedule_send_pushes.sql
+```
+
+After this lands, the cron tick logs (Supabase dashboard → Postgres → Cron
+Jobs) should show one successful run per minute, even if there's nothing
+to push.
+
+### 4e. Test it
+
+Insert a notification by hand and watch it deliver:
+
+```sql
+INSERT INTO public.notifications (user_id, type, title, body)
+VALUES (auth.uid(), 'test', 'Squire test', 'Hello from the cron.');
+```
+
+(Run while logged in via the Supabase SQL Editor — `auth.uid()` returns
+your own teacher id there. Replace with a specific user_id if needed.)
+
+Within ~60 seconds you should see a browser notification appear AND
+`pushed_at` populate on the row.
 
 ## What happens if push services reject a subscription?
 
