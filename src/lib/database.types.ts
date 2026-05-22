@@ -388,6 +388,8 @@ export type Database = {
           interest_tags: string[] | null
           last_active_at: string | null
           learning_velocity: number
+          quiet_hours_end_hour: number | null
+          quiet_hours_start_hour: number | null
           role: Database["public"]["Enums"]["user_role"]
           xp_total: number
         }
@@ -403,6 +405,8 @@ export type Database = {
           interest_tags?: string[] | null
           last_active_at?: string | null
           learning_velocity?: number
+          quiet_hours_end_hour?: number | null
+          quiet_hours_start_hour?: number | null
           role: Database["public"]["Enums"]["user_role"]
           xp_total?: number
         }
@@ -418,6 +422,8 @@ export type Database = {
           interest_tags?: string[] | null
           last_active_at?: string | null
           learning_velocity?: number
+          quiet_hours_end_hour?: number | null
+          quiet_hours_start_hour?: number | null
           role?: Database["public"]["Enums"]["user_role"]
           xp_total?: number
         }
@@ -433,26 +439,32 @@ export type Database = {
       }
       push_tokens: {
         Row: {
+          auth: string
           created_at: string
-          expo_push_token: string
+          endpoint: string
           id: string
           last_used_at: string
+          p256dh: string
           platform: Database["public"]["Enums"]["push_platform"]
           user_id: string
         }
         Insert: {
+          auth: string
           created_at?: string
-          expo_push_token: string
+          endpoint: string
           id?: string
           last_used_at?: string
+          p256dh: string
           platform: Database["public"]["Enums"]["push_platform"]
           user_id: string
         }
         Update: {
+          auth?: string
           created_at?: string
-          expo_push_token?: string
+          endpoint?: string
           id?: string
           last_used_at?: string
+          p256dh?: string
           platform?: Database["public"]["Enums"]["push_platform"]
           user_id?: string
         }
