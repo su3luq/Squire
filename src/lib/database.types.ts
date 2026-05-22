@@ -191,6 +191,7 @@ export type Database = {
       }
       coop_quest_instances: {
         Row: {
+          captain_id: string | null
           class_id: string
           created_at: string
           id: string
@@ -199,8 +200,10 @@ export type Database = {
           started_at: string | null
           status: Database["public"]["Enums"]["coop_instance_status"]
           submitted_at: string | null
+          team_number: number | null
         }
         Insert: {
+          captain_id?: string | null
           class_id: string
           created_at?: string
           id?: string
@@ -209,8 +212,10 @@ export type Database = {
           started_at?: string | null
           status?: Database["public"]["Enums"]["coop_instance_status"]
           submitted_at?: string | null
+          team_number?: number | null
         }
         Update: {
+          captain_id?: string | null
           class_id?: string
           created_at?: string
           id?: string
@@ -219,8 +224,23 @@ export type Database = {
           started_at?: string | null
           status?: Database["public"]["Enums"]["coop_instance_status"]
           submitted_at?: string | null
+          team_number?: number | null
         }
         Relationships: [
+          {
+            foreignKeyName: "coop_quest_instances_captain_id_fkey"
+            columns: ["captain_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "coop_quest_instances_captain_id_fkey"
+            columns: ["captain_id"]
+            isOneToOne: false
+            referencedRelation: "public_profiles"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "coop_quest_instances_class_id_fkey"
             columns: ["class_id"]
@@ -594,6 +614,7 @@ export type Database = {
           description: string
           expires_at: string | null
           id: string
+          matchmaking_ran_at: string | null
           max_instances: number | null
           max_team_size: number | null
           quest_type: Database["public"]["Enums"]["quest_type"]
@@ -608,6 +629,7 @@ export type Database = {
           description?: string
           expires_at?: string | null
           id?: string
+          matchmaking_ran_at?: string | null
           max_instances?: number | null
           max_team_size?: number | null
           quest_type: Database["public"]["Enums"]["quest_type"]
@@ -622,6 +644,7 @@ export type Database = {
           description?: string
           expires_at?: string | null
           id?: string
+          matchmaking_ran_at?: string | null
           max_instances?: number | null
           max_team_size?: number | null
           quest_type?: Database["public"]["Enums"]["quest_type"]
@@ -961,9 +984,9 @@ export type Database = {
       }
       submit_quest: {
         Args: {
-          p_acceptance_id: string
-          p_instance_id: string
-          p_text_content: string
+          p_acceptance_id?: string
+          p_instance_id?: string
+          p_text_content?: string
         }
         Returns: Json
       }

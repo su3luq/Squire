@@ -46,14 +46,20 @@ export default async function MyQuestsPage() {
   const instanceIds = (acceptances ?? [])
     .map((a) => a.instance_id)
     .filter((x): x is string => x != null);
-  let instancesById = new Map<string, { id: string; status: string }>();
+  let instancesById = new Map<
+    string,
+    { id: string; status: string; team_number: number | null }
+  >();
   if (instanceIds.length > 0) {
     const { data: instances } = await supabase
       .from('coop_quest_instances')
-      .select('id, status')
+      .select('id, status, team_number')
       .in('id', instanceIds);
     instancesById = new Map(
-      (instances ?? []).map((i) => [i.id, { id: i.id, status: i.status }])
+      (instances ?? []).map((i) => [
+        i.id,
+        { id: i.id, status: i.status, team_number: i.team_number },
+      ])
     );
   }
 
@@ -105,6 +111,7 @@ export default async function MyQuestsPage() {
     bucket: Bucket;
     latestSubmittedAt: string | null;
     instanceStatus: string | null;
+    teamNumber: number | null;
   };
 
   const enriched: EnrichedAcceptance[] = (acceptances ?? [])
@@ -121,9 +128,11 @@ export default async function MyQuestsPage() {
         | null;
       if (!quest) return null;
 
-      const instanceStatus = a.instance_id
-        ? (instancesById.get(a.instance_id)?.status ?? null)
+      const instance = a.instance_id
+        ? (instancesById.get(a.instance_id) ?? null)
         : null;
+      const instanceStatus = instance?.status ?? null;
+      const teamNumber = instance?.team_number ?? null;
 
       // Determine bucket
       let bucket: Bucket;
@@ -166,6 +175,7 @@ export default async function MyQuestsPage() {
         bucket,
         latestSubmittedAt: latestSub?.submitted_at ?? null,
         instanceStatus,
+        teamNumber,
       };
     })
     .filter((x): x is EnrichedAcceptance => x !== null);
@@ -245,6 +255,11 @@ export default async function MyQuestsPage() {
                           >
                             {item.quest.quest_type}
                           </span>
+                          {item.teamNumber != null && (
+                            <span className="mr-2 inline-block rounded-full bg-slate-200 px-2 py-0.5 font-medium text-slate-800">
+                              Team {item.teamNumber}
+                            </span>
+                          )}
                           +{item.quest.xp_reward} XP
                           {item.latestSubmittedAt && (
                             <span>

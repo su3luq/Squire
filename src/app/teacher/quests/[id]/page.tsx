@@ -63,7 +63,9 @@ export default async function QuestDetailPage({
 
   const { data: instances } = await supabase
     .from('coop_quest_instances')
-    .select('id, status, class_id, started_at, submitted_at, reviewed_at')
+    .select(
+      'id, status, class_id, team_number, captain_id, started_at, submitted_at, reviewed_at'
+    )
     .eq('quest_id', id)
     .order('started_at', { ascending: true });
 
@@ -137,8 +139,14 @@ export default async function QuestDetailPage({
     new Date(quest.expires_at).getTime() <= Date.now();
 
   // Surface matchmaking failure for the teacher (read from notifications log).
+  // Only show if there are genuinely no acceptances — guards against stale
+  // notifications from before a re-enrollment cycle.
   let noEnrollmentsFailure = false;
-  if (quest.quest_type === 'coop' && isExpired) {
+  if (
+    quest.quest_type === 'coop' &&
+    isExpired &&
+    (acceptances ?? []).length === 0
+  ) {
     const { count } = await supabase
       .from('notifications')
       .select('id', { count: 'exact', head: true })
@@ -317,49 +325,73 @@ export default async function QuestDetailPage({
                         {list.length === 1 ? 'team' : 'teams'})
                       </h3>
                       <ul className="space-y-3">
-                        {list.map((inst) => {
-                          const members = (acceptances ?? []).filter(
-                            (a) => a.instance_id === inst.id
-                          );
-                          return (
-                            <li
-                              key={inst.id}
-                              className="rounded-md border border-slate-200 p-3"
-                            >
-                              <div className="flex items-start justify-between gap-3">
-                                <div className="min-w-0 flex-1">
-                                  <p className="text-sm font-medium">
-                                    Team of {members.length} ·{' '}
-                                    <span
-                                      className={
-                                        inst.status === 'passed'
-                                          ? 'text-green-700'
-                                          : 'text-slate-700'
-                                      }
-                                    >
-                                      {inst.status}
-                                    </span>
-                                  </p>
-                                  <ul className="mt-1 text-xs text-slate-600">
-                                    {members.map((m) => {
-                                      const s = m.profiles as
-                                        | { id: string; full_name: string }
-                                        | null;
-                                      return (
-                                        <li key={m.id}>
-                                          • {s?.full_name ?? '(unknown)'} ({m.status})
-                                        </li>
-                                      );
-                                    })}
-                                  </ul>
+                        {list
+                          .slice()
+                          .sort(
+                            (a, b) =>
+                              (a.team_number ?? 0) - (b.team_number ?? 0)
+                          )
+                          .map((inst) => {
+                            const members = (acceptances ?? []).filter(
+                              (a) => a.instance_id === inst.id
+                            );
+                            return (
+                              <li
+                                key={inst.id}
+                                className="rounded-md border border-slate-200 p-3"
+                              >
+                                <div className="flex items-start justify-between gap-3">
+                                  <div className="min-w-0 flex-1">
+                                    <p className="text-sm font-medium">
+                                      {inst.team_number != null
+                                        ? `Team ${inst.team_number}`
+                                        : 'Team'}{' '}
+                                      · {members.length}{' '}
+                                      {members.length === 1
+                                        ? 'member'
+                                        : 'members'}{' '}
+                                      ·{' '}
+                                      <span
+                                        className={
+                                          inst.status === 'passed'
+                                            ? 'text-green-700'
+                                            : 'text-slate-700'
+                                        }
+                                      >
+                                        {inst.status}
+                                      </span>
+                                    </p>
+                                    <ul className="mt-1 text-xs text-slate-600">
+                                      {members.map((m) => {
+                                        const s = m.profiles as
+                                          | { id: string; full_name: string }
+                                          | null;
+                                        const isCaptain =
+                                          s?.id != null &&
+                                          s.id === inst.captain_id;
+                                        return (
+                                          <li key={m.id}>
+                                            • {s?.full_name ?? '(unknown)'} (
+                                            {m.status})
+                                            {isCaptain && (
+                                              <span className="ml-2 rounded bg-purple-100 px-1.5 py-0.5 text-[10px] font-medium text-purple-800">
+                                                captain
+                                              </span>
+                                            )}
+                                          </li>
+                                        );
+                                      })}
+                                    </ul>
+                                  </div>
+                                  {inst.status === 'active' && (
+                                    <DisbandInstanceButton
+                                      instanceId={inst.id}
+                                    />
+                                  )}
                                 </div>
-                                {inst.status === 'active' && (
-                                  <DisbandInstanceButton instanceId={inst.id} />
-                                )}
-                              </div>
-                            </li>
-                          );
-                        })}
+                              </li>
+                            );
+                          })}
                       </ul>
                     </div>
                   ))}

@@ -69,12 +69,14 @@ export default async function MyQuestWorkspacePage({
     id: string;
     status: string;
     submitted_at: string | null;
+    team_number: number | null;
+    captain_id: string | null;
   } | null = null;
   let teamMembers: { id: string; full_name: string }[] = [];
   if (isCoop && acceptance.instance_id) {
     const { data: inst } = await supabase
       .from('coop_quest_instances')
-      .select('id, status, submitted_at')
+      .select('id, status, submitted_at, team_number, captain_id')
       .eq('id', acceptance.instance_id)
       .maybeSingle();
     instance = inst ?? null;
@@ -87,6 +89,11 @@ export default async function MyQuestWorkspacePage({
       .map((m) => m.profiles as { id: string; full_name: string } | null)
       .filter((p): p is { id: string; full_name: string } => p !== null);
   }
+
+  const isCaptain = isCoop && instance?.captain_id === user.id;
+  const captain = isCoop
+    ? teamMembers.find((m) => m.id === instance?.captain_id) ?? null
+    : null;
 
   // Fetch submission history for this acceptance / instance, newest first.
   const submissionQuery = supabase
@@ -109,11 +116,13 @@ export default async function MyQuestWorkspacePage({
 
   // Can we submit right now?
   // - Solo: acceptance is active AND no pending submission
-  // - Coop: instance is active AND no pending submission
+  // - Coop: instance is active AND no pending submission AND viewer is the captain
   const canSubmit =
     !isCompleted &&
     !pendingSubmission &&
-    (isCoop ? instance?.status === 'active' : acceptance.status === 'active');
+    (isCoop
+      ? instance?.status === 'active' && isCaptain
+      : acceptance.status === 'active');
 
   return (
     <main className="container mx-auto max-w-3xl p-6">
@@ -132,6 +141,16 @@ export default async function MyQuestWorkspacePage({
           >
             {isCoop ? 'co-op' : 'solo'}
           </span>
+          {isCoop && instance?.team_number != null && (
+            <span className="rounded-full bg-slate-200 px-2 py-0.5 text-xs font-medium text-slate-800">
+              Team {instance.team_number}
+            </span>
+          )}
+          {isCaptain && (
+            <span className="rounded-full bg-purple-100 px-2 py-0.5 text-xs font-medium text-purple-800">
+              You are the captain
+            </span>
+          )}
           <span>+{quest.xp_reward} XP</span>
           {quest.word_limit_min != null && quest.word_limit_min > 0 && (
             <>
@@ -160,14 +179,33 @@ export default async function MyQuestWorkspacePage({
         {isCoop && (
           <Card>
             <CardHeader>
-              <CardTitle>Your team</CardTitle>
+              <CardTitle>
+                {instance?.team_number != null
+                  ? `Team ${instance.team_number}`
+                  : 'Your team'}
+              </CardTitle>
             </CardHeader>
-            <CardContent>
+            <CardContent className="space-y-3">
               <ul className="text-sm text-slate-700">
                 {teamMembers.map((m) => (
-                  <li key={m.id}>• {m.full_name}</li>
+                  <li key={m.id}>
+                    • {m.full_name}
+                    {m.id === instance?.captain_id && (
+                      <span className="ml-2 rounded bg-purple-100 px-1.5 py-0.5 text-[10px] font-medium text-purple-800">
+                        captain
+                      </span>
+                    )}
+                  </li>
                 ))}
               </ul>
+              {!isCaptain &&
+                !isCompleted &&
+                instance?.status === 'active' && (
+                  <p className="rounded-md bg-slate-50 px-3 py-2 text-xs text-slate-600">
+                    {captain?.full_name ?? 'Your captain'} will submit on behalf
+                    of the team. Coordinate your draft with them.
+                  </p>
+                )}
             </CardContent>
           </Card>
         )}
