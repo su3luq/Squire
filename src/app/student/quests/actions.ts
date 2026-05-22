@@ -37,18 +37,3 @@ export async function enrollCoopQuest(
   return { error: null, acceptance_id: result.acceptance_id };
 }
 
-export async function unenrollCoopQuest(
-  questId: string
-): Promise<{ error: string | null }> {
-  const supabase = await createClient();
-  const { data, error } = await supabase.rpc('unenroll_coop_quest', {
-    p_quest_id: questId,
-  });
-  if (error) return { error: `Server error: ${error.message}` };
-  const result = data as RpcResult;
-  if (!result.ok) return { error: result.error ?? 'Could not unenroll.' };
-  revalidatePath('/student/quests');
-  revalidatePath(`/student/quests/${questId}`);
-  revalidatePath('/student/my-quests');
-  return { error: null };
-}

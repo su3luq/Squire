@@ -140,9 +140,10 @@ export default async function StudentQuestDetailPage({
           <span className="rounded bg-green-100 px-2 py-0.5 text-xs font-medium text-green-800">
             You&apos;re enrolled
           </span>
-          {!quest.closed_at && !isExpired && (
-            <QuestActionButton variant="unenroll-coop" questId={quest.id} />
-          )}
+          <p className="text-xs text-slate-500">
+            Enrollments are final. You&apos;ll be matched into a team at the
+            deadline.
+          </p>
         </div>
       );
     } else if (!quest.closed_at && !isExpired) {

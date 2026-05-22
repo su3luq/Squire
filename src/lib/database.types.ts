@@ -970,7 +970,6 @@ export type Database = {
         Args: { p_student_id: string; p_to_class_id: string }
         Returns: Json
       }
-      unenroll_coop_quest: { Args: { p_quest_id: string }; Returns: Json }
       unlock_lesson_cards: {
         Args: { p_class_id: string; p_lesson_id: string }
         Returns: Json

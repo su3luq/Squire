@@ -127,12 +127,9 @@ export default async function StudentQuestsBoardPage() {
     }
     if (ownAcceptance?.status === 'enrolled') {
       return (
-        <div className="flex flex-col items-end gap-1">
-          <span className="rounded bg-green-100 px-2 py-0.5 text-xs font-medium text-green-800">
-            Enrolled
-          </span>
-          <QuestActionButton variant="unenroll-coop" questId={q.id} />
-        </div>
+        <span className="rounded bg-green-100 px-2 py-0.5 text-xs font-medium text-green-800">
+          Enrolled
+        </span>
       );
     }
     if (hasActiveOrEnrolledCoopElsewhere) {

@@ -3,21 +3,13 @@
 import { useState, useTransition } from 'react';
 import { useRouter } from 'next/navigation';
 import { Button } from '@/components/ui/button';
-import {
-  acceptSoloQuest,
-  enrollCoopQuest,
-  unenrollCoopQuest,
-} from './actions';
+import { acceptSoloQuest, enrollCoopQuest } from './actions';
 
-type Variant = 'accept-solo' | 'enroll-coop' | 'unenroll-coop';
+type Variant = 'accept-solo' | 'enroll-coop';
 
-const LABELS: Record<
-  Variant,
-  { idle: string; pending: string; success?: string }
-> = {
+const LABELS: Record<Variant, { idle: string; pending: string }> = {
   'accept-solo': { idle: 'Accept quest', pending: 'Accepting...' },
   'enroll-coop': { idle: 'Enroll', pending: 'Enrolling...' },
-  'unenroll-coop': { idle: 'Unenroll', pending: 'Unenrolling...' },
 };
 
 export function QuestActionButton({
@@ -41,9 +33,7 @@ export function QuestActionButton({
       const result =
         variant === 'accept-solo'
           ? await acceptSoloQuest(questId)
-          : variant === 'enroll-coop'
-            ? await enrollCoopQuest(questId)
-            : await unenrollCoopQuest(questId);
+          : await enrollCoopQuest(questId);
       if (result.error) {
         setError(result.error);
         return;
@@ -63,9 +53,7 @@ export function QuestActionButton({
         type="button"
         onClick={handleClick}
         disabled={isPending}
-        variant={
-          outline || variant === 'unenroll-coop' ? 'outline' : 'default'
-        }
+        variant={outline ? 'outline' : 'default'}
         size="sm"
       >
         {isPending ? LABELS[variant].pending : LABELS[variant].idle}
