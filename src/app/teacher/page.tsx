@@ -2,6 +2,7 @@ import { createClient } from '@/lib/supabase/server';
 import { redirect } from 'next/navigation';
 import Link from 'next/link';
 import { buttonVariants } from '@/components/ui/button';
+import { EnableNotificationsButton } from '@/components/enable-notifications-button';
 import SignOutButton from '../student/sign-out-button';
 
 export default async function TeacherHome() {
@@ -59,6 +60,10 @@ export default async function TeacherHome() {
           >
             Analytics
           </Link>
+        </div>
+
+        <div className="border-t border-slate-200 pt-4">
+          <EnableNotificationsButton />
         </div>
 
         <SignOutButton />

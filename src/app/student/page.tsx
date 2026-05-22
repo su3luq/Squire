@@ -3,6 +3,7 @@ import { redirect } from 'next/navigation';
 import Link from 'next/link';
 import { buttonVariants } from '@/components/ui/button';
 import { ReviewLauncher } from '@/components/review-launcher';
+import { EnableNotificationsButton } from '@/components/enable-notifications-button';
 import SignOutButton from './sign-out-button';
 
 export const dynamic = 'force-dynamic';
@@ -79,6 +80,10 @@ export default async function StudentHome() {
               Leaderboard
             </Link>
           </div>
+        </div>
+
+        <div className="border-t border-slate-200 pt-4">
+          <EnableNotificationsButton />
         </div>
 
         <SignOutButton />

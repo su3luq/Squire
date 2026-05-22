@@ -66,5 +66,10 @@ export async function middleware(request: NextRequest) {
 }
 
 export const config = {
-  matcher: ['/((?!_next/static|_next/image|favicon.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$).*)'],
+  matcher: [
+    // Exclude Next internals, static assets, favicons, and the service worker.
+    // /sw.js MUST be reachable anonymously — the browser fetches it on
+    // registration and on update checks without cookies.
+    '/((?!_next/static|_next/image|favicon.ico|sw.js|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$).*)',
+  ],
 };
