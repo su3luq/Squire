@@ -1,0 +1,350 @@
+import Link from 'next/link';
+import { notFound } from 'next/navigation';
+import { createClient } from '@/lib/supabase/server';
+import {
+  Card,
+  CardContent,
+  CardHeader,
+  CardTitle,
+} from '@/components/ui/card';
+import { AssessmentForm } from './assessment-form';
+import { NotesSection } from './notes-section';
+import { TransferForm } from './transfer-form';
+import { DeleteStudentButton } from './delete-student-button';
+
+export const dynamic = 'force-dynamic';
+
+const SAIGON_TZ = 'Asia/Ho_Chi_Minh';
+
+function formatSaigon(iso: string | null): string {
+  if (!iso) return '—';
+  return new Intl.DateTimeFormat('en-US', {
+    dateStyle: 'medium',
+    timeStyle: 'short',
+    timeZone: SAIGON_TZ,
+  }).format(new Date(iso));
+}
+
+const RANK_NAMES = [
+  'Novice',
+  'Apprentice',
+  'Adept',
+  'Expert',
+  'Master',
+  'Grandmaster',
+  'Luminary',
+];
+
+export default async function StudentDetailPage({
+  params,
+}: {
+  params: Promise<{ id: string; studentId: string }>;
+}) {
+  const { id: classId, studentId } = await params;
+  const supabase = await createClient();
+
+  const { data: student } = await supabase
+    .from('profiles')
+    .select(
+      'id, full_name, age, email, class_id, xp_total, current_rank, learning_velocity, last_active_at, created_at, role'
+    )
+    .eq('id', studentId)
+    .maybeSingle();
+
+  if (!student || student.role !== 'student') notFound();
+
+  const { data: currentClass } = await supabase
+    .from('classes')
+    .select('id, name')
+    .eq('id', classId)
+    .maybeSingle();
+
+  const { data: otherClasses } = await supabase
+    .from('classes')
+    .select('id, name')
+    .neq('id', student.class_id ?? '')
+    .is('archived_at', null)
+    .order('name');
+
+  const { data: assessment } = await supabase
+    .from('student_assessments')
+    .select('english_proficiency_pearson, english_proficiency_cefr')
+    .eq('student_id', studentId)
+    .maybeSingle();
+
+  const { data: notes } = await supabase
+    .from('teacher_notes')
+    .select('id, note, created_at, updated_at')
+    .eq('student_id', studentId)
+    .order('created_at', { ascending: false });
+
+  // Active quest workload
+  const { data: acceptances } = await supabase
+    .from('quest_acceptances')
+    .select(
+      `
+        id, status, instance_id, accepted_at, completed_at,
+        quests:quest_id ( id, title, quest_type, xp_reward ),
+        coop_quest_instances:instance_id ( id, status )
+      `
+    )
+    .eq('student_id', studentId)
+    .order('accepted_at', { ascending: false });
+
+  // Recent reviews (last 30 days count)
+  // eslint-disable-next-line react-hooks/purity -- Server Component rendered per request.
+  const thirtyDaysAgo = new Date(Date.now() - 30 * 86400000).toISOString();
+  const { count: reviewCount } = await supabase
+    .from('review_attempts')
+    .select('id', { count: 'exact', head: true })
+    .eq('student_id', studentId)
+    .gte('answered_at', thirtyDaysAgo);
+
+  const { data: lastReview } = await supabase
+    .from('review_attempts')
+    .select('answered_at')
+    .eq('student_id', studentId)
+    .order('answered_at', { ascending: false })
+    .limit(1)
+    .maybeSingle();
+
+  type AcceptanceRow = NonNullable<typeof acceptances>[number];
+  const all = (acceptances ?? []) as AcceptanceRow[];
+  const inProgress = all.filter(
+    (a) => a.status === 'active' || a.status === 'enrolled'
+  );
+  const completed = all.filter((a) => a.status === 'passed');
+  const activeTeamCount = all.filter((a) => {
+    if (a.status !== 'active') return false;
+    const inst = a.coop_quest_instances as { status: string } | null;
+    return inst?.status === 'active' || inst?.status === 'submitted';
+  }).length;
+
+  return (
+    <main className="container mx-auto max-w-3xl p-6">
+      <Link
+        href={`/teacher/classes/${classId}`}
+        className="mb-4 inline-block text-sm text-blue-600 hover:underline"
+      >
+        ← {currentClass?.name ?? 'Class'}
+      </Link>
+
+      <div className="mb-6">
+        <h1 className="text-3xl font-bold">{student.full_name}</h1>
+        <p className="mt-1 text-sm text-slate-600">
+          {student.email}
+          {student.age != null && ` · ${student.age} years old`}
+        </p>
+        <p className="text-xs text-slate-500">
+          Joined {formatSaigon(student.created_at)}
+          {student.last_active_at &&
+            ` · last active ${formatSaigon(student.last_active_at)}`}
+        </p>
+      </div>
+
+      <div className="space-y-6">
+        {/* Performance */}
+        <Card>
+          <CardHeader>
+            <CardTitle>Performance</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+              <Stat
+                label="Rank"
+                value={`${student.current_rank}`}
+                sub={RANK_NAMES[student.current_rank - 1] ?? ''}
+              />
+              <Stat
+                label="XP"
+                value={student.xp_total.toLocaleString()}
+              />
+              <Stat
+                label="Velocity"
+                value={Number(student.learning_velocity ?? 0).toFixed(3)}
+                sub="14-day weighted"
+              />
+              <Stat
+                label="Reviews (30 d)"
+                value={`${reviewCount ?? 0}`}
+                sub={
+                  lastReview?.answered_at
+                    ? `last ${formatSaigon(lastReview.answered_at)}`
+                    : 'none'
+                }
+              />
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* Active quests */}
+        <Card>
+          <CardHeader>
+            <CardTitle>In progress ({inProgress.length})</CardTitle>
+          </CardHeader>
+          <CardContent>
+            {inProgress.length === 0 ? (
+              <p className="text-sm text-slate-500">
+                No quests in progress right now.
+              </p>
+            ) : (
+              <ul className="space-y-2">
+                {inProgress.map((a) => {
+                  const q = a.quests as {
+                    id: string;
+                    title: string;
+                    quest_type: string;
+                    xp_reward: number;
+                  } | null;
+                  const inst = a.coop_quest_instances as { status: string } | null;
+                  return (
+                    <li
+                      key={a.id}
+                      className="rounded-md border border-slate-200 p-3 text-sm"
+                    >
+                      <div className="flex items-start justify-between gap-3">
+                        <div className="min-w-0 flex-1">
+                          <p className="font-medium text-slate-900">
+                            {q?.title ?? '(quest deleted)'}
+                          </p>
+                          <p className="mt-1 flex flex-wrap items-center gap-2 text-xs text-slate-500">
+                            <span
+                              className={`rounded-full px-2 py-0.5 font-medium ${q?.quest_type === 'solo' ? 'bg-blue-100 text-blue-800' : 'bg-purple-100 text-purple-800'}`}
+                            >
+                              {q?.quest_type ?? '—'}
+                            </span>
+                            <span>accepted {formatSaigon(a.accepted_at)}</span>
+                            <span>·</span>
+                            <span>acceptance: {a.status}</span>
+                            {inst && (
+                              <>
+                                <span>·</span>
+                                <span>team: {inst.status}</span>
+                              </>
+                            )}
+                          </p>
+                        </div>
+                      </div>
+                    </li>
+                  );
+                })}
+              </ul>
+            )}
+          </CardContent>
+        </Card>
+
+        {/* Completed quests */}
+        {completed.length > 0 && (
+          <Card>
+            <CardHeader>
+              <CardTitle>Completed ({completed.length})</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <ul className="space-y-2 text-sm">
+                {completed.map((a) => {
+                  const q = a.quests as {
+                    title: string;
+                    quest_type: string;
+                    xp_reward: number;
+                  } | null;
+                  return (
+                    <li
+                      key={a.id}
+                      className="flex items-center justify-between rounded-md border border-slate-200 px-3 py-2"
+                    >
+                      <span>
+                        <span className="font-medium text-slate-800">
+                          {q?.title ?? '(quest deleted)'}
+                        </span>
+                        <span className="ml-2 text-xs text-slate-500">
+                          +{q?.xp_reward ?? 0} XP
+                        </span>
+                      </span>
+                      <span className="text-xs text-slate-400">
+                        {formatSaigon(a.completed_at)}
+                      </span>
+                    </li>
+                  );
+                })}
+              </ul>
+            </CardContent>
+          </Card>
+        )}
+
+        {/* Assessment */}
+        <Card>
+          <CardHeader>
+            <CardTitle>Assessment</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <AssessmentForm
+              studentId={student.id}
+              initialPearson={assessment?.english_proficiency_pearson ?? null}
+              initialCefr={assessment?.english_proficiency_cefr ?? null}
+            />
+          </CardContent>
+        </Card>
+
+        {/* Notes */}
+        <Card>
+          <CardHeader>
+            <CardTitle>Teacher notes ({(notes ?? []).length})</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <NotesSection studentId={student.id} notes={notes ?? []} />
+          </CardContent>
+        </Card>
+
+        {/* Transfer */}
+        <Card>
+          <CardHeader>
+            <CardTitle>Transfer to another class</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <TransferForm
+              studentId={student.id}
+              options={otherClasses ?? []}
+            />
+          </CardContent>
+        </Card>
+
+        {/* Danger zone */}
+        <Card className="border-red-200">
+          <CardHeader>
+            <CardTitle className="text-red-700">Danger zone</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <DeleteStudentButton
+              studentId={student.id}
+              fromClassId={classId}
+              studentName={student.full_name}
+              activeTeamCount={activeTeamCount}
+            />
+          </CardContent>
+        </Card>
+      </div>
+    </main>
+  );
+}
+
+function Stat({
+  label,
+  value,
+  sub,
+}: {
+  label: string;
+  value: string;
+  sub?: string;
+}) {
+  return (
+    <div className="rounded-md border border-slate-200 p-3">
+      <p className="text-xs font-medium uppercase tracking-wide text-slate-500">
+        {label}
+      </p>
+      <p className="mt-1 text-xl font-bold tabular-nums text-slate-900">
+        {value}
+      </p>
+      {sub && <p className="text-xs text-slate-400">{sub}</p>}
+    </div>
+  );
+}

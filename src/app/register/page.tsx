@@ -10,7 +10,7 @@ import { Label } from '@/components/ui/label';
 import { registerStudentAction } from './actions';
 
 type ClassOption = { id: string; name: string };
-type RegistrationState = { open: boolean; classes: ClassOption[] };
+type RegistrationState = { classes: ClassOption[] };
 
 export default function RegisterPage() {
   const router = useRouter();
@@ -33,7 +33,7 @@ export default function RegisterPage() {
         return;
       }
       const state = data as RegistrationState;
-      if (!state.open || state.classes.length === 0) {
+      if (state.classes.length === 0) {
         router.replace('/registration-closed');
         return;
       }

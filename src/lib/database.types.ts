@@ -170,22 +170,22 @@ export type Database = {
           archived_at: string | null
           created_at: string
           id: string
-          invite_code: string
           name: string
+          registration_open: boolean
         }
         Insert: {
           archived_at?: string | null
           created_at?: string
           id?: string
-          invite_code: string
           name: string
+          registration_open?: boolean
         }
         Update: {
           archived_at?: string | null
           created_at?: string
           id?: string
-          invite_code?: string
           name?: string
+          registration_open?: boolean
         }
         Relationships: []
       }
@@ -931,20 +931,13 @@ export type Database = {
       }
       compute_rank_from_xp: { Args: { xp: number }; Returns: number }
       count_words: { Args: { p_text: string }; Returns: number }
+      delete_student: { Args: { p_student_id: string }; Returns: Json }
       disband_coop_instance: { Args: { p_instance_id: string }; Returns: Json }
       get_registration_state: { Args: never; Returns: Json }
       is_my_acceptance: { Args: { p_acceptance_id: string }; Returns: boolean }
       is_my_coop_instance: { Args: { p_instance_id: string }; Returns: boolean }
-      is_registration_open: { Args: never; Returns: boolean }
       is_teacher: { Args: { uid?: string }; Returns: boolean }
       list_review_session: { Args: never; Returns: Json }
-      lookup_class_by_invite: {
-        Args: { code: string }
-        Returns: {
-          id: string
-          name: string
-        }[]
-      }
       recompute_learning_velocity: { Args: never; Returns: Json }
       register_student: {
         Args: {
@@ -971,6 +964,10 @@ export type Database = {
           p_instance_id: string
           p_text_content: string
         }
+        Returns: Json
+      }
+      transfer_student: {
+        Args: { p_student_id: string; p_to_class_id: string }
         Returns: Json
       }
       unenroll_coop_quest: { Args: { p_quest_id: string }; Returns: Json }
