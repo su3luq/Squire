@@ -83,11 +83,20 @@ export default async function MyQuestWorkspacePage({
 
     const { data: members } = await supabase
       .from('quest_acceptances')
-      .select('profiles:student_id(id, full_name)')
+      .select('public_profiles:student_id(id, full_name)')
       .eq('instance_id', acceptance.instance_id);
     teamMembers = (members ?? [])
-      .map((m) => m.profiles as { id: string; full_name: string } | null)
-      .filter((p): p is { id: string; full_name: string } => p !== null);
+      .map(
+        (m) =>
+          m.public_profiles as {
+            id: string | null;
+            full_name: string | null;
+          } | null
+      )
+      .filter(
+        (p): p is { id: string; full_name: string } =>
+          p !== null && p.id !== null && p.full_name !== null
+      );
   }
 
   const isCaptain = isCoop && instance?.captain_id === user.id;
@@ -99,7 +108,7 @@ export default async function MyQuestWorkspacePage({
   const submissionQuery = supabase
     .from('quest_submissions')
     .select(
-      'id, status, text_content, word_count, teacher_feedback, submitted_at, reviewed_at, submitted_by, profiles:submitted_by(full_name)'
+      'id, status, text_content, word_count, teacher_feedback, submitted_at, reviewed_at, submitted_by, public_profiles:submitted_by(full_name)'
     )
     .order('submitted_at', { ascending: false });
   const { data: submissions } = isCoop
@@ -243,9 +252,12 @@ export default async function MyQuestWorkspacePage({
                 {' · '}
                 {pendingSubmission.word_count} words
                 {isCoop &&
-                  (pendingSubmission.profiles as { full_name?: string } | null)
-                    ?.full_name &&
-                  ` · by ${(pendingSubmission.profiles as { full_name: string }).full_name}`}
+                  (
+                    pendingSubmission.public_profiles as {
+                      full_name?: string | null;
+                    } | null
+                  )?.full_name &&
+                  ` · by ${(pendingSubmission.public_profiles as { full_name: string }).full_name}`}
               </p>
               <div className="rounded-md bg-white p-3 text-sm text-slate-700">
                 <MarkdownRenderer source={pendingSubmission.text_content ?? ''} />
