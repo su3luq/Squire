@@ -106,15 +106,12 @@ export default async function MyQuestWorkspacePage({
     latestSubmission?.status === 'failed' ? latestSubmission : null;
 
   const isCompleted = acceptance.status === 'passed';
-  const isDisbanded =
-    acceptance.status === 'disbanded' || instance?.status === 'disbanded';
 
   // Can we submit right now?
   // - Solo: acceptance is active AND no pending submission
   // - Coop: instance is active AND no pending submission
   const canSubmit =
     !isCompleted &&
-    !isDisbanded &&
     !pendingSubmission &&
     (isCoop ? instance?.status === 'active' : acceptance.status === 'active');
 
@@ -197,14 +194,6 @@ export default async function MyQuestWorkspacePage({
           </Card>
         )}
 
-        {isDisbanded && (
-          <Card className="border-slate-200 bg-slate-50">
-            <CardContent className="pt-6 text-sm text-slate-700">
-              Your team was disbanded by the teacher.
-            </CardContent>
-          </Card>
-        )}
-
         {pendingSubmission && (
           <Card className="border-amber-200 bg-amber-50">
             <CardContent className="pt-6 space-y-3">
@@ -228,7 +217,7 @@ export default async function MyQuestWorkspacePage({
         )}
 
         {/* Failed-resubmit UX (Spec A) */}
-        {lastFailed && !isCompleted && !isDisbanded && (
+        {lastFailed && !isCompleted && (
           <Card className="border-red-200 bg-red-50">
             <CardContent className="pt-6 space-y-3">
               <h3 className="text-lg font-semibold text-red-900">

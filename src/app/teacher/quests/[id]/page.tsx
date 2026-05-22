@@ -332,11 +332,9 @@ export default async function QuestDetailPage({
                                     Team of {members.length} ·{' '}
                                     <span
                                       className={
-                                        inst.status === 'disbanded'
-                                          ? 'text-slate-500'
-                                          : inst.status === 'passed'
-                                            ? 'text-green-700'
-                                            : 'text-slate-700'
+                                        inst.status === 'passed'
+                                          ? 'text-green-700'
+                                          : 'text-slate-700'
                                       }
                                     >
                                       {inst.status}

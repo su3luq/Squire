@@ -980,7 +980,7 @@ export type Database = {
     }
     Enums: {
       card_review_state: "new" | "learning" | "review" | "relearning"
-      coop_instance_status: "active" | "submitted" | "passed" | "disbanded"
+      coop_instance_status: "active" | "submitted" | "passed"
       push_platform: "ios" | "android" | "web"
       quest_acceptance_status:
         | "active"
@@ -988,7 +988,6 @@ export type Database = {
         | "passed"
         | "failed"
         | "enrolled"
-        | "disbanded"
       quest_availability_mode:
         | "open"
         | "timed"
@@ -1125,7 +1124,7 @@ export const Constants = {
   public: {
     Enums: {
       card_review_state: ["new", "learning", "review", "relearning"],
-      coop_instance_status: ["active", "submitted", "passed", "disbanded"],
+      coop_instance_status: ["active", "submitted", "passed"],
       push_platform: ["ios", "android", "web"],
       quest_acceptance_status: [
         "active",
@@ -1133,7 +1132,6 @@ export const Constants = {
         "passed",
         "failed",
         "enrolled",
-        "disbanded",
       ],
       quest_availability_mode: [
         "open",

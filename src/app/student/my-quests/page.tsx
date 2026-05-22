@@ -97,8 +97,7 @@ export default async function MyQuestsPage() {
     | 'enrolled'
     | 'awaiting_review'
     | 'resubmit_needed'
-    | 'completed'
-    | 'disbanded';
+    | 'completed';
 
   type EnrichedAcceptance = {
     acceptanceId: string;
@@ -131,8 +130,6 @@ export default async function MyQuestsPage() {
 
       if (a.status === 'passed') {
         bucket = 'completed';
-      } else if (a.status === 'disbanded') {
-        bucket = 'disbanded';
       } else if (a.status === 'enrolled') {
         bucket = 'enrolled';
       } else if (a.status === 'active') {
@@ -192,11 +189,6 @@ export default async function MyQuestsPage() {
     {
       title: 'Enrolled in co-op',
       bucket: 'enrolled',
-      emptyText: '',
-    },
-    {
-      title: 'Disbanded',
-      bucket: 'disbanded',
       emptyText: '',
     },
     {

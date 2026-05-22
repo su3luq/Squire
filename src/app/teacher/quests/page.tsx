@@ -101,27 +101,22 @@ export default async function QuestsListPage() {
               if (matchmakingDone) {
                 const teamsByClass = new Map<string, number>();
                 for (const inst of instances) {
-                  if (inst.status === 'disbanded') continue;
                   teamsByClass.set(
                     inst.class_id,
                     (teamsByClass.get(inst.class_id) ?? 0) + 1
                   );
                 }
-                if (teamsByClass.size === 0) {
-                  indicator = <span className="text-slate-500">All teams disbanded</span>;
-                } else {
-                  const totalTeams = Array.from(teamsByClass.values()).reduce(
-                    (a, b) => a + b,
-                    0
-                  );
-                  indicator = (
-                    <span>
-                      {totalTeams} {totalTeams === 1 ? 'team' : 'teams'} across{' '}
-                      {teamsByClass.size}{' '}
-                      {teamsByClass.size === 1 ? 'class' : 'classes'}
-                    </span>
-                  );
-                }
+                const totalTeams = Array.from(teamsByClass.values()).reduce(
+                  (a, b) => a + b,
+                  0
+                );
+                indicator = (
+                  <span>
+                    {totalTeams} {totalTeams === 1 ? 'team' : 'teams'} across{' '}
+                    {teamsByClass.size}{' '}
+                    {teamsByClass.size === 1 ? 'class' : 'classes'}
+                  </span>
+                );
               } else {
                 const enrolled = acceptances.filter((a) => a.status === 'enrolled')
                   .length;

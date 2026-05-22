@@ -75,12 +75,12 @@ export function DisbandQuestButton({
           <AlertDialogHeader>
             <AlertDialogTitle>Disband this quest?</AlertDialogTitle>
             <AlertDialogDescription>
-              This cancels all ongoing work on the quest:{' '}
+              This removes all in-flight work on the quest:{' '}
               <span className="font-medium">
                 {affectedStudents}{' '}
                 {affectedStudents === 1 ? 'student' : 'students'}
               </span>{' '}
-              will lose their active/enrolled status
+              will be removed from the quest
               {affectedTeams > 0 && (
                 <>
                   {' '}
@@ -88,10 +88,12 @@ export function DisbandQuestButton({
                   <span className="font-medium">
                     {affectedTeams} {affectedTeams === 1 ? 'team' : 'teams'}
                   </span>{' '}
-                  will be disbanded
+                  will be deleted
                 </>
               )}
-              . Already-passed work is preserved. Cannot be undone.
+              . They can re-enroll if the quest is still open and the
+              matchmaking deadline hasn&apos;t passed. Already-passed work is
+              preserved. Cannot be undone.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>

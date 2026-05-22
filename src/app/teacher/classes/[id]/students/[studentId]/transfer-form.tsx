@@ -58,9 +58,9 @@ export function TransferForm({
         </Button>
       </div>
       <p className="text-xs text-slate-500">
-        The student keeps their XP, rank, and review history. Active coop
-        teams in the old class are NOT auto-disbanded — you may want to
-        disband them first.
+        The student keeps their XP, rank, and review history. They&apos;ll
+        stay on any coop team they&apos;re already in unless you disband it
+        first.
       </p>
       {error && <p className="text-sm text-red-600">{error}</p>}
     </form>
