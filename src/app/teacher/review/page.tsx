@@ -64,6 +64,52 @@ export default async function ReviewQueuePage({
     quest_type: 'solo' | 'coop' | 'daily_quiz';
   };
 
+  // Build attempt counts: for each pending submission, how many submissions
+  // exist for its acceptance/instance (the count IS the attempt number, since
+  // the pending one is the latest).
+  const acceptanceIds = Array.from(
+    new Set(
+      (submissions ?? [])
+        .map((s) => s.acceptance_id)
+        .filter((x): x is string => x !== null)
+    )
+  );
+  const instanceIds = Array.from(
+    new Set(
+      (submissions ?? [])
+        .map((s) => s.instance_id)
+        .filter((x): x is string => x !== null)
+    )
+  );
+  const attemptByAcceptance = new Map<string, number>();
+  const attemptByInstance = new Map<string, number>();
+  if (acceptanceIds.length > 0) {
+    const { data: prior } = await supabase
+      .from('quest_submissions')
+      .select('acceptance_id')
+      .in('acceptance_id', acceptanceIds);
+    for (const row of prior ?? []) {
+      if (row.acceptance_id)
+        attemptByAcceptance.set(
+          row.acceptance_id,
+          (attemptByAcceptance.get(row.acceptance_id) ?? 0) + 1
+        );
+    }
+  }
+  if (instanceIds.length > 0) {
+    const { data: prior } = await supabase
+      .from('quest_submissions')
+      .select('instance_id')
+      .in('instance_id', instanceIds);
+    for (const row of prior ?? []) {
+      if (row.instance_id)
+        attemptByInstance.set(
+          row.instance_id,
+          (attemptByInstance.get(row.instance_id) ?? 0) + 1
+        );
+    }
+  }
+
   const allItems = (submissions ?? []).map((s) => {
     const accept = s.quest_acceptances as { quests: Quest | null } | null;
     const inst = s.coop_quest_instances as {
@@ -74,6 +120,11 @@ export default async function ReviewQueuePage({
     const submitter = s.profiles as { full_name: string; class_id: string | null } | null;
     // For solo: class derived from the submitter. For coop: class on the instance.
     const classId = inst?.class_id ?? submitter?.class_id ?? null;
+    const attempt = s.acceptance_id
+      ? (attemptByAcceptance.get(s.acceptance_id) ?? 1)
+      : s.instance_id
+        ? (attemptByInstance.get(s.instance_id) ?? 1)
+        : 1;
     return {
       id: s.id,
       quest,
@@ -82,6 +133,7 @@ export default async function ReviewQueuePage({
       wordCount: s.word_count ?? 0,
       submittedAt: s.submitted_at,
       isCoop: s.instance_id !== null,
+      attempt,
     };
   });
 
@@ -166,6 +218,11 @@ export default async function ReviewQueuePage({
                         {item.classId && (
                           <span className="rounded-full bg-slate-100 px-2 py-0.5 font-medium text-slate-700">
                             {classNameById.get(item.classId) ?? 'Unknown class'}
+                          </span>
+                        )}
+                        {item.attempt > 1 && (
+                          <span className="rounded-full bg-amber-100 px-2 py-0.5 font-medium text-amber-900">
+                            Attempt {item.attempt}
                           </span>
                         )}
                         <span>{item.submitterName}</span>

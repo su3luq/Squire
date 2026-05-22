@@ -87,6 +87,30 @@ export default async function QuestDetailPage({
     return a?.quest_id === id || i?.quest_id === id;
   });
 
+  // Compute attempt number per submission (chronological position within
+  // its acceptance/instance). We have submissions ordered DESC; counting
+  // toward "this submission was the Nth attempt" means counting same-key
+  // entries that came strictly before or at this point.
+  const submissionsAsc = [...filteredSubmissions].sort((a, b) =>
+    a.submitted_at < b.submitted_at ? -1 : 1
+  );
+  const attemptBySubmission = new Map<string, number>();
+  const seenByAcceptance = new Map<string, number>();
+  const seenByInstance = new Map<string, number>();
+  for (const s of submissionsAsc) {
+    let n: number;
+    if (s.acceptance_id) {
+      n = (seenByAcceptance.get(s.acceptance_id) ?? 0) + 1;
+      seenByAcceptance.set(s.acceptance_id, n);
+    } else if (s.instance_id) {
+      n = (seenByInstance.get(s.instance_id) ?? 0) + 1;
+      seenByInstance.set(s.instance_id, n);
+    } else {
+      n = 1;
+    }
+    attemptBySubmission.set(s.id, n);
+  }
+
   const pendingCount = filteredSubmissions.filter(
     (s) => s.status === 'pending_review'
   ).length;
@@ -98,6 +122,17 @@ export default async function QuestDetailPage({
     quest.expires_at !== null &&
     // eslint-disable-next-line react-hooks/purity -- Server Component rendered per request; "now" is deliberate.
     new Date(quest.expires_at).getTime() <= Date.now();
+
+  // Surface matchmaking failure for the teacher (read from notifications log).
+  let noEnrollmentsFailure = false;
+  if (quest.quest_type === 'coop' && isExpired) {
+    const { count } = await supabase
+      .from('notifications')
+      .select('id', { count: 'exact', head: true })
+      .eq('type', 'quest_matchmaking_no_enrollments')
+      .filter('data->>quest_id', 'eq', id);
+    noEnrollmentsFailure = (count ?? 0) > 0;
+  }
 
   // Group acceptances by class (for coop pre-matchmaking + general overview)
   type AcceptanceRow = NonNullable<typeof acceptances>[number];
@@ -171,6 +206,18 @@ export default async function QuestDetailPage({
       </div>
 
       <div className="space-y-6">
+        {/* Matchmaking failure banner */}
+        {noEnrollmentsFailure && (
+          <div className="rounded-md border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900">
+            <p className="font-medium">Matchmaking ran with no enrollments.</p>
+            <p className="mt-1 text-xs">
+              The deadline passed and no students had enrolled. You can close
+              the quest, or re-open it with a new deadline by editing
+              &quot;Matchmaking deadline&quot; below.
+            </p>
+          </div>
+        )}
+
         {/* Description */}
         <Card>
           <CardHeader>
@@ -327,6 +374,7 @@ export default async function QuestDetailPage({
                   const submitter = s.profiles as
                     | { id: string; full_name: string; class_id: string | null }
                     | null;
+                  const attempt = attemptBySubmission.get(s.id) ?? 1;
                   return (
                     <li
                       key={s.id}
@@ -336,6 +384,11 @@ export default async function QuestDetailPage({
                         <span className="font-medium text-slate-900">
                           {submitter?.full_name ?? '(unknown)'}
                         </span>
+                        {attempt > 1 && (
+                          <span className="ml-2 rounded bg-amber-100 px-2 py-0.5 text-xs font-medium text-amber-900">
+                            Attempt {attempt}
+                          </span>
+                        )}
                         <span className="ml-2 text-xs text-slate-500">
                           {submitter?.class_id
                             ? `${classLabel(submitter.class_id)} · `

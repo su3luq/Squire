@@ -43,7 +43,7 @@ export default async function StudentQuestDetailPage({
       `
         id, title, description, quest_type, xp_reward, expires_at, closed_at, max_team_size, word_limit_min,
         quest_acceptances(id, student_id, status, instance_id),
-        coop_quest_instances(id)
+        coop_quest_instances(id, class_id)
       `
     )
     .eq('id', id)
@@ -51,14 +51,24 @@ export default async function StudentQuestDetailPage({
 
   if (!quest) notFound();
 
+  const { data: profile } = await supabase
+    .from('profiles')
+    .select('class_id')
+    .eq('id', user.id)
+    .maybeSingle();
+
   // eslint-disable-next-line react-hooks/purity -- Server Component rendered per request.
   const now = Date.now();
   const isExpired =
     quest.expires_at !== null && new Date(quest.expires_at).getTime() <= now;
-  const matchmakingDone = (quest.coop_quest_instances ?? []).length > 0;
+  // Per-class scoping: matchmaking done elsewhere doesn't redirect this student.
+  const matchmakingDoneForMyClass = (quest.coop_quest_instances ?? []).some(
+    (i) => i.class_id === profile?.class_id
+  );
 
-  // If a coop quest has already matched, send the student to their work area.
-  if (quest.quest_type === 'coop' && matchmakingDone) {
+  // If a coop quest has already matched for THIS student's class, send them
+  // to their work area.
+  if (quest.quest_type === 'coop' && matchmakingDoneForMyClass) {
     redirect('/student/my-quests');
   }
 

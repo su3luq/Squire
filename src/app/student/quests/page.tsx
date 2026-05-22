@@ -55,8 +55,8 @@ export default async function StudentQuestsBoardPage() {
     .select(
       `
         id, title, quest_type, xp_reward, expires_at, closed_at, max_team_size,
-        quest_acceptances(id, student_id, status, instance_id),
-        coop_quest_instances(id)
+        quest_acceptances(id, student_id, status, quest_type, instance_id),
+        coop_quest_instances(id, class_id)
       `
     )
     .neq('quest_type', 'daily_quiz')
@@ -64,23 +64,29 @@ export default async function StudentQuestsBoardPage() {
     .or(`expires_at.is.null,expires_at.gt.${nowIso}`)
     .order('created_at', { ascending: false });
 
-  // Global "you're busy" state — for coop, students can have only one active or
-  // enrolled coop at a time. For solo, only one active solo at a time.
+  // Global "you're busy" state. Filter by quest_type so that having an active
+  // solo doesn't block coop enrollment (and vice versa).
   const allAcceptances = (quests ?? []).flatMap((q) =>
     (q.quest_acceptances ?? []).filter((a) => a.student_id === user.id)
   );
   const hasActiveSoloElsewhere = allAcceptances.some(
-    (a) => a.status === 'active' && !a.instance_id
+    (a) => a.quest_type === 'solo' && a.status === 'active'
   );
   const hasActiveOrEnrolledCoopElsewhere = allAcceptances.some(
-    (a) => a.status === 'active' || a.status === 'enrolled'
+    (a) =>
+      a.quest_type === 'coop' &&
+      (a.status === 'active' || a.status === 'enrolled')
   );
 
+  // A coop quest is hidden from this student's board only if matchmaking has
+  // already run for THEIR class. Matchmaking in other classes does not block.
   const visible = (quests ?? []).filter((q) => {
+    if (q.quest_type !== 'coop') return true;
     const instances = q.coop_quest_instances ?? [];
-    const matchmakingDone = instances.length > 0;
-    if (matchmakingDone) return false;
-    return true;
+    const matchmakingDoneForMyClass = instances.some(
+      (i) => i.class_id === profile.class_id
+    );
+    return !matchmakingDoneForMyClass;
   });
 
   const soloQuests = visible.filter((q) => q.quest_type === 'solo');

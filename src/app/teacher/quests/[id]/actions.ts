@@ -63,6 +63,12 @@ export async function updateQuest(
 
   revalidatePath(`/teacher/quests/${questId}`);
   revalidatePath('/teacher/quests');
+  // Student-side surfaces that show quest meta — refresh them too so any
+  // enrolled student sees the edit on their next view without manual reload.
+  revalidatePath('/student/quests');
+  revalidatePath(`/student/quests/${questId}`);
+  revalidatePath('/student/my-quests');
+  revalidatePath(`/student/my-quests/${questId}`);
   return { error: null, id: questId };
 }
 

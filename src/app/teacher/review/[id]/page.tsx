@@ -95,6 +95,25 @@ export default async function ReviewSubmissionPage({
 
   const isPending = submission.status === 'pending_review';
 
+  // Attempt number = count of all submissions for the same acceptance / instance
+  // up to and including this one (chronological position).
+  let attempt = 1;
+  if (submission.acceptance_id) {
+    const { count } = await supabase
+      .from('quest_submissions')
+      .select('id', { count: 'exact', head: true })
+      .eq('acceptance_id', submission.acceptance_id)
+      .lte('submitted_at', submission.submitted_at);
+    attempt = count ?? 1;
+  } else if (submission.instance_id) {
+    const { count } = await supabase
+      .from('quest_submissions')
+      .select('id', { count: 'exact', head: true })
+      .eq('instance_id', submission.instance_id)
+      .lte('submitted_at', submission.submitted_at);
+    attempt = count ?? 1;
+  }
+
   return (
     <main className="container mx-auto max-w-3xl p-6">
       <Link
@@ -115,6 +134,11 @@ export default async function ReviewSubmissionPage({
           {className && (
             <span className="rounded-full bg-slate-100 px-2 py-0.5 text-xs font-medium text-slate-700">
               {className}
+            </span>
+          )}
+          {attempt > 1 && (
+            <span className="rounded-full bg-amber-100 px-2 py-0.5 text-xs font-medium text-amber-900">
+              Attempt {attempt}
             </span>
           )}
           <span>+{quest?.xp_reward ?? 0} XP</span>
