@@ -12,6 +12,7 @@ import { formatLongCountdown } from '../indicator';
 import { EditQuestForm } from './edit-quest-form';
 import { DeleteQuestButton } from './delete-quest-button';
 import { CloseQuestButton } from './close-quest-button';
+import { DisbandQuestButton } from './disband-quest-button';
 import { DisbandInstanceButton } from './disband-instance-button';
 
 const SAIGON_TZ = 'Asia/Ho_Chi_Minh';
@@ -118,6 +119,18 @@ export default async function QuestDetailPage({
   const matchmakingDone = (instances ?? []).length > 0;
   const hasAnyAcceptance = (acceptances ?? []).length > 0;
   const lockCoopFields = quest.quest_type === 'coop' && hasAnyAcceptance;
+
+  // Disband preview counts — what would be cancelled if the teacher clicks
+  // Disband right now.
+  const disbandableAcceptances = (acceptances ?? []).filter(
+    (a) =>
+      a.status === 'active' ||
+      a.status === 'enrolled' ||
+      a.status === 'submitted'
+  ).length;
+  const disbandableInstances = (instances ?? []).filter(
+    (i) => i.status === 'active' || i.status === 'submitted'
+  ).length;
   const isExpired =
     quest.expires_at !== null &&
     // eslint-disable-next-line react-hooks/purity -- Server Component rendered per request; "now" is deliberate.
@@ -432,6 +445,12 @@ export default async function QuestDetailPage({
           </CardHeader>
           <CardContent className="space-y-4">
             <CloseQuestButton questId={quest.id} isClosed={isClosed} />
+            <hr className="border-slate-200" />
+            <DisbandQuestButton
+              questId={quest.id}
+              affectedStudents={disbandableAcceptances}
+              affectedTeams={disbandableInstances}
+            />
             <hr className="border-slate-200" />
             <DeleteQuestButton questId={quest.id} hasPending={pendingCount > 0} />
           </CardContent>

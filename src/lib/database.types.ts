@@ -933,6 +933,7 @@ export type Database = {
       count_words: { Args: { p_text: string }; Returns: number }
       delete_student: { Args: { p_student_id: string }; Returns: Json }
       disband_coop_instance: { Args: { p_instance_id: string }; Returns: Json }
+      disband_quest: { Args: { p_quest_id: string }; Returns: Json }
       get_registration_state: { Args: never; Returns: Json }
       is_my_acceptance: { Args: { p_acceptance_id: string }; Returns: boolean }
       is_my_coop_instance: { Args: { p_instance_id: string }; Returns: boolean }

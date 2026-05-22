@@ -151,6 +151,36 @@ export async function disbandInstance(
   return { error: null, members_released: result.members_released };
 }
 
+export async function disbandQuest(
+  questId: string
+): Promise<{
+  error: string | null;
+  students_affected?: number;
+  instances_affected?: number;
+}> {
+  const supabase = await createClient();
+  const { data, error } = await supabase.rpc('disband_quest', {
+    p_quest_id: questId,
+  });
+  if (error) return { error: `Failed to disband: ${error.message}` };
+  const result = data as {
+    ok: boolean;
+    error?: string;
+    students_affected?: number;
+    instances_affected?: number;
+  };
+  if (!result.ok) return { error: result.error ?? 'Disband failed.' };
+  revalidatePath(`/teacher/quests/${questId}`);
+  revalidatePath('/teacher/quests');
+  revalidatePath('/student/quests');
+  revalidatePath('/student/my-quests');
+  return {
+    error: null,
+    students_affected: result.students_affected,
+    instances_affected: result.instances_affected,
+  };
+}
+
 export async function runMatchmakingNow(
   questId: string
 ): Promise<{ error: string | null }> {
