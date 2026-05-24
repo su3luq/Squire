@@ -54,6 +54,7 @@ A sanity check, not a deep optimization. Goal: surface anything that's already b
 2. Drop the 2 duplicate indexes (one migration, instant).
 3. Add 4 missing FK indexes.
 4. Consolidate dual student/teacher policies where it pays (~17 tables).
+5. Set up a teacher-facing "database size" view (`pg_size_pretty(pg_database_size(...))` per table) so you can see when the 500 MB Supabase free-tier ceiling is approaching. Add pruning helpers for `review_attempts` (>30 days) and resolved `notifications` (>60 days) — keeps you on free tier longer.
 
 ---
 

@@ -119,10 +119,10 @@ Approximate ceilings before you'd jump to paid tiers:
 | Vendor | Free tier ceiling | What pushes you over |
 |---|---|---|
 | Vercel | 100 GB bandwidth/mo, 100 GB-hours of function execution | ~10 k page-loads × 500 students per month is well under |
-| Supabase | 500 MB database, 1 GB file storage, 2 GB egress, 50 MAUs ⚠️ | The 50 MAU limit applies to free-tier auth users — **for 500 students you'll need Supabase Pro ($25/mo)**. This is the only realistic paid line in v1. |
+| Supabase | 500 MB database, 1 GB file storage, 5 GB egress, **50,000 MAUs**, 500 k Edge Function calls/mo | 500 students is 100× under MAU. The realistic ceiling is the 500 MB database — you'll approach that toward the end of a 40-week course. Prune `review_attempts` + old `notifications` before paying. |
 | Cloudflare | unlimited DNS, free SSL, generous DDoS | Hard to hit on a normal app |
 
-So realistic v1 cost once you have actual students: **$10/yr domain + $25/mo Supabase Pro** = ~$310/yr. Flag this when ramping student count past ~40.
+So realistic v1 cost: **$10/yr domain only**. You can launch on free and stay free for the full 40-week course as long as the database stays under 500 MB. The only forecasted paid line is Supabase Pro ($25/mo) if/when the DB approaches the limit — at which point pruning old `review_attempts` rows usually buys you another term.
 
 ## Gotchas
 
