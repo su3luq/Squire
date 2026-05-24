@@ -1,10 +1,7 @@
 import { createClient } from '@/lib/supabase/server';
 import { redirect } from 'next/navigation';
-import Link from 'next/link';
-import { buttonVariants } from '@/components/ui/button';
 import { ReviewLauncher } from '@/components/review-launcher';
 import { EnableNotificationsButton } from '@/components/enable-notifications-button';
-import SignOutButton from './sign-out-button';
 
 export const dynamic = 'force-dynamic';
 
@@ -23,88 +20,41 @@ export default async function StudentHome() {
 
   if (!profile) redirect('/login');
 
-  // Count of currently-due review cards for this student. RLS scopes to own.
   const nowIso = new Date().toISOString();
-  const [{ count: dueCountRaw }, { data: nextRow }, { count: unreadCountRaw }] =
-    await Promise.all([
-      supabase
-        .from('card_reviews')
-        .select('id', { count: 'exact', head: true })
-        .lte('due_at', nowIso),
-      supabase
-        .from('card_reviews')
-        .select('due_at')
-        .gt('due_at', nowIso)
-        .order('due_at', { ascending: true })
-        .limit(1)
-        .maybeSingle(),
-      supabase
-        .from('notifications')
-        .select('id', { count: 'exact', head: true })
-        .is('read_at', null),
-    ]);
+  const [{ count: dueCountRaw }, { data: nextRow }] = await Promise.all([
+    supabase
+      .from('card_reviews')
+      .select('id', { count: 'exact', head: true })
+      .lte('due_at', nowIso),
+    supabase
+      .from('card_reviews')
+      .select('due_at')
+      .gt('due_at', nowIso)
+      .order('due_at', { ascending: true })
+      .limit(1)
+      .maybeSingle(),
+  ]);
   const dueCount = dueCountRaw ?? 0;
   const nextDueAt = nextRow?.due_at ?? null;
-  const unreadCount = unreadCountRaw ?? 0;
 
   return (
-    <main className="flex min-h-screen items-center justify-center p-6">
-      <div className="w-full max-w-md space-y-6 rounded-lg bg-white p-8 text-center shadow-sm">
-        <div>
-          <h1 className="text-2xl font-bold">Student Home</h1>
-          <p className="mt-1 text-sm text-slate-600">Welcome, {profile.full_name}.</p>
-          <p className="mt-1 text-xs text-slate-500">
-            Rank: {profile.current_rank} · XP: {profile.xp_total}
-          </p>
-        </div>
+    <div className="mx-auto max-w-3xl space-y-6">
+      <header>
+        <h1 className="text-2xl font-semibold tracking-tight">
+          Welcome back, {profile.full_name}
+        </h1>
+        <p className="mt-1 text-sm text-muted-foreground">
+          Rank {profile.current_rank} · {profile.xp_total} XP
+        </p>
+      </header>
 
-        <div className="flex flex-col items-center gap-3">
-          <ReviewLauncher dueCount={dueCount} nextDueAt={nextDueAt} />
-          <div className="flex flex-wrap justify-center gap-2">
-            <Link
-              href="/student/quests"
-              className={buttonVariants({ variant: 'outline' })}
-            >
-              Quests
-            </Link>
-            <Link
-              href="/student/my-quests"
-              className={buttonVariants({ variant: 'outline' })}
-            >
-              My Quests
-            </Link>
-            <Link
-              href="/student/library"
-              className={buttonVariants({ variant: 'outline' })}
-            >
-              Library
-            </Link>
-            <Link
-              href="/student/leaderboard"
-              className={buttonVariants({ variant: 'outline' })}
-            >
-              Leaderboard
-            </Link>
-            <Link
-              href="/notifications"
-              className={buttonVariants({ variant: 'outline' })}
-            >
-              Notifications
-              {unreadCount > 0 && (
-                <span className="ml-2 rounded-full bg-blue-100 px-2 py-0.5 text-xs font-medium text-blue-900">
-                  {unreadCount}
-                </span>
-              )}
-            </Link>
-          </div>
-        </div>
-
-        <div className="border-t border-slate-200 pt-4">
-          <EnableNotificationsButton />
-        </div>
-
-        <SignOutButton />
+      <div className="rounded-lg border border-border bg-card p-5">
+        <ReviewLauncher dueCount={dueCount} nextDueAt={nextDueAt} />
       </div>
-    </main>
+
+      <div className="rounded-lg border border-border bg-card p-5">
+        <EnableNotificationsButton />
+      </div>
+    </div>
   );
 }
