@@ -1,6 +1,6 @@
-# Squire — Database Schema Reference
+# RankedLearning — Database Schema Reference
 
-Authoritative reference for all 16 tables in the `public` schema of the SQUIRE Supabase project (`dicufymnejhrkrakgluu`). Match this exactly when writing queries.
+Authoritative reference for all 16 tables in the `public` schema of the RankedLearning Supabase project (`dicufymnejhrkrakgluu`). Match this exactly when writing queries.
 
 **Project region:** `ap-northeast-2` (Seoul)
 **Postgres version:** 17

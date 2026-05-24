@@ -8,7 +8,7 @@ This file is the plan. It is not a contract — adjust as we go.
 
 ## Goal
 
-Bring Squire from a functional-but-basic UI to a **production-grade, responsive, on-brand interface** suitable for both teachers (admin-feel) and high-school students (modern app-feel), then squeeze observable performance.
+Bring RankedLearning from a functional-but-basic UI to a **production-grade, responsive, on-brand interface** suitable for both teachers (admin-feel) and high-school students (modern app-feel), then squeeze observable performance.
 
 ## Non-goals
 

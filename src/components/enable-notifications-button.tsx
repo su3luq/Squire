@@ -177,7 +177,7 @@ export function EnableNotificationsButton() {
     if (needsA2HS) {
       return (
         <div className="rounded-md border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-900">
-          On iPhone, install Squire to your Home Screen first
+          On iPhone, install RankedLearning to your Home Screen first
           (Share → Add to Home Screen), then open it from there to enable
           notifications.
         </div>

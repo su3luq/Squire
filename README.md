@@ -1,4 +1,4 @@
-# Squire
+# RankedLearning
 
 A gamified learning platform for a single teacher and their students. Built with Expo (React Native + Web) and Supabase.
 

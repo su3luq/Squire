@@ -2,7 +2,7 @@
 
 This folder is the source of truth for database schema changes.
 
-**Migration application pattern:** Migrations are applied to the SQUIRE Supabase project (`dicufymnejhrkrakgluu`) via the Supabase MCP from the architect's chat session. The SQL is ALSO committed here as the audit trail and the reproducible reference.
+**Migration application pattern:** Migrations are applied to the RankedLearning Supabase project (`dicufymnejhrkrakgluu`) via the Supabase MCP from the architect's chat session. The SQL is ALSO committed here as the audit trail and the reproducible reference.
 
 **File naming:** `NNN_short_description.sql` where NNN matches the order applied in production.
 

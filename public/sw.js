@@ -1,4 +1,4 @@
-// Squire service worker — Web Push delivery.
+// RankedLearning service worker — Web Push delivery.
 //
 // Registered at /sw.js so the scope is the whole origin. The browser keeps
 // this running independently of any open tab; it wakes up whenever the push
@@ -22,10 +22,10 @@ self.addEventListener('push', (event) => {
   try {
     payload = event.data ? event.data.json() : {};
   } catch {
-    payload = { title: 'Squire', body: event.data ? event.data.text() : '' };
+    payload = { title: 'RankedLearning', body: event.data ? event.data.text() : '' };
   }
 
-  const title = payload.title || 'Squire';
+  const title = payload.title || 'RankedLearning';
   const options = {
     body: payload.body || '',
     icon: '/next.svg', // placeholder; real icon ships later
@@ -44,7 +44,7 @@ self.addEventListener('notificationclick', (event) => {
 
   event.waitUntil(
     self.clients.matchAll({ type: 'window', includeUncontrolled: true }).then((clients) => {
-      // If a Squire tab is already open, focus it and navigate.
+      // If a RankedLearning tab is already open, focus it and navigate.
       for (const client of clients) {
         if ('focus' in client) {
           try {

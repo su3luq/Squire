@@ -149,7 +149,7 @@ Insert a notification by hand and watch it deliver:
 
 ```sql
 INSERT INTO public.notifications (user_id, type, title, body)
-VALUES (auth.uid(), 'test', 'Squire test', 'Hello from the cron.');
+VALUES (auth.uid(), 'test', 'RankedLearning test', 'Hello from the cron.');
 ```
 
 (Run while logged in via the Supabase SQL Editor — `auth.uid()` returns

@@ -36,7 +36,7 @@ export default function LoginPage() {
     <main className="flex min-h-screen items-center justify-center p-6">
       <div className="w-full max-w-md space-y-6 rounded-lg bg-white p-8 shadow-sm">
         <div className="space-y-1 text-center">
-          <h1 className="text-2xl font-bold">Welcome to Squire</h1>
+          <h1 className="text-2xl font-bold">Welcome to RankedLearning</h1>
           <p className="text-sm text-slate-600">Sign in with your email and password.</p>
         </div>
         <form onSubmit={handleSubmit} className="space-y-4">

@@ -1,4 +1,4 @@
-# Squire — Project Briefing for Claude Code
+# RankedLearning — Project Briefing for Claude Code
 
 **This file is loaded automatically at the start of every Claude Code session. Read it fully before doing anything else.**
 
@@ -6,7 +6,7 @@
 
 ## What This App Is
 
-Squire is a gamified learning platform for a single teacher (the developer/author of this repo) and up to 500 Vietnamese high school ESL/research students at an international school. Course runs 40 weeks. Web-only deployment via Next.js (no native apps). Teacher and students both use the same app; UI is role-gated.
+RankedLearning is a gamified learning platform for a single teacher (the developer/author of this repo) and up to 500 Vietnamese high school ESL/research students at an international school. Course runs 40 weeks. Web-only deployment via Next.js (no native apps). Teacher and students both use the same app; UI is role-gated.
 
 **This is the teacher's own app for their own students. They are the only developer and the only teacher (for now).**
 
@@ -28,7 +28,7 @@ Squire is a gamified learning platform for a single teacher (the developer/autho
 | AI-likelihood detection | Small open-source classifier (decide at Phase 5) |
 
 **Supabase project ID:** `dicufymnejhrkrakgluu` (region: ap-northeast-2 / Seoul)
-**Supabase project name:** SQUIRE
+**Supabase project name:** RankedLearning
 
 ---
 

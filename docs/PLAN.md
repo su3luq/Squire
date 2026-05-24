@@ -1,4 +1,4 @@
-# Squire — Implementation Plan
+# RankedLearning — Implementation Plan
 
 Full project plan as agreed between teacher and architect (Claude). This is the source of truth for what gets built. Diverging from this document requires a conversation, not a unilateral decision.
 
