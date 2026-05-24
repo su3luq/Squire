@@ -24,6 +24,10 @@
 .DS_Store
 *.pem
 
+# local UI screenshots + Playwright MCP scratch
+/.playwright-mcp/
+/*.png
+
 # debug
 npm-debug.log*
 yarn-debug.log*
