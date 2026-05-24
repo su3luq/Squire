@@ -71,6 +71,8 @@ export async function markNotificationRead(
     .is('read_at', null);
   if (error) return { ok: false, error: error.message };
   revalidatePath('/notifications');
+  revalidatePath('/teacher');
+  revalidatePath('/student');
   return { ok: true };
 }
 
@@ -91,6 +93,8 @@ export async function markAllNotificationsRead(): Promise<
     .is('read_at', null);
   if (error) return { ok: false, error: error.message };
   revalidatePath('/notifications');
+  revalidatePath('/teacher');
+  revalidatePath('/student');
   return { ok: true, count: count ?? 0 };
 }
 
