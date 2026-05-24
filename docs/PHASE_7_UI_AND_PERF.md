@@ -33,35 +33,20 @@ A sanity check, not a deep optimization. Goal: surface anything that's already b
 
 ---
 
-## Open design decisions (need your input before Stage 1)
+## Locked design decisions
 
-These are blockers for the UI design system. Once you answer, I'll lock them and start building.
-
-1. **Design direction / vibe**
-   - Option A: clean Apple-like / Linear (minimal, lots of whitespace, monochrome with single accent color)
-   - Option B: modern education-product (Khan Academy / Duolingo — playful, more color, illustrations, slightly rounded)
-   - Option C: serious-academic (Notion-like, dense, neutral, content-first)
-   - Inspiration links / screenshots welcome.
-
-2. **Color palette**
-   - Brand primary color (one strong accent we'll use throughout): suggest navy, deep indigo, or forest green to feel "knightly" given the Squire name. Open to anything.
-   - Dark mode in v1, or light-only first? (Recommend light-only first; dark mode is a tail of work that's never essential.)
-
-3. **Typography**
-   - Body font: default Inter (clean, free, broad support).
-   - Headings: same as body, or a display font? (Suggest the same family for tightness, or a contrast pairing like Fraunces / Space Grotesk if you want personality.)
-
-4. **Icon library**
-   - `lucide-react` (default with shadcn). Comprehensive, clean line icons.
-
-5. **Layout shell**
-   - Recommend a left sidebar on desktop/tablet (≥768 px) and bottom-tab navigation on mobile (<768 px). Faster than hamburger menus and feels native.
+1. **Vibe:** Serious-academic (Notion-like). Neutral background, content-first, dense without feeling cramped. Restraint over decoration. Suits both teacher admin work and student study sessions.
+2. **Brand color:** Forest green as the single accent. Used for primary actions, active nav, rank / XP highlights. Everything else neutral grays + black + white.
+3. **Dark mode:** Light only in v1. Dark mode parked as a Stage 5/6 follow-on if appetite remains.
+4. **Typography:** Inter everywhere. One family, four weights (400 / 500 / 600 / 700). Display sizes get tighter tracking, body sizes get default.
+5. **Icons:** `lucide-react`.
+6. **Layout shell:** Left sidebar on ≥768 px (desktop + tablet), bottom-tab navigation on <768 px (mobile). No hamburger menu.
 
 ---
 
 ## Stage 1 — UI foundation (1–2 sessions)
 
-After your answers above:
+Now unblocked. Tasks:
 
 - [ ] Tailwind v4 `@theme` overhaul in `src/app/globals.css`: semantic color tokens (`--color-brand`, `--color-bg`, `--color-fg`, `--color-muted-fg`, `--color-border`, `--color-success`, `--color-danger`), spacing scale, radius scale, shadow scale, animation easings.
 - [ ] Add fonts via `next/font/google`. Define `--font-sans` (and `--font-display` if chosen).
