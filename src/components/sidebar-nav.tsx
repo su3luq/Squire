@@ -14,7 +14,12 @@ export function SidebarNav({ items }: { items: NavItem[] }) {
       <ul className="space-y-1">
         {items.map((item) => {
           const active =
-            pathname === item.href || pathname.startsWith(item.href + '/');
+            pathname === item.href ||
+            pathname.startsWith(item.href + '/') ||
+            (item.activePaths?.some(
+              (p) => pathname === p || pathname.startsWith(p + '/'),
+            ) ??
+              false);
           return (
             <li key={item.href}>
               <Link

@@ -15,7 +15,12 @@ export function BottomTabsNav({ items }: { items: NavItem[] }) {
     <nav className="fixed inset-x-0 bottom-0 z-30 flex h-16 border-t border-border bg-background md:hidden">
       {tabs.map((item) => {
         const active =
-          pathname === item.href || pathname.startsWith(item.href + '/');
+          pathname === item.href ||
+          pathname.startsWith(item.href + '/') ||
+          (item.activePaths?.some(
+            (p) => pathname === p || pathname.startsWith(p + '/'),
+          ) ??
+            false);
         return (
           <Link
             key={item.href}

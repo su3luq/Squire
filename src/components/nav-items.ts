@@ -23,6 +23,13 @@ export type NavItem = {
   label: string;
   icon: NavIconKey;
   badge?: number;
+  /**
+   * Extra path prefixes that should make this item appear active.
+   * Used for "hub" entries like Insights, which routes to one URL
+   * (/teacher/analytics) but should also light up when a sibling
+   * page (/leaderboard) is open under the same tab strip.
+   */
+  activePaths?: string[];
 };
 
 type TeacherCounts = {
@@ -43,7 +50,12 @@ export function getTeacherNav(counts: TeacherCounts): NavItem[] {
     { href: '/teacher/quests', label: 'Quests', icon: 'quests' },
     { href: '/teacher/lessons', label: 'Lessons', icon: 'lessons' },
     { href: '/teacher/classes', label: 'Classes', icon: 'classes' },
-    { href: '/teacher/analytics', label: 'Insights', icon: 'insights' },
+    {
+      href: '/teacher/analytics',
+      label: 'Insights',
+      icon: 'insights',
+      activePaths: ['/leaderboard'],
+    },
   ];
 }
 
