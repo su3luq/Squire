@@ -90,21 +90,27 @@ python -c "import secrets; print(secrets.token_urlsafe(32))"
 This value must match exactly in two places: a Postgres setting *and* an
 Edge Function secret. The function checks it on every invocation.
 
-### 4b. Set the Postgres settings
+### 4b. Store the secret in Supabase Vault
 
-Run these once via the Supabase SQL Editor as a superuser. They survive
-restarts.
+On hosted Supabase the `postgres` role isn't the cluster superuser, so
+`ALTER DATABASE postgres SET …` is denied even via the SQL Editor.
+Supabase Vault is the supported pattern for cron-readable secrets.
+
+Run this once via the SQL Editor:
 
 ```sql
-ALTER DATABASE postgres SET app.settings.functions_url =
-    'https://dicufymnejhrkrakgluu.supabase.co/functions/v1';
-ALTER DATABASE postgres SET app.settings.cron_secret =
-    '<paste the value from 4a>';
+SELECT vault.create_secret(
+    '<paste the value from 4a>',
+    'cron_secret',
+    'Shared secret for send-pushes cron -> Edge Function'
+);
 ```
 
-Sessions started before these `ALTER`s won't see them — `pg_cron`'s
-session is fine because it's reconnected per tick, but if you're testing
-manually in psql, reconnect first.
+The value is encrypted at rest. The cron job reads it back via
+`SELECT decrypted_secret FROM vault.decrypted_secrets WHERE name = 'cron_secret'`.
+
+The Edge Function URL is public and hardcoded in migration 031, so it
+doesn't need to be stored anywhere.
 
 ### 4c. Set the Edge Function secrets
 
@@ -115,7 +121,7 @@ Supabase dashboard → Edge Functions → `send-pushes` → Secrets (or via CLI
 VAPID_PUBLIC_KEY  = (same as NEXT_PUBLIC_VAPID_PUBLIC_KEY)
 VAPID_PRIVATE_KEY = (private half of the VAPID keypair from step 1)
 VAPID_SUBJECT     = mailto:your-email@example.com
-CRON_SECRET       = (same value as app.settings.cron_secret)
+CRON_SECRET       = (same value you put in vault.secrets)
 ```
 
 `SUPABASE_URL` and `SUPABASE_SERVICE_ROLE_KEY` are injected automatically
