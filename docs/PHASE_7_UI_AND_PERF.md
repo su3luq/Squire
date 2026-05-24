@@ -31,6 +31,30 @@ A sanity check, not a deep optimization. Goal: surface anything that's already b
 
 **Exit criterion:** baseline numbers captured. No critical regressions. Anything non-critical gets parked in Stage 5.
 
+### Stage 0 results (2026-05-25)
+
+**Build (`next build`):** succeeds in ~3 s. 31 routes total — 7 statically prerendered (login, register, root, etc.), 24 server-rendered on demand (everything auth-gated). Per-route First Load JS sizes are not surfaced by Next 16's default build output; the bundle-analyzer step is deferred to Stage 5.
+
+**Performance advisor (Supabase, `get_advisors performance`)** — categorized:
+
+| Severity | Issue | Count | Notes |
+|---|---|---|---|
+| High | `auth_rls_initplan` — RLS policies re-evaluate `auth.uid()` per row | 22 | Standard fix: wrap as `(select auth.uid())`. Biggest scale win. |
+| Medium | `multiple_permissive_policies` — student + teacher SELECTs both evaluated | 17 | Consolidate into single policies with `OR` where it pays. |
+| Low | `unindexed_foreign_keys` — `app_settings.updated_by`, `coop_quest_instances.captain_id`, `quest_submissions.submitted_by`, `review_attempts.quiz_question_id` | 4 | Add indexes; trivial. |
+| Low | `duplicate_index` — `notifications.idx_notifications_pending_push` ≡ `notifications_unpushed_idx`; `push_tokens.idx_push_tokens_user` ≡ `push_tokens_user_id_idx` | 2 | Migration 030 added duplicates that already existed. Quick 5-min cleanup. |
+| Info | `unused_index` — `idx_notifications_pending_push` never accessed | 1 | Same row as the duplicate above; goes away when we dedupe. |
+
+**Lighthouse + DevTools Network:** deferred. Running these now would measure the soon-to-be-thrown-away UI; the right time is Stage 4, where the new UI gets benchmarked.
+
+**Showstoppers:** none. None of the advisor items block the redesign. Stage 1 is unblocked.
+
+**Backlog carried into Stage 5:**
+1. Wrap `auth.uid()` in `(select …)` across ~22 RLS policies.
+2. Drop the 2 duplicate indexes (one migration, instant).
+3. Add 4 missing FK indexes.
+4. Consolidate dual student/teacher policies where it pays (~17 tables).
+
 ---
 
 ## Locked design decisions
