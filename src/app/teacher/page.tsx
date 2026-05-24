@@ -22,7 +22,7 @@ export default async function TeacherHome() {
       <header>
         <h1 className="text-2xl font-semibold tracking-tight">Welcome back, {profile.full_name}</h1>
         <p className="mt-1 text-sm text-muted-foreground">
-          Pick where to start from the sidebar.
+          Pick a section from the menu to get started.
         </p>
       </header>
 

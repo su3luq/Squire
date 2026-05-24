@@ -3,6 +3,7 @@
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { cn } from '@/lib/utils';
+import { NavIcon } from './nav-icons';
 import type { NavItem } from './nav-items';
 
 export function SidebarNav({ items }: { items: NavItem[] }) {
@@ -12,7 +13,6 @@ export function SidebarNav({ items }: { items: NavItem[] }) {
     <nav className="flex-1 overflow-y-auto p-3">
       <ul className="space-y-1">
         {items.map((item) => {
-          const Icon = item.icon;
           const active =
             pathname === item.href || pathname.startsWith(item.href + '/');
           return (
@@ -27,7 +27,7 @@ export function SidebarNav({ items }: { items: NavItem[] }) {
                 )}
               >
                 <span className="flex items-center gap-3">
-                  <Icon className="h-4 w-4 shrink-0" />
+                  <NavIcon name={item.icon} className="h-4 w-4 shrink-0" />
                   <span>{item.label}</span>
                 </span>
                 {item.badge && item.badge > 0 ? (

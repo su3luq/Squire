@@ -3,6 +3,7 @@
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { cn } from '@/lib/utils';
+import { NavIcon } from './nav-icons';
 import type { NavItem } from './nav-items';
 
 export function BottomTabsNav({ items }: { items: NavItem[] }) {
@@ -13,7 +14,6 @@ export function BottomTabsNav({ items }: { items: NavItem[] }) {
   return (
     <nav className="fixed inset-x-0 bottom-0 z-30 flex h-16 border-t border-border bg-background md:hidden">
       {tabs.map((item) => {
-        const Icon = item.icon;
         const active =
           pathname === item.href || pathname.startsWith(item.href + '/');
         return (
@@ -26,7 +26,7 @@ export function BottomTabsNav({ items }: { items: NavItem[] }) {
             )}
           >
             <span className="relative">
-              <Icon className="h-5 w-5" />
+              <NavIcon name={item.icon} className="h-5 w-5" />
               {item.badge && item.badge > 0 ? (
                 <span className="absolute -right-2 -top-1 flex h-4 min-w-4 items-center justify-center rounded-full bg-primary px-1 text-[10px] font-medium text-primary-foreground">
                   {item.badge}
