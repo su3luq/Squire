@@ -36,13 +36,11 @@ export default async function StudentLayout({
 
   return (
     <AppShell
-      navItems={getStudentNav({
-        dueReviews: dueReviews ?? 0,
-        unreadNotifications: unreadNotifications ?? 0,
-      })}
+      navItems={getStudentNav({ dueReviews: dueReviews ?? 0 })}
       userName={profile.full_name ?? 'Student'}
       userMeta={`Rank ${profile.current_rank} · ${profile.xp_total} XP`}
       homeHref="/student"
+      unreadCount={unreadNotifications ?? 0}
     >
       {children}
     </AppShell>

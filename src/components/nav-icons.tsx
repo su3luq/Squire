@@ -12,6 +12,7 @@ import {
   Trophy,
   ListChecks,
   Brain,
+  Gauge,
   type LucideIcon,
 } from 'lucide-react';
 import type { NavIconKey } from './nav-items';
@@ -21,6 +22,7 @@ const ICON_REGISTRY: Record<NavIconKey, LucideIcon> = {
   quests: Target,
   review: ClipboardCheck,
   analytics: BarChart3,
+  insights: Gauge,
   inbox: Bell,
   lessons: BookOpen,
   classes: Users,

@@ -9,6 +9,7 @@ export type NavIconKey =
   | 'quests'
   | 'review'
   | 'analytics'
+  | 'insights'
   | 'inbox'
   | 'lessons'
   | 'classes'
@@ -26,38 +27,32 @@ export type NavItem = {
 
 type TeacherCounts = {
   pendingReviews?: number;
-  unreadNotifications?: number;
 };
 
 type StudentCounts = {
   dueReviews?: number;
-  unreadNotifications?: number;
 };
 
-// First 5 items become bottom tabs on mobile; everything stays in the sidebar.
-// Order is "most-used first" so the mobile shortcut surface is the right one.
+// Exactly 5 items per role, consistent across desktop sidebar and mobile
+// bottom tabs. Home is reachable via the brand-logo click; Inbox lives
+// in the top-right header icon (not in this list).
 
 export function getTeacherNav(counts: TeacherCounts): NavItem[] {
   return [
-    { href: '/teacher', label: 'Home', icon: 'home' },
-    { href: '/teacher/quests', label: 'Quests', icon: 'quests' },
     { href: '/teacher/review', label: 'Review', icon: 'review', badge: counts.pendingReviews },
-    { href: '/teacher/analytics', label: 'Analytics', icon: 'analytics' },
-    { href: '/notifications', label: 'Inbox', icon: 'inbox', badge: counts.unreadNotifications },
+    { href: '/teacher/quests', label: 'Quests', icon: 'quests' },
     { href: '/teacher/lessons', label: 'Lessons', icon: 'lessons' },
     { href: '/teacher/classes', label: 'Classes', icon: 'classes' },
-    { href: '/leaderboard', label: 'Ranks', icon: 'leaderboard' },
+    { href: '/teacher/analytics', label: 'Insights', icon: 'insights' },
   ];
 }
 
 export function getStudentNav(counts: StudentCounts): NavItem[] {
   return [
-    { href: '/student', label: 'Home', icon: 'home' },
     { href: '/student/review', label: 'Review', icon: 'student-review', badge: counts.dueReviews },
     { href: '/student/quests', label: 'Quests', icon: 'quests' },
-    { href: '/leaderboard', label: 'Ranks', icon: 'leaderboard' },
-    { href: '/notifications', label: 'Inbox', icon: 'inbox', badge: counts.unreadNotifications },
     { href: '/student/my-quests', label: 'My Quests', icon: 'my-quests' },
     { href: '/student/library', label: 'Library', icon: 'library' },
+    { href: '/leaderboard', label: 'Ranks', icon: 'leaderboard' },
   ];
 }

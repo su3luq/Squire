@@ -3,6 +3,7 @@ import { redirect } from 'next/navigation';
 import { Card, CardContent } from '@/components/ui/card';
 import { cn } from '@/lib/utils';
 import { rankName } from '@/lib/ranks';
+import { InsightsTabs } from '@/components/insights-tabs';
 
 export const dynamic = 'force-dynamic';
 
@@ -16,6 +17,13 @@ export default async function LeaderboardPage() {
     data: { user },
   } = await supabase.auth.getUser();
   if (!user) redirect('/login');
+
+  const { data: viewerProfile } = await supabase
+    .from('profiles')
+    .select('role')
+    .eq('id', user.id)
+    .single();
+  const isTeacher = viewerProfile?.role === 'teacher';
 
   const { data: students } = await supabase
     .from('public_profiles')
@@ -46,13 +54,17 @@ export default async function LeaderboardPage() {
   }
 
   return (
-    <div className="mx-auto max-w-2xl space-y-6">
-      <header>
-        <h1 className="text-2xl font-semibold tracking-tight">Leaderboard</h1>
+    <div className="mx-auto max-w-2xl">
+      <header className="mb-2">
+        <h1 className="text-2xl font-semibold tracking-tight">
+          {isTeacher ? 'Insights' : 'Leaderboard'}
+        </h1>
         <p className="mt-1 text-sm text-muted-foreground">
           Global ranking by XP. Earn XP by reviewing cards and completing quests.
         </p>
       </header>
+      {isTeacher ? <InsightsTabs /> : <div className="mb-6" />}
+      <div className="space-y-6">
 
       {rows.length === 0 ? (
         <Card>
@@ -91,6 +103,7 @@ export default async function LeaderboardPage() {
           </CardContent>
         </Card>
       )}
+      </div>
     </div>
   );
 }

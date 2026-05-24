@@ -31,13 +31,11 @@ export default async function TeacherLayout({
 
   return (
     <AppShell
-      navItems={getTeacherNav({
-        pendingReviews: pendingReviews ?? 0,
-        unreadNotifications: unreadNotifications ?? 0,
-      })}
+      navItems={getTeacherNav({ pendingReviews: pendingReviews ?? 0 })}
       userName={profile.full_name ?? 'Teacher'}
       userMeta="Teacher"
       homeHref="/teacher"
+      unreadCount={unreadNotifications ?? 0}
     >
       {children}
     </AppShell>

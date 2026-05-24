@@ -7,6 +7,7 @@ import {
   CardHeader,
   CardTitle,
 } from '@/components/ui/card';
+import { InsightsTabs } from '@/components/insights-tabs';
 
 export const dynamic = 'force-dynamic';
 
@@ -498,17 +499,14 @@ export default async function AnalyticsPage({
       : 0;
 
   return (
-    <main className="container mx-auto max-w-5xl p-6">
-      <Link
-        href="/teacher"
-        className="mb-4 inline-block text-sm text-blue-600 hover:underline"
-      >
-        ← Dashboard
-      </Link>
-      <h1 className="mb-2 text-3xl font-bold">Analytics</h1>
-      <p className="mb-6 text-sm text-slate-600">
-        At-a-glance view of class engagement.
-      </p>
+    <div className="mx-auto max-w-5xl">
+      <header className="mb-2">
+        <h1 className="text-2xl font-semibold tracking-tight">Insights</h1>
+        <p className="mt-1 text-sm text-muted-foreground">
+          At-a-glance view of class engagement.
+        </p>
+      </header>
+      <InsightsTabs />
 
       {/* Class filter */}
       {classes && classes.length > 0 && (
@@ -917,7 +915,7 @@ export default async function AnalyticsPage({
           .
         </p>
       </div>
-    </main>
+    </div>
   );
 }
 

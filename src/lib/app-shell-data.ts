@@ -8,6 +8,7 @@ export type ShellData = {
   userName: string;
   userMeta?: string;
   homeHref: string;
+  unreadCount: number;
 };
 
 /**
@@ -34,7 +35,7 @@ export async function getShellData(): Promise<ShellData> {
     .from('notifications')
     .select('id', { count: 'exact', head: true })
     .is('read_at', null);
-  const unreadNotifications = unreadNotificationsRaw ?? 0;
+  const unreadCount = unreadNotificationsRaw ?? 0;
 
   if (profile.role === 'teacher') {
     const { count: pendingReviewsRaw } = await supabase
@@ -42,13 +43,11 @@ export async function getShellData(): Promise<ShellData> {
       .select('id', { count: 'exact', head: true })
       .eq('status', 'pending_review');
     return {
-      navItems: getTeacherNav({
-        pendingReviews: pendingReviewsRaw ?? 0,
-        unreadNotifications,
-      }),
+      navItems: getTeacherNav({ pendingReviews: pendingReviewsRaw ?? 0 }),
       userName: profile.full_name ?? 'Teacher',
       userMeta: 'Teacher',
       homeHref: '/teacher',
+      unreadCount,
     };
   }
 
@@ -59,12 +58,10 @@ export async function getShellData(): Promise<ShellData> {
     .lte('due_at', nowIso);
 
   return {
-    navItems: getStudentNav({
-      dueReviews: dueReviewsRaw ?? 0,
-      unreadNotifications,
-    }),
+    navItems: getStudentNav({ dueReviews: dueReviewsRaw ?? 0 }),
     userName: profile.full_name ?? 'Student',
     userMeta: `Rank ${profile.current_rank} · ${profile.xp_total} XP`,
     homeHref: '/student',
+    unreadCount,
   };
 }
