@@ -20,21 +20,21 @@ export function SidebarNav({ items }: { items: NavItem[] }) {
               <Link
                 href={item.href}
                 className={cn(
-                  'flex items-center justify-between gap-3 rounded-md px-3 py-2 text-sm transition-colors',
+                  'flex items-center gap-3 rounded-md px-3 py-2 text-sm transition-colors',
                   active
                     ? 'bg-primary/10 text-primary font-medium'
                     : 'text-foreground hover:bg-muted',
                 )}
               >
-                <span className="flex items-center gap-3">
-                  <NavIcon name={item.icon} className="h-4 w-4 shrink-0" />
-                  <span>{item.label}</span>
+                <span className="relative shrink-0">
+                  <NavIcon name={item.icon} className="h-4 w-4" />
+                  {item.badge && item.badge > 0 ? (
+                    <span className="absolute -right-2 -top-1.5 flex h-4 min-w-4 items-center justify-center rounded-full bg-primary px-1 text-[10px] font-semibold leading-none text-primary-foreground">
+                      {item.badge > 99 ? '99+' : item.badge}
+                    </span>
+                  ) : null}
                 </span>
-                {item.badge && item.badge > 0 ? (
-                  <span className="rounded-full bg-primary/15 px-2 py-0.5 text-xs font-medium text-primary">
-                    {item.badge}
-                  </span>
-                ) : null}
+                <span>{item.label}</span>
               </Link>
             </li>
           );

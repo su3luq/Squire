@@ -46,6 +46,7 @@ export function getTeacherNav(counts: TeacherCounts): NavItem[] {
     { href: '/notifications', label: 'Inbox', icon: 'inbox', badge: counts.unreadNotifications },
     { href: '/teacher/lessons', label: 'Lessons', icon: 'lessons' },
     { href: '/teacher/classes', label: 'Classes', icon: 'classes' },
+    { href: '/leaderboard', label: 'Ranks', icon: 'leaderboard' },
   ];
 }
 
@@ -54,7 +55,7 @@ export function getStudentNav(counts: StudentCounts): NavItem[] {
     { href: '/student', label: 'Home', icon: 'home' },
     { href: '/student/review', label: 'Review', icon: 'student-review', badge: counts.dueReviews },
     { href: '/student/quests', label: 'Quests', icon: 'quests' },
-    { href: '/student/leaderboard', label: 'Ranks', icon: 'leaderboard' },
+    { href: '/leaderboard', label: 'Ranks', icon: 'leaderboard' },
     { href: '/notifications', label: 'Inbox', icon: 'inbox', badge: counts.unreadNotifications },
     { href: '/student/my-quests', label: 'My Quests', icon: 'my-quests' },
     { href: '/student/library', label: 'Library', icon: 'library' },

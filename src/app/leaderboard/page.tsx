@@ -1,10 +1,6 @@
 import { createClient } from '@/lib/supabase/server';
 import { redirect } from 'next/navigation';
-import Link from 'next/link';
-import {
-  Card,
-  CardContent,
-} from '@/components/ui/card';
+import { Card, CardContent } from '@/components/ui/card';
 import { cn } from '@/lib/utils';
 import { rankName } from '@/lib/ranks';
 
@@ -21,9 +17,6 @@ export default async function LeaderboardPage() {
   } = await supabase.auth.getUser();
   if (!user) redirect('/login');
 
-  // public_profiles is the security-barrier view. RLS lets students see all
-  // other students globally; teachers see everyone. The view excludes
-  // sensitive columns. We sort by xp_total DESC for the ranking.
   const { data: students } = await supabase
     .from('public_profiles')
     .select('id, full_name, xp_total, current_rank')
@@ -45,7 +38,6 @@ export default async function LeaderboardPage() {
 
   const topRows = rows.slice(0, TOP_N);
 
-  // If the user is below the top, show a small context window around them.
   let contextRows: typeof rows = [];
   if (!userInTop && userPosition >= 0) {
     const start = Math.max(TOP_N, userPosition - CONTEXT_RADIUS);
@@ -54,28 +46,24 @@ export default async function LeaderboardPage() {
   }
 
   return (
-    <main className="container mx-auto max-w-2xl p-6">
-      <Link
-        href="/student"
-        className="mb-4 inline-block text-sm text-blue-600 hover:underline"
-      >
-        ← Home
-      </Link>
-      <h1 className="mb-1 text-3xl font-bold">Leaderboard</h1>
-      <p className="mb-6 text-sm text-slate-600">
-        Global ranking by XP. Earn XP by reviewing cards and completing quests.
-      </p>
+    <div className="mx-auto max-w-2xl space-y-6">
+      <header>
+        <h1 className="text-2xl font-semibold tracking-tight">Leaderboard</h1>
+        <p className="mt-1 text-sm text-muted-foreground">
+          Global ranking by XP. Earn XP by reviewing cards and completing quests.
+        </p>
+      </header>
 
       {rows.length === 0 ? (
         <Card>
-          <CardContent className="py-12 text-center text-sm text-slate-600">
+          <CardContent className="py-12 text-center text-sm text-muted-foreground">
             No students on the board yet.
           </CardContent>
         </Card>
       ) : (
         <Card>
           <CardContent className="p-0">
-            <ul className="divide-y divide-slate-200">
+            <ul className="divide-y divide-border">
               {topRows.map((r) => (
                 <LeaderboardRow
                   key={r.id}
@@ -84,12 +72,12 @@ export default async function LeaderboardPage() {
                 />
               ))}
             </ul>
-            {!userInTop && userRow && (
+            {!userInTop && userRow ? (
               <>
-                <div className="border-t border-slate-200 bg-slate-50 px-4 py-2 text-center text-xs uppercase tracking-wide text-slate-500">
+                <div className="border-t border-border bg-muted px-4 py-2 text-center text-xs uppercase tracking-wide text-muted-foreground">
                   Your position
                 </div>
-                <ul className="divide-y divide-slate-200">
+                <ul className="divide-y divide-border">
                   {contextRows.map((r) => (
                     <LeaderboardRow
                       key={r.id}
@@ -99,11 +87,11 @@ export default async function LeaderboardPage() {
                   ))}
                 </ul>
               </>
-            )}
+            ) : null}
           </CardContent>
         </Card>
       )}
-    </main>
+    </div>
   );
 }
 
@@ -123,13 +111,13 @@ function LeaderboardRow({
     <li
       className={cn(
         'flex items-center gap-3 px-4 py-3',
-        isCurrentUser && 'bg-blue-50/60'
+        isCurrentUser && 'bg-primary/5',
       )}
     >
       <span
         className={cn(
-          'w-9 shrink-0 text-sm font-semibold tabular-nums text-slate-500',
-          row.position <= 3 && 'text-amber-700'
+          'w-9 shrink-0 text-sm font-semibold tabular-nums text-muted-foreground',
+          row.position <= 3 && 'text-primary',
         )}
       >
         #{row.position}
@@ -138,21 +126,21 @@ function LeaderboardRow({
         <p
           className={cn(
             'truncate text-sm font-medium',
-            isCurrentUser ? 'text-blue-900' : 'text-slate-900'
+            isCurrentUser ? 'text-primary' : 'text-foreground',
           )}
         >
           {row.full_name}
-          {isCurrentUser && (
-            <span className="ml-2 rounded bg-blue-100 px-1.5 py-0.5 text-xs font-medium text-blue-700">
+          {isCurrentUser ? (
+            <span className="ml-2 rounded bg-primary/10 px-1.5 py-0.5 text-xs font-medium text-primary">
               you
             </span>
-          )}
+          ) : null}
         </p>
-        <p className="text-xs text-slate-500">
+        <p className="text-xs text-muted-foreground">
           {rankName(row.current_rank)} · tier {row.current_rank}
         </p>
       </div>
-      <span className="shrink-0 text-sm font-semibold tabular-nums text-slate-900">
+      <span className="shrink-0 text-sm font-semibold tabular-nums">
         {row.xp_total.toLocaleString()} XP
       </span>
     </li>
