@@ -50,9 +50,7 @@ type Answer = {
 };
 
 type CardProgress = {
-  // answers[i] is the result for mcqs[i]
   answers: Answer[];
-  // True after FSRS state has been written back for this card.
   completed: boolean;
   nextDueAt: string | null;
   nextState: DbState | null;
@@ -70,11 +68,9 @@ export function ReviewSession({ cards }: { cards: SessionCard[] }) {
       cards.map((c) => [
         c.card_review_id,
         { answers: [], completed: false, nextDueAt: null, nextState: null },
-      ])
-    )
+      ]),
+    ),
   );
-  // Choice the student just clicked, before the RPC returns. Drives the
-  // pending visual state on the MCQ button.
   const [pendingChoice, setPendingChoice] = useState<Choice | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [, startSubmit] = useTransition();
@@ -84,7 +80,6 @@ export function ReviewSession({ cards }: { cards: SessionCard[] }) {
   const currentCard: SessionCard | undefined = cards[cardIndex];
   const currentProgress = currentCard ? progress[currentCard.card_review_id] : undefined;
 
-  // ---- Session-level derived totals (for summary screen) ----
   const allAnswers: Answer[] = sessionDone
     ? cards.flatMap((c) => progress[c.card_review_id]?.answers ?? [])
     : [];
@@ -92,7 +87,6 @@ export function ReviewSession({ cards }: { cards: SessionCard[] }) {
   const totalCorrect = allAnswers.filter((a) => a.is_correct).length;
   const totalAnswered = allAnswers.length;
 
-  // ---- Compute & write FSRS state for the card. Returns when done. ----
   async function completeCard(card: SessionCard, finalAnswers: Answer[]) {
     try {
       const allCorrect = finalAnswers.every((a) => a.is_correct);
@@ -137,12 +131,11 @@ export function ReviewSession({ cards }: { cards: SessionCard[] }) {
       }));
     } catch (err) {
       setError(
-        `Schedule update threw: ${err instanceof Error ? err.message : String(err)}`
+        `Schedule update threw: ${err instanceof Error ? err.message : String(err)}`,
       );
     }
   }
 
-  // ---- Submit one MCQ answer ----
   function submitAnswer(choice: Choice) {
     if (!currentCard || !currentProgress) return;
     const mcq = currentCard.mcqs[mcqStepIndex];
@@ -195,9 +188,6 @@ export function ReviewSession({ cards }: { cards: SessionCard[] }) {
       }));
       setPendingChoice(null);
 
-      // If this was the last MCQ for the card, kick off the FSRS state write
-      // immediately so the wrap-up has it ready (or close to ready) by the
-      // time the student clicks Continue.
       if (newAnswers.length === currentCard.mcqs.length) {
         await completeCard(currentCard, newAnswers);
       }
@@ -211,8 +201,6 @@ export function ReviewSession({ cards }: { cards: SessionCard[] }) {
   }
 
   // Auto-advance to the next question 1 second after an answer is recorded.
-  // Gives the student a moment to register the result without requiring a
-  // manual click between questions.
   const currentStepAnswer = currentProgress?.answers[mcqStepIndex];
   useEffect(() => {
     if (!currentStepAnswer) return;
@@ -222,48 +210,41 @@ export function ReviewSession({ cards }: { cards: SessionCard[] }) {
     return () => clearTimeout(timer);
   }, [currentStepAnswer, mcqStepIndex]);
 
-  // ============================================================================
-  // RENDER
-  // ============================================================================
+  // -- RENDER --
 
   if (sessionDone) {
     const accuracy =
       totalAnswered === 0 ? 0 : Math.round((totalCorrect / totalAnswered) * 100);
-    // Soonest next-due across all cards reviewed in this session. If any
-    // were rated Again, this will be 1–10 minutes; if all were Good, days.
     const sessionNextDueAt = cards
       .map((c) => progress[c.card_review_id]?.nextDueAt)
       .filter((d): d is string => !!d)
       .sort()[0];
     return (
       <Card>
-        <CardContent className="flex flex-col items-center gap-4 py-12 text-center">
-          <h2 className="text-2xl font-bold text-slate-900">Review complete</h2>
-          <div className="grid grid-cols-3 gap-6 text-sm">
-            <div>
-              <p className="text-2xl font-bold text-slate-900">{totalCards}</p>
-              <p className="text-xs text-slate-500">
-                {totalCards === 1 ? 'card' : 'cards'} reviewed
-              </p>
-            </div>
-            <div>
-              <p className="text-2xl font-bold text-slate-900">{accuracy}%</p>
-              <p className="text-xs text-slate-500">
-                {totalCorrect}/{totalAnswered} correct
-              </p>
-            </div>
-            <div>
-              <p className="text-2xl font-bold text-green-700">+{totalXp}</p>
-              <p className="text-xs text-slate-500">XP earned</p>
-            </div>
+        <CardContent className="flex flex-col items-center gap-6 py-12 text-center">
+          <div className="space-y-1">
+            <h2 className="text-2xl font-semibold tracking-tight">
+              Review complete
+            </h2>
+            <p className="text-sm text-muted-foreground">
+              Nicely done. Here&apos;s how the session went.
+            </p>
           </div>
-          {sessionNextDueAt && (
-            <p className="text-xs text-slate-500">
+          <div className="grid w-full max-w-md grid-cols-3 gap-4">
+            <SummaryStat label={totalCards === 1 ? 'card' : 'cards'} value={totalCards} />
+            <SummaryStat label={`${totalCorrect}/${totalAnswered} correct`} value={`${accuracy}%`} />
+            <SummaryStat label="XP earned" value={`+${totalXp}`} accent />
+          </div>
+          {sessionNextDueAt ? (
+            <p className="text-xs text-muted-foreground">
               Next card <NextReviewCountdown dueAt={sessionNextDueAt} />
             </p>
-          )}
+          ) : null}
           <div className="flex flex-wrap justify-center gap-2 pt-2">
-            <Link href="/student" className={buttonVariants({ variant: 'outline' })}>
+            <Link
+              href="/student"
+              className={buttonVariants({ variant: 'outline' })}
+            >
               Home
             </Link>
             <button
@@ -289,29 +270,37 @@ export function ReviewSession({ cards }: { cards: SessionCard[] }) {
 
   return (
     <div className="flex flex-col gap-4">
-      <div className="flex flex-col gap-1">
+      <div className="space-y-1">
         <Progress value={progressValue} />
-        <p className="text-xs text-slate-500">
+        <p className="text-xs text-muted-foreground">
           Card {cardIndex + 1} of {totalCards}
         </p>
       </div>
 
-      {/* Card header — headline only, body hidden until all MCQs answered. */}
       <Card>
         <CardContent className="flex flex-col gap-3 pt-6">
-          <p className="text-xs font-medium uppercase tracking-wide text-slate-500">
+          <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
             Lesson {currentCard.lesson_number} · {currentCard.lesson_title}
           </p>
-          <h2 className="text-2xl font-bold text-slate-900">{currentCard.headline}</h2>
-          {!allMcqsAnswered && (
-            <p className="text-xs text-slate-500">
+          <h2 className="text-2xl font-semibold tracking-tight">
+            {currentCard.headline}
+          </h2>
+          {!allMcqsAnswered ? (
+            <p className="text-xs text-muted-foreground">
               Question {mcqStepIndex + 1} of {currentCard.mcqs.length}
             </p>
-          )}
+          ) : null}
         </CardContent>
       </Card>
 
-      {error && <p className="text-sm text-red-600">{error}</p>}
+      {error ? (
+        <p
+          role="alert"
+          className="rounded-md border border-destructive/30 bg-destructive/5 px-3 py-2 text-sm text-destructive"
+        >
+          {error}
+        </p>
+      ) : null}
 
       {!allMcqsAnswered && currentMcq ? (
         <McqStep
@@ -334,9 +323,29 @@ export function ReviewSession({ cards }: { cards: SessionCard[] }) {
   );
 }
 
-// ============================================================================
-// McqStep — buttons + inline feedback all in one card
-// ============================================================================
+function SummaryStat({
+  label,
+  value,
+  accent,
+}: {
+  label: string;
+  value: string | number;
+  accent?: boolean;
+}) {
+  return (
+    <div>
+      <p
+        className={cn(
+          'text-2xl font-semibold tracking-tight tabular-nums',
+          accent ? 'text-primary' : '',
+        )}
+      >
+        {value}
+      </p>
+      <p className="mt-1 text-xs text-muted-foreground">{label}</p>
+    </div>
+  );
+}
 
 function McqStep({
   mcq,
@@ -355,7 +364,7 @@ function McqStep({
   return (
     <Card>
       <CardContent className="flex flex-col gap-4 pt-6">
-        <p className="text-base font-medium text-slate-900">{mcq.question_text}</p>
+        <p className="text-base font-medium">{mcq.question_text}</p>
 
         <div className="grid grid-cols-1 gap-2">
           {CHOICES.map((letter) => {
@@ -365,24 +374,26 @@ function McqStep({
             // We never reveal the correct answer through button styling — the
             // student stays in the dark about which choice was right, so
             // they're forced to think the next time the card surfaces.
-            let styleClasses = '';
+            let stateClasses = '';
             let icon: React.ReactNode = null;
 
             if (isAnswered && isSelected) {
               if (answer.is_correct) {
-                styleClasses = 'border-green-400 bg-green-50 text-green-900';
-                icon = <Check className="size-4 text-green-700" />;
+                stateClasses =
+                  'border-primary/50 bg-primary/10 text-primary';
+                icon = <Check className="h-4 w-4 text-primary" />;
               } else {
-                styleClasses = 'border-red-400 bg-red-50 text-red-900';
-                icon = <X className="size-4 text-red-700" />;
+                stateClasses =
+                  'border-destructive/40 bg-destructive/5 text-destructive';
+                icon = <X className="h-4 w-4 text-destructive" />;
               }
             } else if (isAnswered && !isSelected) {
-              styleClasses = 'border-slate-200 bg-slate-50 text-slate-500 opacity-60';
+              stateClasses = 'border-border bg-muted/50 text-muted-foreground opacity-70';
             } else if (isPendingThis) {
-              styleClasses = 'border-blue-400 bg-blue-50 text-blue-900';
-              icon = <Loader2 className="size-4 animate-spin text-blue-700" />;
+              stateClasses = 'border-border bg-muted text-foreground';
+              icon = <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />;
             } else if (isPending) {
-              styleClasses = 'border-slate-200 bg-white text-slate-400 opacity-50';
+              stateClasses = 'border-border bg-card text-muted-foreground opacity-60';
             }
 
             return (
@@ -392,14 +403,14 @@ function McqStep({
                 onClick={() => onSubmit(letter)}
                 disabled={isAnswered || isPending}
                 className={cn(
-                  'flex items-center gap-3 rounded-md border bg-white px-4 py-3 text-left text-sm transition-colors',
+                  'flex items-center gap-3 rounded-md border bg-card px-4 py-3 text-left text-sm transition-colors',
                   'disabled:cursor-default',
                   !isAnswered && !isPending &&
-                    'border-slate-200 text-slate-900 hover:border-blue-300 hover:bg-blue-50/40',
-                  styleClasses
+                    'border-border text-foreground hover:border-primary/40 hover:bg-muted/40',
+                  stateClasses,
                 )}
               >
-                <span className="font-semibold text-slate-500">
+                <span className="font-semibold text-muted-foreground">
                   {letter.toUpperCase()}
                 </span>
                 <span className="flex-1">
@@ -411,24 +422,20 @@ function McqStep({
           })}
         </div>
 
-        {isAnswered && answer && (
+        {isAnswered && answer ? (
           <p
             className={cn(
-              'border-t border-slate-200 pt-3 text-sm font-medium',
-              answer.is_correct ? 'text-green-700' : 'text-red-700'
+              'border-t border-border pt-3 text-sm font-medium',
+              answer.is_correct ? 'text-primary' : 'text-destructive',
             )}
           >
             {answer.is_correct ? `Correct — +${answer.xp_awarded} XP` : 'Wrong'}
           </p>
-        )}
+        ) : null}
       </CardContent>
     </Card>
   );
 }
-
-// ============================================================================
-// Wrap-up — body reveal + FSRS outcome + next card button
-// ============================================================================
 
 function CardWrapUp({
   card,
@@ -453,37 +460,36 @@ function CardWrapUp({
     <>
       <Card>
         <CardContent className="flex flex-col gap-3 pt-6">
-          <div className="flex items-center justify-between gap-2 border-b border-slate-200 pb-3">
-            <p className="text-sm font-medium text-slate-900">
+          <div className="flex items-center justify-between gap-2 border-b border-border pb-3">
+            <p className="text-sm font-medium">
               {correctCount} of {total} correct
             </p>
             <p
               className={cn(
                 'text-xs font-medium',
-                allCorrect ? 'text-green-700' : 'text-amber-800'
+                allCorrect ? 'text-primary' : 'text-muted-foreground',
               )}
             >
               {allCorrect ? 'Rating: Good' : 'Rating: Again'}
             </p>
           </div>
           {completed && nextDueAt ? (
-            <p className="text-xs text-slate-600">
+            <p className="text-xs text-muted-foreground">
               Next review for this card: {formatRelativeDate(nextDueAt)}
-              {nextState && ` · state: ${nextState}`}
+              {nextState ? ` · state: ${nextState}` : null}
             </p>
           ) : (
-            <p className="flex items-center gap-2 text-xs text-slate-500">
-              <Loader2 className="size-3 animate-spin" />
+            <p className="flex items-center gap-2 text-xs text-muted-foreground">
+              <Loader2 className="h-3 w-3 animate-spin" />
               Updating schedule…
             </p>
           )}
         </CardContent>
       </Card>
 
-      {/* Card body — revealed only after MCQs are answered. */}
       <Card>
         <CardContent className="pt-6">
-          <p className="mb-3 text-xs font-medium uppercase tracking-wide text-slate-500">
+          <p className="mb-3 text-xs font-medium uppercase tracking-wide text-muted-foreground">
             What you should remember
           </p>
           <MarkdownRenderer

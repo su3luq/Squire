@@ -1,5 +1,4 @@
 import { createClient } from '@/lib/supabase/server';
-import Link from 'next/link';
 import { Card, CardContent } from '@/components/ui/card';
 import { NextReviewCountdown } from '@/components/next-review-countdown';
 import { ReviewSession, type SessionCard } from './review-session';
@@ -17,6 +16,27 @@ type SessionResult = {
   error?: string;
 };
 
+function ReviewHeader({ subtitle }: { subtitle?: string }) {
+  return (
+    <header className="mb-6">
+      <h1 className="text-2xl font-semibold tracking-tight">Review</h1>
+      {subtitle ? (
+        <p className="mt-1 text-sm text-muted-foreground">{subtitle}</p>
+      ) : null}
+    </header>
+  );
+}
+
+function ErrorPanel({ message }: { message: string }) {
+  return (
+    <Card>
+      <CardContent className="py-10 text-center">
+        <p className="text-sm text-destructive">{message}</p>
+      </CardContent>
+    </Card>
+  );
+}
+
 export default async function ReviewPage() {
   const supabase = await createClient();
 
@@ -24,22 +44,10 @@ export default async function ReviewPage() {
 
   if (error) {
     return (
-      <main className="container mx-auto max-w-3xl p-6">
-        <Link
-          href="/student"
-          className="mb-4 inline-block text-sm text-blue-600 hover:underline"
-        >
-          ← Home
-        </Link>
-        <h1 className="mb-2 text-3xl font-bold">Review</h1>
-        <Card>
-          <CardContent className="py-8 text-center">
-            <p className="text-sm text-red-600">
-              Failed to load review session: {error.message}
-            </p>
-          </CardContent>
-        </Card>
-      </main>
+      <div className="mx-auto max-w-3xl">
+        <ReviewHeader />
+        <ErrorPanel message={`Failed to load review session: ${error.message}`} />
+      </div>
     );
   }
 
@@ -47,20 +55,10 @@ export default async function ReviewPage() {
 
   if (!result.ok) {
     return (
-      <main className="container mx-auto max-w-3xl p-6">
-        <Link
-          href="/student"
-          className="mb-4 inline-block text-sm text-blue-600 hover:underline"
-        >
-          ← Home
-        </Link>
-        <h1 className="mb-2 text-3xl font-bold">Review</h1>
-        <Card>
-          <CardContent className="py-8 text-center">
-            <p className="text-sm text-red-600">{result.error ?? 'Failed.'}</p>
-          </CardContent>
-        </Card>
-      </main>
+      <div className="mx-auto max-w-3xl">
+        <ReviewHeader />
+        <ErrorPanel message={result.error ?? 'Failed to load review session.'} />
+      </div>
     );
   }
 
@@ -84,42 +82,38 @@ export default async function ReviewPage() {
   // new server render → new key → ReviewSession remounts with empty internal
   // state. Without this, after a "Wrong"-rated card re-surfaces as still due,
   // ReviewSession keeps its previous cardIndex/sessionDone and the summary
-  // screen sticks instead of starting the new session. The page is
-  // force-dynamic so this runs per request, which is the intended behavior.
+  // screen sticks instead of starting the new session.
   // eslint-disable-next-line react-hooks/purity
   const sessionKey = Date.now().toString();
 
   return (
-    <main className="container mx-auto max-w-3xl p-6">
-      <Link
-        href="/student"
-        className="mb-4 inline-block text-sm text-blue-600 hover:underline"
-      >
-        ← Home
-      </Link>
-      <h1 className="mb-1 text-3xl font-bold">Review</h1>
-      <p className="mb-6 text-sm text-slate-600">
-        Answer the questions for each due card. Each correct answer earns 5 XP.
-      </p>
+    <div className="mx-auto max-w-3xl">
+      <ReviewHeader
+        subtitle={
+          cards.length > 0
+            ? 'Answer the questions for each due card. Each correct answer earns 5 XP.'
+            : undefined
+        }
+      />
 
       {cards.length === 0 ? (
         <Card>
-          <CardContent className="flex flex-col items-center gap-2 py-12 text-center">
-            <p className="text-lg font-semibold text-slate-900">All caught up</p>
-            <p className="text-sm text-slate-600">
+          <CardContent className="flex flex-col items-center gap-2 py-14 text-center">
+            <p className="text-lg font-semibold">All caught up</p>
+            <p className="text-sm text-muted-foreground">
               No cards due right now.
-              {nextDueAt && (
+              {nextDueAt ? (
                 <>
                   {' '}
                   Next review <NextReviewCountdown dueAt={nextDueAt} />.
                 </>
-              )}
+              ) : null}
             </p>
           </CardContent>
         </Card>
       ) : (
         <ReviewSession key={sessionKey} cards={cards} />
       )}
-    </main>
+    </div>
   );
 }
