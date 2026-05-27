@@ -36,7 +36,10 @@ export function AppShell({
   useEffect(() => {
     try {
       const stored = localStorage.getItem(STORAGE_KEY);
-      if (stored === 'true') setCollapsed(true);
+      if (stored === 'true') {
+        // eslint-disable-next-line react-hooks/set-state-in-effect
+        setCollapsed(true);
+      }
     } catch {
       // localStorage can throw in private mode / disabled storage.
     }

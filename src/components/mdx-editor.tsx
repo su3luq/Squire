@@ -181,7 +181,34 @@ export function MdxEditor({
          */
         :global(.mdxeditor-root-contenteditable [contenteditable]) {
           min-height: ${minHeight};
+          max-width: 100%;
+          overflow-wrap: break-word;
+          word-break: break-word;
         }
+
+        /*
+         * Mobile / tablet responsiveness for rich content. Tables,
+         * images, and code blocks would otherwise burst out of the
+         * editor box and force horizontal page scroll. Tables become
+         * their own horizontally-scrollable region; images cap at the
+         * available width and keep their aspect ratio; pre blocks
+         * scroll inline.
+         */
+        :global(.mdxeditor-root-contenteditable [contenteditable] table) {
+          display: block;
+          width: max-content;
+          max-width: 100%;
+          overflow-x: auto;
+        }
+        :global(.mdxeditor-root-contenteditable [contenteditable] img) {
+          max-width: 100%;
+          height: auto;
+        }
+        :global(.mdxeditor-root-contenteditable [contenteditable] pre) {
+          max-width: 100%;
+          overflow-x: auto;
+        }
+
         :global(.mdxeditor-toolbar) {
           border-bottom: 1px solid var(--color-border);
           background: var(--color-card);

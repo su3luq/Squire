@@ -1,9 +1,9 @@
 # Phase 8 — MDXEditor + Co-op Per-Member Drafts
 
-**Status:** Day 1 done. MDXEditor on teacher card body and student solo submission.
+**Status:** Days 1–5 done. Editor migrated, co-op per-member drafts + auto-finalize + team notes shipped, mobile polish applied.
 **Owner:** Single-developer build
 **Estimated effort:** 4–5 working days
-**Last updated:** 2026-05-27
+**Last updated:** 2026-05-28
 
 ---
 
@@ -241,37 +241,62 @@ The wrapper accepts a `minHeight` prop (default `400px`). The editor never colla
 - Skipped: `body_json` column — markdown stays the only source of truth.
 - Verified the markdown round-trip on the Qualitative Data card: byte-perfect.
 
-### Day 2 — MDXEditor on remaining single-user surfaces + co-op schema
-- Replace `MarkdownEditor` in:
-  - `quest-form.tsx` (teacher quest description, 320px min-height)
-  - `review-form.tsx` (teacher feedback, 200px min-height)
-  - `notes-section.tsx` (teacher notes on student, 200px min-height)
-- Delete the obsolete `markdown-editor.tsx` / `markdown-toolbar.tsx` after all surfaces are migrated.
-- Migration: create `coop_member_drafts` table + RLS policies + indexes.
-- Initialize drafts when an instance is formed: extend the matchmaking RPC to seed one `coop_member_drafts` row per team member.
+### Day 2 — MDXEditor on remaining single-user surfaces + co-op schema  ✅ DONE
+- Migrated `quest-form.tsx`, `review-form.tsx`. `notes-section.tsx` left as a
+  plain textarea (it was never markdown).
+- Deleted the obsolete `markdown-editor.tsx` + `markdown-toolbar.tsx`.
+- Migration 035: `coop_member_drafts` table + RLS + indexes + seed trigger
+  on `quest_acceptances.instance_id`. Backfill ran for active instances.
+- Migration 036: hardened the new trigger functions (search_path,
+  REST execute revoked) per Supabase advisor.
+- Perf: 150ms debounce on editor → form propagation + blur flush so
+  Save never reads stale state.
 
-### Day 3 — Co-op workspace UI + finalize flow
-- Rewrite `src/app/student/my-quests/[id]/page.tsx` to detect co-op + render the team workspace:
-  - Top of page: PageHeader with quest title + status pills.
-  - Tabbed/dropdown switcher for teammate drafts (your draft is selected by default, editable; teammates' drafts are read-only MDXEditor views).
-  - "Submit my draft" / "Un-submit" button toggle.
-  - Status indicator showing how many members have submitted.
-- Migration: `finalize_team_submission(instance_id)` RPC + `force_finalize_team_submission(instance_id)` RPC.
-- Migration: `unlock_team_drafts(submission_id)` RPC, wired to teacher fail action.
-- Teacher review page (`src/app/teacher/review/[id]/page.tsx`) splits the submission into per-member sections when `instance_id` is set, each in its own card.
+### Day 3 — Co-op workspace UI + finalize flow  ✅ DONE
+- Rewrote `src/app/student/my-quests/[id]/page.tsx` to delegate to the new
+  `TeamWorkspace` client component on the co-op path.
+- Teammate dropdown, MDXEditor for own draft (read-only `MarkdownRenderer`
+  for others), Save / Submit / Un-submit toggle, "N of M submitted" counter.
+- Migration 037: `finalize_team_submission(instance_id)` RPC + auto-finalize
+  trigger fires when the last member toggles `submitted_at`.
+  `force_finalize_team_submission(instance_id)` for teacher override.
+  `review_submission` extended to clear all member `submitted_at` on coop
+  fail so members can revise + retoggle.
+- Teacher quest detail shows "X/N drafts submitted" per active instance
+  and a `ForceFinalizeButton` for teacher override.
 
-### Day 4 — Team notes
-- Migration: create `coop_team_notes` table + RLS + indexes.
-- New component `team-notes-sidebar.tsx` — collapsible on desktop, sheet on mobile.
-- Realtime subscription wiring + auto-save (1.5s debounce + `pagehide` flush).
-- Wire the sidebar into the co-op workspace.
-- Verify teacher visibility on the review page (after submission) and the lock state during pass/fail cycles.
+### Day 3 follow-up — Captain mechanic removed  ✅ DONE
+- Migration 038: rewrote `run_matchmaking` to skip captain selection,
+  simplified the "team ready" notification, cleared `captain_id` on all
+  instances. `submit_quest` reduced to solo-only.
+- All UI references to captain badges removed.
 
-### Day 5 — Buffer / polish
-- Teacher "force submit" UI button on the team workspace teacher-only view (or on the teacher's quest detail page).
-- Mobile responsive polish for the team workspace + notes sidebar.
-- Edge cases: orphaned drafts when a team member is removed mid-quest, draft initialization for instances created before the migration.
-- Smoke-test the full flow with the test1–5 student accounts.
+### Day 4 — Team notes  ✅ DONE
+- Migration 039: `coop_team_notes` table + RLS + indexes + seed trigger.
+  Teammates always read; teacher reads once a submission exists.
+  Locked when instance leaves 'active'. Realtime publication.
+- `TeamNotesSidebar` client component — desktop right-rail (sticky,
+  collapsible with prominent "Hide" button) + mobile floating pill +
+  bottom sheet. Auto-save 1.5s debounce + pagehide/visibilitychange
+  flush. Realtime subscription on postgres_changes (skips own echo).
+- Teacher review page shows a "Team discussion" card pulling all
+  notes when a submission exists for the instance.
+
+### Day 5 — Polish  ✅ DONE
+- Mobile/tablet overflow guard on MDXEditor + MarkdownRenderer: tables
+  become horizontally-scrollable boxes, images cap at container width,
+  pre blocks scroll inline, long words break.
+- AppShell sidebar collapsible into an icon-only rail (w-14) with
+  localStorage persistence — students can reclaim ~190px of horizontal
+  space.
+- Migration 040 (out-of-spec follow-up): rank numbering inverted so
+  Rank 1 = highest XP. Names dropped, numbers only.
+- Pre-existing student-dashboard bug fixed: "Active quests" list linked
+  to acceptance_id instead of quest_id.
+- "Quest" + "My Quests" student nav items merged into a single "Quests"
+  page that shows both active acceptances and the open board.
+- Teacher quest detail: per-instance draft-submitted counter + force-
+  submit button rendered alongside Disband on active instances.
 
 ---
 

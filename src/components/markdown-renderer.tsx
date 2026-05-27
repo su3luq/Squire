@@ -155,6 +155,11 @@ const components: Components = {
 // Prose modifiers tuned for our slate palette. `prose-sm` for compact rendering.
 const PROSE_CLASSES = [
   'prose prose-slate prose-sm max-w-none',
+  // Mobile/tablet overflow guard: break long words and constrain inline media
+  // so tables, images, and code blocks don't burst out of their container.
+  '[overflow-wrap:break-word] [word-break:break-word]',
+  '[&_table]:block [&_table]:w-max [&_table]:max-w-full [&_table]:overflow-x-auto',
+  '[&_pre]:max-w-full [&_pre]:overflow-x-auto',
   'prose-headings:font-semibold prose-headings:text-slate-900',
   'prose-h1:text-3xl prose-h1:mt-0 prose-h1:mb-3 prose-h1:border-b prose-h1:border-slate-200 prose-h1:pb-2',
   'prose-h2:text-2xl prose-h2:mb-2 prose-h2:border-b prose-h2:border-slate-100 prose-h2:pb-1',
@@ -171,7 +176,7 @@ const PROSE_CLASSES = [
   'prose-th:bg-slate-50 prose-th:px-3 prose-th:py-2 prose-th:text-left prose-th:font-semibold',
   'prose-td:border-t prose-td:border-slate-200 prose-td:px-3 prose-td:py-2',
   'prose-ul:my-3 prose-ol:my-3 prose-li:my-1',
-  'prose-img:rounded-md prose-img:border prose-img:border-slate-200',
+  'prose-img:rounded-md prose-img:border prose-img:border-slate-200 prose-img:max-w-full prose-img:h-auto',
 ].join(' ');
 
 export function MarkdownRenderer({
