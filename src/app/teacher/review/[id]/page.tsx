@@ -1,4 +1,3 @@
-import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import { createClient } from '@/lib/supabase/server';
 import {
@@ -8,6 +7,7 @@ import {
   CardTitle,
 } from '@/components/ui/card';
 import { MarkdownRenderer } from '@/components/markdown-renderer';
+import { PageHeader } from '@/components/page-header';
 import { ReviewForm } from './review-form';
 
 export const dynamic = 'force-dynamic';
@@ -67,7 +67,9 @@ export default async function ReviewSubmissionPage({
     quests: Quest | null;
   } | null;
   const quest = accept?.quests ?? inst?.quests ?? null;
-  const submitter = submission.profiles as { full_name: string; class_id: string | null } | null;
+  const submitter = submission.profiles as
+    | { full_name: string; class_id: string | null }
+    | null;
   const isCoop = submission.instance_id !== null;
   const classId = inst?.class_id ?? submitter?.class_id ?? null;
 
@@ -81,7 +83,6 @@ export default async function ReviewSubmissionPage({
     className = cls?.name ?? null;
   }
 
-  // For coop, surface the rest of the team for context
   let teamMembers: string[] = [];
   if (isCoop && submission.instance_id) {
     const { data: members } = await supabase
@@ -95,8 +96,6 @@ export default async function ReviewSubmissionPage({
 
   const isPending = submission.status === 'pending_review';
 
-  // Attempt number = count of all submissions for the same acceptance / instance
-  // up to and including this one (chronological position).
   let attempt = 1;
   if (submission.acceptance_id) {
     const { count } = await supabase
@@ -115,109 +114,101 @@ export default async function ReviewSubmissionPage({
   }
 
   return (
-    <main className="container mx-auto max-w-3xl p-6">
-      <Link
-        href="/teacher/review"
-        className="mb-4 inline-block text-sm text-blue-600 hover:underline"
-      >
-        ← Review queue
-      </Link>
+    <div className="mx-auto max-w-3xl space-y-6">
+      <PageHeader title={quest?.title ?? '(quest deleted)'} />
 
-      <div className="mb-6">
-        <h1 className="text-3xl font-bold">{quest?.title ?? '(quest deleted)'}</h1>
-        <div className="mt-2 flex flex-wrap items-center gap-2 text-sm text-slate-600">
-          <span
-            className={`rounded-full px-2 py-0.5 text-xs font-medium ${isCoop ? 'bg-purple-100 text-purple-800' : 'bg-blue-100 text-blue-800'}`}
-          >
+      <div className="space-y-2">
+        <div className="flex flex-wrap items-center gap-2 text-xs">
+          <span className="rounded-full bg-muted px-2.5 py-0.5 font-medium capitalize text-muted-foreground">
             {isCoop ? 'co-op' : 'solo'}
           </span>
           {className && (
-            <span className="rounded-full bg-slate-100 px-2 py-0.5 text-xs font-medium text-slate-700">
+            <span className="rounded-full bg-muted px-2.5 py-0.5 font-medium text-muted-foreground">
               {className}
             </span>
           )}
           {attempt > 1 && (
-            <span className="rounded-full bg-amber-100 px-2 py-0.5 text-xs font-medium text-amber-900">
+            <span className="rounded-full bg-amber-100 px-2.5 py-0.5 font-medium text-amber-900">
               Attempt {attempt}
             </span>
           )}
-          <span>+{quest?.xp_reward ?? 0} XP</span>
-          <span>·</span>
-          <span>
-            {submission.word_count ?? 0} words
-            {quest?.word_limit_min != null &&
-              quest.word_limit_min > 0 &&
-              ` · target ${quest.word_limit_min}`}
+          <span className="text-muted-foreground">
+            +{quest?.xp_reward ?? 0} XP
           </span>
-          <span>·</span>
-          <span>by {submitter?.full_name ?? '(unknown)'}</span>
-          <span>·</span>
-          <span>submitted {formatSaigon(submission.submitted_at)}</span>
         </div>
+        <p className="text-xs text-muted-foreground">
+          {submission.word_count ?? 0} words
+          {quest?.word_limit_min != null &&
+            quest.word_limit_min > 0 &&
+            ` · target ${quest.word_limit_min}`}
+          {' · '}by {submitter?.full_name ?? '(unknown)'}
+          {' · '}submitted {formatSaigon(submission.submitted_at)}
+        </p>
         {isCoop && teamMembers.length > 0 && (
-          <p className="mt-1 text-xs text-slate-500">
+          <p className="text-xs text-muted-foreground">
             Team: {teamMembers.join(', ')}
           </p>
         )}
       </div>
 
-      <div className="space-y-6">
+      <Card>
+        <CardHeader>
+          <CardTitle className="text-base">Submission</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <MarkdownRenderer
+            source={submission.text_content ?? ''}
+            emptyPlaceholder="(empty submission)"
+          />
+        </CardContent>
+      </Card>
+
+      {isPending && quest ? (
         <Card>
           <CardHeader>
-            <CardTitle>Submission</CardTitle>
+            <CardTitle className="text-base">Decision</CardTitle>
           </CardHeader>
           <CardContent>
-            <MarkdownRenderer
-              source={submission.text_content ?? ''}
-              emptyPlaceholder="(empty submission)"
+            <ReviewForm
+              submissionId={submission.id}
+              xpReward={quest.xp_reward}
             />
           </CardContent>
         </Card>
-
-        {isPending && quest ? (
-          <Card>
-            <CardHeader>
-              <CardTitle>Decision</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <ReviewForm
-                submissionId={submission.id}
-                xpReward={quest.xp_reward}
-              />
-            </CardContent>
-          </Card>
-        ) : (
-          <Card>
-            <CardHeader>
-              <CardTitle>Already reviewed</CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-3 text-sm">
-              <p>
-                Decision:{' '}
-                <span
-                  className={
-                    submission.status === 'passed'
-                      ? 'font-semibold text-green-700'
-                      : 'font-semibold text-red-700'
-                  }
-                >
-                  {submission.status}
+      ) : (
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-base">Already reviewed</CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-3 text-sm">
+            <p className="flex items-center gap-2">
+              <span>Decision:</span>
+              <span
+                className={`rounded-full px-2.5 py-0.5 text-xs font-medium capitalize ${
+                  submission.status === 'passed'
+                    ? 'bg-primary/10 text-primary'
+                    : 'bg-destructive/10 text-destructive'
+                }`}
+              >
+                {submission.status}
+              </span>
+              {submission.reviewed_at && (
+                <span className="text-xs text-muted-foreground">
+                  · {formatSaigon(submission.reviewed_at)}
                 </span>
-                {submission.reviewed_at &&
-                  ` · ${formatSaigon(submission.reviewed_at)}`}
-              </p>
-              {submission.teacher_feedback && (
-                <div className="rounded-md border border-slate-200 p-3">
-                  <p className="mb-1 text-xs font-semibold uppercase tracking-wide text-slate-500">
-                    Feedback given
-                  </p>
-                  <MarkdownRenderer source={submission.teacher_feedback} />
-                </div>
               )}
-            </CardContent>
-          </Card>
-        )}
-      </div>
-    </main>
+            </p>
+            {submission.teacher_feedback && (
+              <div className="rounded-md border border-border bg-muted/40 p-4">
+                <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+                  Feedback given
+                </p>
+                <MarkdownRenderer source={submission.teacher_feedback} />
+              </div>
+            )}
+          </CardContent>
+        </Card>
+      )}
+    </div>
   );
 }

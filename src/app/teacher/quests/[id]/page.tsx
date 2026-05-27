@@ -1,4 +1,3 @@
-import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import { createClient } from '@/lib/supabase/server';
 import {
@@ -8,6 +7,7 @@ import {
   CardTitle,
 } from '@/components/ui/card';
 import { MarkdownRenderer } from '@/components/markdown-renderer';
+import { PageHeader } from '@/components/page-header';
 import { formatLongCountdown } from '../indicator';
 import { EditQuestForm } from './edit-quest-form';
 import { DeleteQuestButton } from './delete-quest-button';
@@ -180,53 +180,43 @@ export default async function QuestDetailPage({
   }
 
   return (
-    <main className="container mx-auto max-w-4xl p-6">
-      <Link
-        href="/teacher/quests"
-        className="mb-4 inline-block text-sm text-blue-600 hover:underline"
-      >
-        ← Quests
-      </Link>
+    <div className="mx-auto max-w-4xl space-y-6">
+      <PageHeader title={quest.title} />
 
-      <div className="mb-6 flex flex-wrap items-start justify-between gap-3">
-        <div className="min-w-0 flex-1">
-          <h1 className="text-3xl font-bold">{quest.title}</h1>
-          <div className="mt-2 flex flex-wrap items-center gap-2 text-sm text-slate-600">
-            <span
-              className={`rounded-full px-2 py-0.5 text-xs font-medium ${quest.quest_type === 'solo' ? 'bg-blue-100 text-blue-800' : 'bg-purple-100 text-purple-800'}`}
-            >
-              {quest.quest_type}
+      <div className="space-y-2">
+        <div className="flex flex-wrap items-center gap-2 text-xs">
+          <span className="rounded-full bg-muted px-2.5 py-0.5 font-medium capitalize text-muted-foreground">
+            {quest.quest_type}
+          </span>
+          <span className="text-muted-foreground">+{quest.xp_reward} XP</span>
+          {quest.quest_type === 'coop' && quest.max_team_size && (
+            <>
+              <span className="text-muted-foreground">·</span>
+              <span className="text-muted-foreground">
+                max team size {quest.max_team_size}
+              </span>
+            </>
+          )}
+          {isClosed && (
+            <span className="rounded-full bg-muted px-2.5 py-0.5 font-medium text-muted-foreground">
+              Closed
             </span>
-            <span>+{quest.xp_reward} XP</span>
-            {quest.quest_type === 'coop' && quest.max_team_size && (
-              <>
-                <span>·</span>
-                <span>max team size {quest.max_team_size}</span>
-              </>
-            )}
-            {isClosed && (
-              <span className="rounded bg-slate-200 px-2 py-0.5 text-xs text-slate-700">
-                Closed
-              </span>
-            )}
-            {!isClosed && isExpired && quest.quest_type === 'solo' && (
-              <span className="rounded bg-amber-100 px-2 py-0.5 text-xs text-amber-900">
-                Expired
-              </span>
-            )}
-          </div>
-          {quest.expires_at && (
-            <p className="mt-1 text-xs text-slate-500">
-              {quest.quest_type === 'coop' ? 'Matchmaking' : 'Expires'} at{' '}
-              {formatSaigon(quest.expires_at)} (Saigon)
-              {!isExpired &&
-                ` · ${formatLongCountdown(new Date(quest.expires_at).getTime())}`}
-            </p>
+          )}
+          {!isClosed && isExpired && quest.quest_type === 'solo' && (
+            <span className="rounded-full bg-amber-100 px-2.5 py-0.5 font-medium text-amber-900">
+              Expired
+            </span>
           )}
         </div>
+        {quest.expires_at && (
+          <p className="text-xs text-muted-foreground">
+            {quest.quest_type === 'coop' ? 'Matchmaking' : 'Expires'} at{' '}
+            {formatSaigon(quest.expires_at)} (Saigon)
+            {!isExpired &&
+              ` · ${formatLongCountdown(new Date(quest.expires_at).getTime())}`}
+          </p>
+        )}
       </div>
-
-      <div className="space-y-6">
         {/* Matchmaking failure banner */}
         {noEnrollmentsFailure && (
           <div className="rounded-md border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900">
@@ -242,7 +232,7 @@ export default async function QuestDetailPage({
         {/* Description */}
         <Card>
           <CardHeader>
-            <CardTitle>Description</CardTitle>
+            <CardTitle className="text-base">Description</CardTitle>
           </CardHeader>
           <CardContent>
             <MarkdownRenderer
@@ -255,14 +245,14 @@ export default async function QuestDetailPage({
         {/* Acceptances / enrollments — grouped by class */}
         <Card>
           <CardHeader>
-            <CardTitle>
+            <CardTitle className="text-base">
               {quest.quest_type === 'coop' ? 'Enrollments & members' : 'Acceptances'} (
               {(acceptances ?? []).length})
             </CardTitle>
           </CardHeader>
           <CardContent>
             {(acceptances ?? []).length === 0 ? (
-              <p className="text-sm text-slate-500">
+              <p className="text-sm text-muted-foreground">
                 Nobody has{' '}
                 {quest.quest_type === 'coop' ? 'enrolled' : 'accepted'} yet.
               </p>
@@ -274,10 +264,10 @@ export default async function QuestDetailPage({
                   )
                   .map(([classId, list]) => (
                     <div key={classId}>
-                      <h3 className="mb-2 text-sm font-semibold text-slate-700">
+                      <h3 className="mb-2 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
                         {classLabel(classId)} ({list.length})
                       </h3>
-                      <ul className="divide-y divide-slate-200 rounded-md border border-slate-200">
+                      <ul className="divide-y divide-border rounded-md border border-border">
                         {list.map((a) => {
                           const student = a.profiles as
                             | { id: string; full_name: string }
@@ -287,10 +277,10 @@ export default async function QuestDetailPage({
                               key={a.id}
                               className="flex items-center justify-between px-3 py-2 text-sm"
                             >
-                              <span className="font-medium text-slate-900">
+                              <span className="font-medium">
                                 {student?.full_name ?? '(unknown student)'}
                               </span>
-                              <span className="text-xs text-slate-500">
+                              <span className="text-xs text-muted-foreground capitalize">
                                 {a.status}
                                 {a.completed_at &&
                                   ` · ${formatSaigon(a.completed_at)}`}
@@ -320,7 +310,7 @@ export default async function QuestDetailPage({
                   )
                   .map(([classId, list]) => (
                     <div key={classId}>
-                      <h3 className="mb-2 text-sm font-semibold text-slate-700">
+                      <h3 className="mb-2 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
                         {classLabel(classId)} ({list.length}{' '}
                         {list.length === 1 ? 'team' : 'teams'})
                       </h3>
@@ -338,7 +328,7 @@ export default async function QuestDetailPage({
                             return (
                               <li
                                 key={inst.id}
-                                className="rounded-md border border-slate-200 p-3"
+                                className="rounded-md border border-border p-3"
                               >
                                 <div className="flex items-start justify-between gap-3">
                                   <div className="min-w-0 flex-1">
@@ -352,16 +342,16 @@ export default async function QuestDetailPage({
                                         : 'members'}{' '}
                                       ·{' '}
                                       <span
-                                        className={
+                                        className={`capitalize ${
                                           inst.status === 'passed'
-                                            ? 'text-green-700'
-                                            : 'text-slate-700'
-                                        }
+                                            ? 'text-primary'
+                                            : 'text-foreground'
+                                        }`}
                                       >
                                         {inst.status}
                                       </span>
                                     </p>
-                                    <ul className="mt-1 text-xs text-slate-600">
+                                    <ul className="mt-2 space-y-0.5 text-xs text-muted-foreground">
                                       {members.map((m) => {
                                         const s = m.profiles as
                                           | { id: string; full_name: string }
@@ -371,10 +361,10 @@ export default async function QuestDetailPage({
                                           s.id === inst.captain_id;
                                         return (
                                           <li key={m.id}>
-                                            • {s?.full_name ?? '(unknown)'} (
+                                            {s?.full_name ?? '(unknown)'} (
                                             {m.status})
                                             {isCaptain && (
-                                              <span className="ml-2 rounded bg-purple-100 px-1.5 py-0.5 text-[10px] font-medium text-purple-800">
+                                              <span className="ml-2 rounded-full bg-primary/10 px-1.5 py-0.5 text-[10px] font-medium uppercase tracking-wide text-primary">
                                                 captain
                                               </span>
                                             )}
@@ -403,16 +393,16 @@ export default async function QuestDetailPage({
         {/* Submissions */}
         <Card>
           <CardHeader>
-            <CardTitle>
+            <CardTitle className="text-base">
               Submissions ({filteredSubmissions.length}
               {pendingCount > 0 && ` · ${pendingCount} pending`})
             </CardTitle>
           </CardHeader>
           <CardContent>
             {filteredSubmissions.length === 0 ? (
-              <p className="text-sm text-slate-500">No submissions yet.</p>
+              <p className="text-sm text-muted-foreground">No submissions yet.</p>
             ) : (
-              <ul className="divide-y divide-slate-200 rounded-md border border-slate-200">
+              <ul className="divide-y divide-border rounded-md border border-border">
                 {filteredSubmissions.map((s) => {
                   const submitter = s.profiles as
                     | { id: string; full_name: string; class_id: string | null }
@@ -424,31 +414,34 @@ export default async function QuestDetailPage({
                       className="flex items-center justify-between px-3 py-2 text-sm"
                     >
                       <div>
-                        <span className="font-medium text-slate-900">
+                        <span className="font-medium">
                           {submitter?.full_name ?? '(unknown)'}
                         </span>
                         {attempt > 1 && (
-                          <span className="ml-2 rounded bg-amber-100 px-2 py-0.5 text-xs font-medium text-amber-900">
+                          <span className="ml-2 rounded-full bg-amber-100 px-2 py-0.5 text-xs font-medium text-amber-900">
                             Attempt {attempt}
                           </span>
                         )}
-                        <span className="ml-2 text-xs text-slate-500">
+                        <span className="ml-2 text-xs text-muted-foreground">
                           {submitter?.class_id
                             ? `${classLabel(submitter.class_id)} · `
                             : ''}
-                          {s.word_count ?? 0} words · {formatSaigon(s.submitted_at)}
+                          {s.word_count ?? 0} words ·{' '}
+                          {formatSaigon(s.submitted_at)}
                         </span>
                       </div>
                       <span
-                        className={`rounded px-2 py-0.5 text-xs font-medium ${
+                        className={`rounded-full px-2.5 py-0.5 text-xs font-medium ${
                           s.status === 'passed'
-                            ? 'bg-green-100 text-green-800'
+                            ? 'bg-primary/10 text-primary'
                             : s.status === 'failed'
-                              ? 'bg-red-100 text-red-800'
+                              ? 'bg-destructive/10 text-destructive'
                               : 'bg-amber-100 text-amber-900'
                         }`}
                       >
-                        {s.status === 'pending_review' ? 'pending review' : s.status}
+                        {s.status === 'pending_review'
+                          ? 'pending review'
+                          : s.status}
                       </span>
                     </li>
                   );
@@ -461,7 +454,7 @@ export default async function QuestDetailPage({
         {/* Edit */}
         <Card>
           <CardHeader>
-            <CardTitle>Edit</CardTitle>
+            <CardTitle className="text-base">Edit</CardTitle>
           </CardHeader>
           <CardContent>
             <EditQuestForm quest={quest} lockCoopFields={lockCoopFields} />
@@ -471,21 +464,23 @@ export default async function QuestDetailPage({
         {/* Settings */}
         <Card>
           <CardHeader>
-            <CardTitle>Settings</CardTitle>
+            <CardTitle className="text-base">Settings</CardTitle>
           </CardHeader>
           <CardContent className="space-y-4">
             <CloseQuestButton questId={quest.id} isClosed={isClosed} />
-            <hr className="border-slate-200" />
+            <hr className="border-border" />
             <DisbandQuestButton
               questId={quest.id}
               affectedStudents={disbandableAcceptances}
               affectedTeams={disbandableInstances}
             />
-            <hr className="border-slate-200" />
-            <DeleteQuestButton questId={quest.id} hasPending={pendingCount > 0} />
+            <hr className="border-border" />
+            <DeleteQuestButton
+              questId={quest.id}
+              hasPending={pendingCount > 0}
+            />
           </CardContent>
         </Card>
-      </div>
-    </main>
+    </div>
   );
 }

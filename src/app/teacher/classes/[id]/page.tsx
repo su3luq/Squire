@@ -7,6 +7,7 @@ import {
   CardHeader,
   CardTitle,
 } from '@/components/ui/card';
+import { PageHeader } from '@/components/page-header';
 import { EditClassForm } from './edit-class-form';
 import { RegistrationToggle } from './registration-toggle';
 import { ArchiveButton } from './archive-button';
@@ -50,119 +51,106 @@ export default async function ClassDetailPage({
     .order('full_name');
 
   const isArchived = cls.archived_at !== null;
+  const studentCount = (students ?? []).length;
 
   return (
-    <main className="container mx-auto max-w-4xl p-6">
-      <Link
-        href="/teacher/classes"
-        className="mb-4 inline-block text-sm text-blue-600 hover:underline"
-      >
-        ← Classes
-      </Link>
+    <div className="mx-auto max-w-4xl space-y-6">
+      <PageHeader title={cls.name} />
 
-      <div className="mb-6">
-        <h1 className="text-3xl font-bold">{cls.name}</h1>
-        <div className="mt-2 flex flex-wrap items-center gap-2 text-sm text-slate-600">
-          {isArchived ? (
-            <span className="rounded bg-slate-200 px-2 py-0.5 text-xs font-medium text-slate-700">
-              Archived
-            </span>
-          ) : cls.registration_open ? (
-            <span className="rounded bg-green-100 px-2 py-0.5 text-xs font-medium text-green-800">
-              Registration open
-            </span>
-          ) : (
-            <span className="rounded bg-slate-100 px-2 py-0.5 text-xs font-medium text-slate-700">
-              Registration closed
-            </span>
-          )}
-          <span className="text-xs">
-            {(students ?? []).length}{' '}
-            {(students ?? []).length === 1 ? 'student' : 'students'}
+      <div className="flex flex-wrap items-center gap-2 text-xs">
+        {isArchived ? (
+          <span className="rounded-full bg-muted px-2.5 py-0.5 font-medium text-muted-foreground">
+            Archived
           </span>
-        </div>
+        ) : cls.registration_open ? (
+          <span className="rounded-full bg-primary/10 px-2.5 py-0.5 font-medium text-primary">
+            Registration open
+          </span>
+        ) : (
+          <span className="rounded-full bg-muted px-2.5 py-0.5 font-medium text-muted-foreground">
+            Registration closed
+          </span>
+        )}
+        <span className="text-muted-foreground">
+          {studentCount} {studentCount === 1 ? 'student' : 'students'}
+        </span>
       </div>
 
-      <div className="space-y-6">
-        {/* Students */}
-        <Card>
-          <CardHeader>
-            <CardTitle>Students ({(students ?? []).length})</CardTitle>
-          </CardHeader>
-          <CardContent>
-            {(students ?? []).length === 0 ? (
-              <p className="text-sm text-slate-500">
-                No students in this class yet.
-              </p>
-            ) : (
-              <ul className="divide-y divide-slate-200 rounded-md border border-slate-200">
-                {(students ?? []).map((s) => (
-                  <li key={s.id}>
-                    <Link
-                      href={`/teacher/classes/${id}/students/${s.id}`}
-                      className="block px-3 py-3 transition-colors hover:bg-slate-50"
-                    >
-                      <div className="flex flex-wrap items-baseline justify-between gap-3">
-                        <div className="min-w-0 flex-1">
-                          <p className="truncate font-medium text-slate-900">
-                            {s.full_name}
-                          </p>
-                          <p className="text-xs text-slate-500">
-                            {s.age ? `${s.age}y · ` : ''}
-                            {s.email}
-                          </p>
-                        </div>
-                        <div className="flex items-center gap-3 text-xs text-slate-600">
-                          <span className="rounded bg-slate-100 px-2 py-0.5 font-medium">
-                            Rank {s.current_rank}
-                          </span>
-                          <span className="tabular-nums">
-                            {s.xp_total.toLocaleString()} XP
-                          </span>
-                          <span className="tabular-nums">
-                            v {Number(s.learning_velocity ?? 0).toFixed(2)}
-                          </span>
-                        </div>
-                      </div>
-                      {s.last_active_at && (
-                        <p className="mt-1 text-xs text-slate-400">
-                          Last active {formatSaigon(s.last_active_at)}
+      <Card>
+        <CardHeader>
+          <CardTitle className="text-base">Students ({studentCount})</CardTitle>
+        </CardHeader>
+        <CardContent>
+          {studentCount === 0 ? (
+            <p className="text-sm text-muted-foreground">
+              No students in this class yet.
+            </p>
+          ) : (
+            <ul className="divide-y divide-border rounded-md border border-border">
+              {(students ?? []).map((s) => (
+                <li key={s.id}>
+                  <Link
+                    href={`/teacher/classes/${id}/students/${s.id}`}
+                    className="block px-4 py-3 transition-colors hover:bg-muted/40"
+                  >
+                    <div className="flex flex-wrap items-baseline justify-between gap-3">
+                      <div className="min-w-0 flex-1">
+                        <p className="truncate text-sm font-medium">
+                          {s.full_name}
                         </p>
-                      )}
-                    </Link>
-                  </li>
-                ))}
-              </ul>
-            )}
-          </CardContent>
-        </Card>
+                        <p className="text-xs text-muted-foreground">
+                          {s.age ? `${s.age}y · ` : ''}
+                          {s.email}
+                        </p>
+                      </div>
+                      <div className="flex items-center gap-3 text-xs text-muted-foreground">
+                        <span className="rounded-full bg-muted px-2 py-0.5 font-medium">
+                          Rank {s.current_rank}
+                        </span>
+                        <span className="tabular-nums">
+                          {s.xp_total.toLocaleString()} XP
+                        </span>
+                        <span className="tabular-nums">
+                          v {Number(s.learning_velocity ?? 0).toFixed(2)}
+                        </span>
+                      </div>
+                    </div>
+                    {s.last_active_at && (
+                      <p className="mt-1 text-xs text-muted-foreground/70">
+                        Last active {formatSaigon(s.last_active_at)}
+                      </p>
+                    )}
+                  </Link>
+                </li>
+              ))}
+            </ul>
+          )}
+        </CardContent>
+      </Card>
 
-        {/* Edit name */}
-        <Card>
-          <CardHeader>
-            <CardTitle>Name</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <EditClassForm classId={cls.id} initialName={cls.name} />
-          </CardContent>
-        </Card>
+      <Card>
+        <CardHeader>
+          <CardTitle className="text-base">Name</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <EditClassForm classId={cls.id} initialName={cls.name} />
+        </CardContent>
+      </Card>
 
-        {/* Registration toggle + archive */}
-        <Card>
-          <CardHeader>
-            <CardTitle>Settings</CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <RegistrationToggle
-              classId={cls.id}
-              isOpen={cls.registration_open}
-              isArchived={isArchived}
-            />
-            <hr className="border-slate-200" />
-            <ArchiveButton classId={cls.id} isArchived={isArchived} />
-          </CardContent>
-        </Card>
-      </div>
-    </main>
+      <Card>
+        <CardHeader>
+          <CardTitle className="text-base">Settings</CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <RegistrationToggle
+            classId={cls.id}
+            isOpen={cls.registration_open}
+            isArchived={isArchived}
+          />
+          <hr className="border-border" />
+          <ArchiveButton classId={cls.id} isArchived={isArchived} />
+        </CardContent>
+      </Card>
+    </div>
   );
 }

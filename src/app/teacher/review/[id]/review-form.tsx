@@ -43,9 +43,9 @@ export function ReviewForm({
   return (
     <div className="space-y-4">
       <div className="space-y-2">
-        <p className="text-sm font-medium text-slate-700">
+        <p className="text-sm font-medium">
           Feedback{' '}
-          <span className="font-normal text-slate-500">
+          <span className="font-normal text-muted-foreground">
             (required if failing — markdown supported)
           </span>
         </p>
@@ -58,7 +58,7 @@ export function ReviewForm({
         />
       </div>
 
-      {error && <p className="text-sm text-red-600">{error}</p>}
+      {error && <p className="text-sm text-destructive">{error}</p>}
 
       <div className="flex flex-wrap gap-3 pt-2">
         <Button
@@ -67,14 +67,11 @@ export function ReviewForm({
           onClick={() => submit(false)}
           disabled={isPending}
         >
-          {isPending && pendingDecision === 'fail' ? 'Failing...' : 'Fail (needs revision)'}
+          {isPending && pendingDecision === 'fail'
+            ? 'Failing...'
+            : 'Fail (needs revision)'}
         </Button>
-        <Button
-          type="button"
-          onClick={() => submit(true)}
-          disabled={isPending}
-          className="bg-green-600 hover:bg-green-700"
-        >
+        <Button type="button" onClick={() => submit(true)} disabled={isPending}>
           {isPending && pendingDecision === 'pass'
             ? 'Passing...'
             : `Pass (+${xpReward} XP)`}

@@ -1,6 +1,7 @@
-import { createClient } from '@/lib/supabase/server';
-import { notFound } from 'next/navigation';
 import Link from 'next/link';
+import { notFound } from 'next/navigation';
+import { Plus } from 'lucide-react';
+import { createClient } from '@/lib/supabase/server';
 import { buttonVariants } from '@/components/ui/button';
 import {
   Card,
@@ -8,6 +9,7 @@ import {
   CardHeader,
   CardTitle,
 } from '@/components/ui/card';
+import { PageHeader } from '@/components/page-header';
 import { EditLessonForm } from './edit-lesson-form';
 import { DeleteLessonButton } from './delete-lesson-button';
 import { ClassAccessRow } from './class-access-row';
@@ -43,20 +45,17 @@ export default async function LessonDetailPage({
     .eq('lesson_id', id)
     .order('position');
 
-  // All non-archived classes
   const { data: classes } = await supabase
     .from('classes')
     .select('id, name')
     .is('archived_at', null)
     .order('name');
 
-  // Existing unlock rows for this lesson
   const { data: unlocks } = await supabase
     .from('lesson_unlocks')
     .select('class_id, unlocked_at')
     .eq('lesson_id', id);
 
-  // Student counts per class (only count classes that exist)
   const classIds = (classes ?? []).map((c) => c.id);
   let studentCountsByClass = new Map<string, number>();
   if (classIds.length > 0) {
@@ -76,108 +75,106 @@ export default async function LessonDetailPage({
   );
 
   return (
-    <main className="container mx-auto max-w-2xl p-6">
-      <Link
-        href="/teacher/lessons"
-        className="mb-4 inline-block text-sm text-blue-600 hover:underline"
-      >
-        ← Lessons
-      </Link>
+    <div className="mx-auto max-w-3xl space-y-6">
+      <PageHeader
+        title={lesson.title}
+        subtitle={`Lesson ${lesson.lesson_number}`}
+      />
 
-      <h1 className="mb-2 text-3xl font-bold">{lesson.title}</h1>
-      <p className="mb-6 text-sm text-slate-600">Lesson {lesson.lesson_number}</p>
+      <Card>
+        <CardHeader>
+          <div className="flex items-center justify-between">
+            <CardTitle className="text-base">Cards</CardTitle>
+            <Link
+              href={`/teacher/lessons/${id}/cards/new`}
+              className={buttonVariants({ size: 'sm' })}
+            >
+              <Plus className="h-4 w-4" />
+              Add card
+            </Link>
+          </div>
+        </CardHeader>
+        <CardContent>
+          <p className="text-sm text-muted-foreground">
+            {cardCount} {cardCount === 1 ? 'card' : 'cards'} · {questionCount}{' '}
+            quiz {questionCount === 1 ? 'question' : 'questions'}
+          </p>
 
-      <div className="space-y-6">
-        <Card>
-          <CardHeader>
-            <div className="flex items-center justify-between">
-              <CardTitle>Cards</CardTitle>
-              <Link
-                href={`/teacher/lessons/${id}/cards/new`}
-                className={buttonVariants({ size: 'sm' })}
-              >
-                Add card
-              </Link>
-            </div>
-          </CardHeader>
-          <CardContent>
-            <p className="text-sm text-slate-600">
-              {cardCount} {cardCount === 1 ? 'card' : 'cards'} · {questionCount} quiz{' '}
-              {questionCount === 1 ? 'question' : 'questions'}
+          {cards && cards.length > 0 && (
+            <ul className="mt-4 divide-y divide-border rounded-md border border-border">
+              {cards.map((card) => (
+                <li key={card.id}>
+                  <Link
+                    href={`/teacher/lessons/${id}/cards/${card.id}`}
+                    className="flex items-center justify-between gap-3 px-3 py-2 text-sm transition-colors hover:bg-muted/40"
+                  >
+                    <span className="truncate font-medium">{card.headline}</span>
+                    <span className="shrink-0 text-xs text-muted-foreground">
+                      Edit →
+                    </span>
+                  </Link>
+                </li>
+              ))}
+            </ul>
+          )}
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader>
+          <CardTitle className="text-base">Class access</CardTitle>
+        </CardHeader>
+        <CardContent>
+          {classes && classes.length > 0 ? (
+            <ul className="divide-y divide-border rounded-md border border-border">
+              {classes.map((cls) => (
+                <ClassAccessRow
+                  key={cls.id}
+                  lessonId={id}
+                  classId={cls.id}
+                  className={cls.name}
+                  unlockedAt={unlockedByClass.get(cls.id) ?? null}
+                  cardCount={cardCount}
+                  studentCount={studentCountsByClass.get(cls.id) ?? 0}
+                />
+              ))}
+            </ul>
+          ) : (
+            <p className="text-sm text-muted-foreground">
+              No classes available.
             </p>
+          )}
+          <p className="mt-3 text-xs text-muted-foreground">
+            Unlock this lesson for each class on the day you teach it. Re-syncing
+            picks up any cards or students added since the last unlock.
+          </p>
+        </CardContent>
+      </Card>
 
-            {cards && cards.length > 0 && (
-              <ul className="mt-4 divide-y divide-slate-200 rounded-md border border-slate-200">
-                {cards.map((card) => (
-                  <li key={card.id}>
-                    <Link
-                      href={`/teacher/lessons/${id}/cards/${card.id}`}
-                      className="flex items-center justify-between gap-3 px-3 py-2 text-sm transition-colors hover:bg-slate-50"
-                    >
-                      <span className="truncate font-medium text-slate-900">
-                        {card.headline}
-                      </span>
-                      <span className="shrink-0 text-xs text-slate-500">Edit →</span>
-                    </Link>
-                  </li>
-                ))}
-              </ul>
-            )}
-          </CardContent>
-        </Card>
+      <Card>
+        <CardHeader>
+          <CardTitle className="text-base">Edit lesson</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <EditLessonForm lesson={lesson} />
+        </CardContent>
+      </Card>
 
-        <Card>
-          <CardHeader>
-            <CardTitle>Class access</CardTitle>
-          </CardHeader>
-          <CardContent>
-            {classes && classes.length > 0 ? (
-              <ul className="divide-y divide-slate-200 rounded-md border border-slate-200">
-                {classes.map((cls) => (
-                  <ClassAccessRow
-                    key={cls.id}
-                    lessonId={id}
-                    classId={cls.id}
-                    className={cls.name}
-                    unlockedAt={unlockedByClass.get(cls.id) ?? null}
-                    cardCount={cardCount}
-                    studentCount={studentCountsByClass.get(cls.id) ?? 0}
-                  />
-                ))}
-              </ul>
-            ) : (
-              <p className="text-sm text-slate-500">No classes available.</p>
-            )}
-            <p className="mt-3 text-xs text-slate-500">
-              Unlock this lesson for each class on the day you teach it. Re-syncing
-              picks up any cards or students added since the last unlock.
-            </p>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader>
-            <CardTitle>Edit lesson</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <EditLessonForm lesson={lesson} />
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader>
-            <CardTitle className="text-red-700">Danger zone</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <p className="mb-3 text-sm text-slate-600">
-              Deleting this lesson permanently removes it
-              {cardCount > 0 ? `, all ${cardCount} cards, and any review state for students` : ''}.
-              This cannot be undone.
-            </p>
-            <DeleteLessonButton lessonId={lesson.id} cardCount={cardCount} />
-          </CardContent>
-        </Card>
-      </div>
-    </main>
+      <Card>
+        <CardHeader>
+          <CardTitle className="text-base text-destructive">Danger zone</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <p className="mb-3 text-sm text-muted-foreground">
+            Deleting this lesson permanently removes it
+            {cardCount > 0
+              ? `, all ${cardCount} cards, and any review state for students`
+              : ''}
+            . This cannot be undone.
+          </p>
+          <DeleteLessonButton lessonId={lesson.id} cardCount={cardCount} />
+        </CardContent>
+      </Card>
+    </div>
   );
 }
