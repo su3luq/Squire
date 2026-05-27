@@ -15,7 +15,6 @@ export type DraftMember = {
   fullName: string;
   bodyMd: string;
   submittedAt: string | null;
-  isCaptain: boolean;
 };
 
 type Props = {
@@ -106,7 +105,6 @@ export function TeamWorkspace({
               <option key={m.studentId} value={m.studentId}>
                 {m.studentId === viewerId ? `${m.fullName} (you)` : m.fullName}
                 {m.submittedAt ? ' ✓' : ''}
-                {m.isCaptain ? ' · captain' : ''}
               </option>
             ))}
           </select>
@@ -173,7 +171,6 @@ export function TeamWorkspace({
           <div className="mb-3 flex items-center justify-between gap-2 text-xs text-muted-foreground">
             <span>
               {active?.fullName}
-              {active?.isCaptain ? ' · captain' : ''}
               {isOwn ? ' (you)' : ''}
             </span>
             {active?.submittedAt && (

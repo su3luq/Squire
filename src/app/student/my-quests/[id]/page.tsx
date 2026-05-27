@@ -59,21 +59,20 @@ export default async function MyQuestWorkspacePage({
 
   const isCoop = acceptance.instance_id !== null;
 
-  // Coop-specific fetches: instance, member drafts, captain
+  // Coop-specific fetches: instance + member drafts
   let instance:
     | {
         id: string;
         status: string;
         submitted_at: string | null;
         team_number: number | null;
-        captain_id: string | null;
       }
     | null = null;
   let draftMembers: DraftMember[] = [];
   if (isCoop && acceptance.instance_id) {
     const { data: inst } = await supabase
       .from('coop_quest_instances')
-      .select('id, status, submitted_at, team_number, captain_id')
+      .select('id, status, submitted_at, team_number')
       .eq('id', acceptance.instance_id)
       .maybeSingle();
     instance = inst ?? null;
@@ -105,12 +104,9 @@ export default async function MyQuestWorkspacePage({
         fullName: profilesById.get(d.student_id) ?? '(unknown)',
         bodyMd: d.body_md ?? '',
         submittedAt: d.submitted_at,
-        isCaptain: instance?.captain_id === d.student_id,
       }))
       .sort((a, b) => a.fullName.localeCompare(b.fullName));
   }
-
-  const isCaptain = isCoop && instance?.captain_id === user.id;
 
   // Submission history (latest first)
   const submissionQuery = supabase
@@ -160,11 +156,6 @@ export default async function MyQuestWorkspacePage({
         {isCoop && instance?.team_number != null && (
           <span className="rounded-full bg-muted px-2.5 py-0.5 font-medium text-muted-foreground">
             Team {instance.team_number}
-          </span>
-        )}
-        {isCaptain && (
-          <span className="rounded-full bg-primary/10 px-2.5 py-0.5 font-medium text-primary">
-            You are the captain
           </span>
         )}
         <span className="text-muted-foreground">+{quest.xp_reward} XP</span>

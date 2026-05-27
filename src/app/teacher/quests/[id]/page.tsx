@@ -65,7 +65,7 @@ export default async function QuestDetailPage({
   const { data: instances } = await supabase
     .from('coop_quest_instances')
     .select(
-      'id, status, class_id, team_number, captain_id, started_at, submitted_at, reviewed_at'
+      'id, status, class_id, team_number, started_at, submitted_at, reviewed_at'
     )
     .eq('quest_id', id)
     .order('started_at', { ascending: true });
@@ -390,18 +390,10 @@ export default async function QuestDetailPage({
                                         const s = m.profiles as
                                           | { id: string; full_name: string }
                                           | null;
-                                        const isCaptain =
-                                          s?.id != null &&
-                                          s.id === inst.captain_id;
                                         return (
                                           <li key={m.id}>
                                             {s?.full_name ?? '(unknown)'} (
                                             {m.status})
-                                            {isCaptain && (
-                                              <span className="ml-2 rounded-full bg-primary/10 px-1.5 py-0.5 text-[10px] font-medium uppercase tracking-wide text-primary">
-                                                captain
-                                              </span>
-                                            )}
                                           </li>
                                         );
                                       })}

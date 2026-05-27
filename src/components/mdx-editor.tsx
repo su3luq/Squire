@@ -90,11 +90,30 @@ export function MdxEditor({
     }
   }, []);
 
+  // MDXEditor only treats clicks inside its contentEditable as text input;
+  // the surrounding padding doesn't reach the cursor. When the user clicks
+  // anywhere in the editor's white area, forward focus to the contentEditable
+  // element so the cursor lands there.
+  const focusEditor = useCallback((e: React.MouseEvent<HTMLDivElement>) => {
+    if (!editable) return;
+    // If the user already clicked inside the contentEditable, do nothing
+    // (otherwise we'd disturb the natural caret placement).
+    const target = e.target as HTMLElement;
+    if (target.closest('[contenteditable="true"]')) return;
+    if (target.closest('.mdxeditor-toolbar')) return;
+    const root = e.currentTarget.querySelector<HTMLElement>(
+      '[contenteditable="true"]',
+    );
+    if (root) root.focus();
+  }, [editable]);
+
   return (
     <div
       onBlur={flush}
+      onMouseDown={focusEditor}
       className={cn(
         'rounded-md border border-input bg-card text-sm focus-within:border-ring focus-within:ring-1 focus-within:ring-ring',
+        editable && 'cursor-text',
         // The shipped MDXEditor stylesheet uses its own design tokens. We
         // pull them into our brand palette where it matters most.
         '[--accentBase:var(--color-primary)] [--accentBgSubtle:color-mix(in_oklch,var(--color-primary)_10%,transparent)] [--accentLine:var(--color-border)] [--accentBorder:var(--color-border)] [--accentBorderHover:var(--color-border)] [--accentSolid:var(--color-primary)] [--accentSolidHover:var(--color-primary)] [--accentText:var(--color-primary)] [--accentTextContrast:var(--color-primary-foreground)]',
