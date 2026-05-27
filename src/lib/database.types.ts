@@ -189,6 +189,58 @@ export type Database = {
         }
         Relationships: []
       }
+      coop_member_drafts: {
+        Row: {
+          body_md: string
+          created_at: string
+          id: string
+          instance_id: string
+          student_id: string
+          submitted_at: string | null
+          updated_at: string
+        }
+        Insert: {
+          body_md?: string
+          created_at?: string
+          id?: string
+          instance_id: string
+          student_id: string
+          submitted_at?: string | null
+          updated_at?: string
+        }
+        Update: {
+          body_md?: string
+          created_at?: string
+          id?: string
+          instance_id?: string
+          student_id?: string
+          submitted_at?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "coop_member_drafts_instance_id_fkey"
+            columns: ["instance_id"]
+            isOneToOne: false
+            referencedRelation: "coop_quest_instances"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "coop_member_drafts_student_id_fkey"
+            columns: ["student_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "coop_member_drafts_student_id_fkey"
+            columns: ["student_id"]
+            isOneToOne: false
+            referencedRelation: "public_profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       coop_quest_instances: {
         Row: {
           captain_id: string | null
