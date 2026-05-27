@@ -241,6 +241,52 @@ export type Database = {
           },
         ]
       }
+      coop_team_notes: {
+        Row: {
+          body: string
+          id: string
+          instance_id: string
+          student_id: string
+          updated_at: string
+        }
+        Insert: {
+          body?: string
+          id?: string
+          instance_id: string
+          student_id: string
+          updated_at?: string
+        }
+        Update: {
+          body?: string
+          id?: string
+          instance_id?: string
+          student_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "coop_team_notes_instance_id_fkey"
+            columns: ["instance_id"]
+            isOneToOne: false
+            referencedRelation: "coop_quest_instances"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "coop_team_notes_student_id_fkey"
+            columns: ["student_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "coop_team_notes_student_id_fkey"
+            columns: ["student_id"]
+            isOneToOne: false
+            referencedRelation: "public_profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       coop_quest_instances: {
         Row: {
           captain_id: string | null

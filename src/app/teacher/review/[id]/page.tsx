@@ -84,6 +84,12 @@ export default async function ReviewSubmissionPage({
   }
 
   let teamMembers: string[] = [];
+  let teamNotes: Array<{
+    studentId: string;
+    studentName: string;
+    body: string;
+    updatedAt: string;
+  }> = [];
   if (isCoop && submission.instance_id) {
     const { data: members } = await supabase
       .from('quest_acceptances')
@@ -92,6 +98,32 @@ export default async function ReviewSubmissionPage({
     teamMembers = (members ?? [])
       .map((m) => (m.profiles as { full_name?: string } | null)?.full_name)
       .filter((n): n is string => typeof n === 'string');
+
+    // Phase 8 Day 4: teacher can see the team's scratchpad once a
+    // submission exists for the instance — which it does on this page.
+    const { data: notes } = await supabase
+      .from('coop_team_notes')
+      .select('student_id, body, updated_at')
+      .eq('instance_id', submission.instance_id);
+    const noteStudentIds = (notes ?? []).map((n) => n.student_id);
+    const nameById = new Map<string, string>();
+    if (noteStudentIds.length > 0) {
+      const { data: profiles } = await supabase
+        .from('public_profiles')
+        .select('id, full_name')
+        .in('id', noteStudentIds);
+      for (const p of profiles ?? []) {
+        if (p.id && p.full_name) nameById.set(p.id, p.full_name);
+      }
+    }
+    teamNotes = (notes ?? [])
+      .map((n) => ({
+        studentId: n.student_id,
+        studentName: nameById.get(n.student_id) ?? '(unknown)',
+        body: n.body ?? '',
+        updatedAt: n.updated_at,
+      }))
+      .sort((a, b) => a.studentName.localeCompare(b.studentName));
   }
 
   const isPending = submission.status === 'pending_review';
@@ -162,6 +194,40 @@ export default async function ReviewSubmissionPage({
           />
         </CardContent>
       </Card>
+
+      {isCoop && teamNotes.length > 0 && (
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-base">Team discussion</CardTitle>
+            <p className="text-xs text-muted-foreground">
+              Notes the team wrote to each other while drafting.
+            </p>
+          </CardHeader>
+          <CardContent>
+            <ul className="space-y-3">
+              {teamNotes.map((n) => (
+                <li
+                  key={n.studentId}
+                  className="rounded-md border border-border bg-muted/40 p-3"
+                >
+                  <p className="mb-1 text-xs font-medium text-foreground">
+                    {n.studentName}
+                  </p>
+                  {n.body.trim() ? (
+                    <p className="whitespace-pre-wrap text-sm text-foreground">
+                      {n.body}
+                    </p>
+                  ) : (
+                    <p className="text-xs italic text-muted-foreground">
+                      (no note)
+                    </p>
+                  )}
+                </li>
+              ))}
+            </ul>
+          </CardContent>
+        </Card>
+      )}
 
       {isPending && quest ? (
         <Card>

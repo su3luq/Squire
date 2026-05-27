@@ -10,6 +10,10 @@ import { MarkdownRenderer } from '@/components/markdown-renderer';
 import { PageHeader } from '@/components/page-header';
 import { SubmissionForm } from '../submission-form';
 import { TeamWorkspace, type DraftMember } from './team-workspace';
+import {
+  TeamNotesSidebar,
+  type TeamNote,
+} from './team-notes-sidebar';
 
 export const dynamic = 'force-dynamic';
 
@@ -108,6 +112,26 @@ export default async function MyQuestWorkspacePage({
       .sort((a, b) => a.fullName.localeCompare(b.fullName));
   }
 
+  // Coop team notes (Phase 8 Day 4). RLS scopes to teammates.
+  let teamNotes: TeamNote[] = [];
+  if (isCoop && acceptance.instance_id) {
+    const { data: notes } = await supabase
+      .from('coop_team_notes')
+      .select('id, student_id, body, updated_at')
+      .eq('instance_id', acceptance.instance_id);
+    teamNotes = (notes ?? [])
+      .map((n) => ({
+        noteId: n.id,
+        studentId: n.student_id,
+        studentName:
+          draftMembers.find((m) => m.studentId === n.student_id)?.fullName ??
+          '(unknown)',
+        body: n.body ?? '',
+        updatedAt: n.updated_at,
+      }))
+      .sort((a, b) => a.studentName.localeCompare(b.studentName));
+  }
+
   // Submission history (latest first)
   const submissionQuery = supabase
     .from('quest_submissions')
@@ -146,7 +170,8 @@ export default async function MyQuestWorkspacePage({
     !isCoop && !isCompleted && !pendingSubmission && acceptance.status === 'active';
 
   return (
-    <div className="mx-auto max-w-3xl space-y-6">
+    <div className="mx-auto flex max-w-6xl gap-6">
+    <div className="min-w-0 flex-1 space-y-6 lg:max-w-3xl">
       <PageHeader title={quest.title} />
 
       <div className="flex flex-wrap items-center gap-2 text-xs">
@@ -361,6 +386,16 @@ export default async function MyQuestWorkspacePage({
           </CardContent>
         </Card>
       )}
+    </div>
+
+    {isCoop && acceptance.instance_id && (
+      <TeamNotesSidebar
+        instanceId={acceptance.instance_id}
+        viewerId={user.id}
+        initialNotes={teamNotes}
+        editable={instance?.status === 'active'}
+      />
+    )}
     </div>
   );
 }
