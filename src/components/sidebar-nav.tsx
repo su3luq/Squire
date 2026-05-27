@@ -6,11 +6,22 @@ import { cn } from '@/lib/utils';
 import { NavIcon } from './nav-icons';
 import type { NavItem } from './nav-items';
 
-export function SidebarNav({ items }: { items: NavItem[] }) {
+export function SidebarNav({
+  items,
+  collapsed = false,
+}: {
+  items: NavItem[];
+  collapsed?: boolean;
+}) {
   const pathname = usePathname();
 
   return (
-    <nav className="flex-1 overflow-y-auto p-3">
+    <nav
+      className={cn(
+        'flex-1 overflow-y-auto',
+        collapsed ? 'p-2' : 'p-3',
+      )}
+    >
       <ul className="space-y-1">
         {items.map((item) => {
           const active =
@@ -24,8 +35,10 @@ export function SidebarNav({ items }: { items: NavItem[] }) {
             <li key={item.href}>
               <Link
                 href={item.href}
+                title={collapsed ? item.label : undefined}
                 className={cn(
-                  'flex items-center gap-3 rounded-md px-3 py-2 text-sm transition-colors',
+                  'flex items-center rounded-md text-sm transition-colors',
+                  collapsed ? 'justify-center px-2 py-2.5' : 'gap-3 px-3 py-2',
                   active
                     ? 'bg-primary/10 text-primary font-medium'
                     : 'text-foreground hover:bg-muted',
@@ -39,7 +52,7 @@ export function SidebarNav({ items }: { items: NavItem[] }) {
                     </span>
                   ) : null}
                 </span>
-                <span>{item.label}</span>
+                {!collapsed && <span>{item.label}</span>}
               </Link>
             </li>
           );
