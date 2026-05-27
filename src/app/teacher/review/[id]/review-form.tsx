@@ -3,7 +3,7 @@
 import { useState, useTransition } from 'react';
 import { useRouter } from 'next/navigation';
 import { Button } from '@/components/ui/button';
-import { MarkdownEditor } from '@/components/markdown-editor';
+import { MdxEditor } from '@/components/mdx-editor';
 import { reviewSubmission } from '../actions';
 
 export function ReviewForm({
@@ -49,12 +49,11 @@ export function ReviewForm({
             (required if failing — markdown supported)
           </span>
         </p>
-        <MarkdownEditor
+        <MdxEditor
           value={feedback}
           onChange={setFeedback}
-          disabled={isPending}
-          placeholder="What did the student get right? What needs revision? Be specific and actionable."
-          rows={10}
+          editable={!isPending}
+          minHeight="220px"
         />
       </div>
 

@@ -9,7 +9,7 @@ import type { z } from 'zod';
 import { Button, buttonVariants } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { MarkdownEditor } from '@/components/markdown-editor';
+import { MdxEditor } from '@/components/mdx-editor';
 import {
   emptyQuest,
   questFormSchema,
@@ -145,11 +145,11 @@ export function QuestForm({
             control={control}
             name="description"
             render={({ field }) => (
-              <MarkdownEditor
+              <MdxEditor
                 value={field.value ?? ''}
                 onChange={field.onChange}
-                disabled={isPending}
-                placeholder="What students need to do, how it'll be assessed, any examples or constraints..."
+                editable={!isPending}
+                minHeight="320px"
               />
             )}
           />

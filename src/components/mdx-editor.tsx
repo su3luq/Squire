@@ -1,6 +1,6 @@
 'use client';
 
-import { useRef } from 'react';
+import { useCallback, useEffect, useRef } from 'react';
 import {
   MDXEditor,
   type MDXEditorMethods,
@@ -56,8 +56,43 @@ export function MdxEditor({
 }: Props) {
   const ref = useRef<MDXEditorMethods>(null);
 
+  // MDXEditor fires onChange synchronously on every keystroke. Propagating
+  // that straight into a parent form's state causes the editor subtree to
+  // reconcile on every key, which is noticeable in dev mode. Debounce by
+  // ~150ms; flush immediately on blur so a "save" click never reads stale.
+  const onChangeRef = useRef(onChange);
+  useEffect(() => {
+    onChangeRef.current = onChange;
+  });
+  const latestMdRef = useRef(value);
+  const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  useEffect(() => {
+    return () => {
+      if (debounceRef.current) clearTimeout(debounceRef.current);
+    };
+  }, []);
+
+  const handleChange = useCallback((md: string) => {
+    latestMdRef.current = md;
+    if (debounceRef.current) clearTimeout(debounceRef.current);
+    debounceRef.current = setTimeout(() => {
+      onChangeRef.current(latestMdRef.current);
+      debounceRef.current = null;
+    }, 150);
+  }, []);
+
+  const flush = useCallback(() => {
+    if (debounceRef.current) {
+      clearTimeout(debounceRef.current);
+      debounceRef.current = null;
+      onChangeRef.current(latestMdRef.current);
+    }
+  }, []);
+
   return (
     <div
+      onBlur={flush}
       className={cn(
         'rounded-md border border-input bg-card text-sm focus-within:border-ring focus-within:ring-1 focus-within:ring-ring',
         // The shipped MDXEditor stylesheet uses its own design tokens. We
@@ -69,7 +104,7 @@ export function MdxEditor({
       <MDXEditor
         ref={ref}
         markdown={value}
-        onChange={onChange}
+        onChange={handleChange}
         readOnly={!editable}
         contentEditableClassName={cn(
           'prose prose-sm max-w-none px-4 py-3',
