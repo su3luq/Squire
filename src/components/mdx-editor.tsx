@@ -168,7 +168,18 @@ export function MdxEditor({
         ]}
       />
       <style jsx>{`
-        :global(.mdxeditor-root-contenteditable) {
+        /*
+         * Put min-height on the contenteditable element itself, not on
+         * its container. MDXEditor's DOM is:
+         *   .mdxeditor-root-contenteditable > div > [contenteditable]
+         * If we size only the outer wrapper, the contenteditable stays
+         * as short as the text, so clicks below the text land on the
+         * wrapper — the cursor lands at line 0 instead of where the
+         * user clicked. Sizing the contenteditable makes it fill the
+         * visible area, so Lexical places the caret at the last
+         * paragraph wherever the user clicks.
+         */
+        :global(.mdxeditor-root-contenteditable [contenteditable]) {
           min-height: ${minHeight};
         }
         :global(.mdxeditor-toolbar) {
