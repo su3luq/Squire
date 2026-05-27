@@ -1,12 +1,14 @@
 'use client';
 
-import { useState, useEffect, useTransition } from 'react';
+import { useState, useEffect, useRef, useTransition } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { createClient } from '@/lib/supabase/client';
+import { Avatar } from '@/components/avatar';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { uploadAvatar } from '@/lib/avatar-upload';
 import { registerStudentAction } from './actions';
 
 type ClassOption = { id: string; name: string };
@@ -23,6 +25,9 @@ export default function RegisterPage() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
+  const [avatarFile, setAvatarFile] = useState<File | null>(null);
+  const [avatarPreview, setAvatarPreview] = useState<string | null>(null);
+  const avatarInputRef = useRef<HTMLInputElement>(null);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
@@ -66,8 +71,26 @@ export default function RegisterPage() {
         setError(result.error);
         return;
       }
+      // Best-effort avatar upload if one was selected. Registration
+      // succeeded even if this step fails — the user can upload later
+      // from /settings.
+      if (avatarFile && result.userId) {
+        try {
+          await uploadAvatar(result.userId, avatarFile);
+        } catch (err) {
+          console.warn('Avatar upload failed during registration', err);
+        }
+      }
       router.refresh();
     });
+  }
+
+  function handleAvatarChange(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setAvatarFile(file);
+    if (avatarPreview) URL.revokeObjectURL(avatarPreview);
+    setAvatarPreview(URL.createObjectURL(file));
   }
 
   return (
@@ -110,6 +133,40 @@ export default function RegisterPage() {
                 onChange={(e) => setFullName(e.target.value)}
                 disabled={isPending}
               />
+            </div>
+
+            <div className="space-y-2">
+              <Label>
+                Profile picture <span className="text-xs text-slate-500">(optional)</span>
+              </Label>
+              <div className="flex items-center gap-4">
+                <Avatar
+                  url={avatarPreview}
+                  name={fullName || 'You'}
+                  size="lg"
+                />
+                <input
+                  ref={avatarInputRef}
+                  type="file"
+                  accept="image/jpeg,image/png,image/webp"
+                  className="hidden"
+                  onChange={handleAvatarChange}
+                />
+                <div className="flex flex-col gap-1">
+                  <Button
+                    type="button"
+                    size="sm"
+                    variant="outline"
+                    onClick={() => avatarInputRef.current?.click()}
+                    disabled={isPending}
+                  >
+                    {avatarFile ? 'Change photo' : 'Upload photo'}
+                  </Button>
+                  <p className="text-xs text-slate-500">
+                    JPEG/PNG/WebP, resized to 256×256.
+                  </p>
+                </div>
+              </div>
             </div>
 
             <div className="grid grid-cols-2 gap-4">

@@ -7,6 +7,7 @@ import { SidebarNav } from './sidebar-nav';
 import { BottomTabsNav } from './bottom-tabs-nav';
 import { SignOutButton } from './sign-out-button';
 import { InboxButton } from './inbox-button';
+import { Avatar } from './avatar';
 import { cn } from '@/lib/utils';
 import type { NavItem } from './nav-items';
 
@@ -14,6 +15,7 @@ interface AppShellProps {
   navItems: NavItem[];
   userName: string;
   userMeta?: string;
+  avatarUrl?: string | null;
   homeHref: string;
   unreadCount: number;
   children: React.ReactNode;
@@ -25,6 +27,7 @@ export function AppShell({
   navItems,
   userName,
   userMeta,
+  avatarUrl,
   homeHref,
   unreadCount,
   children,
@@ -94,6 +97,13 @@ export function AppShell({
 
         {collapsed && (
           <div className="flex flex-col items-center gap-1 border-t border-border py-2">
+            <Link
+              href="/settings"
+              title={`${userName} · settings`}
+              className="rounded-full focus-visible:outline focus-visible:outline-2 focus-visible:outline-ring"
+            >
+              <Avatar url={avatarUrl} name={userName} size="sm" />
+            </Link>
             <InboxButton count={unreadCount} />
             <SignOutButton iconOnly />
           </div>
@@ -101,14 +111,21 @@ export function AppShell({
 
         {!collapsed && (
           <div className="space-y-3 border-t border-border p-4">
-            <div className="text-sm">
-              <p className="truncate font-medium">{userName}</p>
-              {userMeta ? (
-                <p className="truncate text-xs text-muted-foreground">
-                  {userMeta}
-                </p>
-              ) : null}
-            </div>
+            <Link
+              href="/settings"
+              className="flex items-center gap-3 rounded-md transition-colors hover:bg-muted/60"
+              title="Settings"
+            >
+              <Avatar url={avatarUrl} name={userName} size="sm" />
+              <div className="min-w-0 flex-1 text-sm">
+                <p className="truncate font-medium">{userName}</p>
+                {userMeta ? (
+                  <p className="truncate text-xs text-muted-foreground">
+                    {userMeta}
+                  </p>
+                ) : null}
+              </div>
+            </Link>
             <SignOutButton />
           </div>
         )}

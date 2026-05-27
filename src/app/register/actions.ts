@@ -12,7 +12,9 @@ export type RegisterPayload = {
 
 type RegisterStudentResult = { ok: true } | { ok: false; error: string };
 
-export async function registerStudentAction(payload: RegisterPayload): Promise<{ error: string | null }> {
+export async function registerStudentAction(
+  payload: RegisterPayload,
+): Promise<{ error: string | null; userId?: string }> {
   const supabase = await createClient();
 
   // 1. Create the auth.users row with the user's real email.
@@ -42,5 +44,5 @@ export async function registerStudentAction(payload: RegisterPayload): Promise<{
     return { error: result.error };
   }
 
-  return { error: null };
+  return { error: null, userId: authData.user.id };
 }

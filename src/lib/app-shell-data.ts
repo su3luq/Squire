@@ -7,6 +7,7 @@ export type ShellData = {
   navItems: NavItem[];
   userName: string;
   userMeta?: string;
+  avatarUrl?: string | null;
   homeHref: string;
   unreadCount: number;
 };
@@ -26,7 +27,7 @@ export async function getShellData(): Promise<ShellData> {
 
   const { data: profile } = await supabase
     .from('profiles')
-    .select('role, full_name, xp_total, current_rank')
+    .select('role, full_name, xp_total, current_rank, avatar_url')
     .eq('id', user.id)
     .single();
   if (!profile) redirect('/login');
@@ -46,6 +47,7 @@ export async function getShellData(): Promise<ShellData> {
       navItems: getTeacherNav({ pendingReviews: pendingReviewsRaw ?? 0 }),
       userName: profile.full_name ?? 'Teacher',
       userMeta: 'Teacher',
+      avatarUrl: profile.avatar_url ?? null,
       homeHref: '/teacher',
       unreadCount,
     };
@@ -61,6 +63,7 @@ export async function getShellData(): Promise<ShellData> {
     navItems: getStudentNav({ dueReviews: dueReviewsRaw ?? 0 }),
     userName: profile.full_name ?? 'Student',
     userMeta: `Rank ${profile.current_rank} · ${profile.xp_total} XP`,
+    avatarUrl: profile.avatar_url ?? null,
     homeHref: '/student',
     unreadCount,
   };

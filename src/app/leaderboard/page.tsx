@@ -2,6 +2,7 @@ import { createClient } from '@/lib/supabase/server';
 import { redirect } from 'next/navigation';
 import { Card, CardContent } from '@/components/ui/card';
 import { cn } from '@/lib/utils';
+import { Avatar } from '@/components/avatar';
 import { InsightsTabs } from '@/components/insights-tabs';
 
 export const dynamic = 'force-dynamic';
@@ -26,7 +27,7 @@ export default async function LeaderboardPage() {
 
   const { data: students } = await supabase
     .from('public_profiles')
-    .select('id, full_name, xp_total, current_rank')
+    .select('id, full_name, xp_total, current_rank, avatar_url')
     .eq('role', 'student')
     .order('xp_total', { ascending: false })
     .order('full_name', { ascending: true });
@@ -37,6 +38,7 @@ export default async function LeaderboardPage() {
     full_name: s.full_name ?? 'Unknown',
     xp_total: s.xp_total ?? 0,
     current_rank: s.current_rank ?? 1,
+    avatar_url: s.avatar_url ?? null,
   }));
 
   const userPosition = rows.findIndex((r) => r.id === user.id);
@@ -116,6 +118,7 @@ function LeaderboardRow({
     full_name: string;
     xp_total: number;
     current_rank: number;
+    avatar_url: string | null;
   };
   isCurrentUser: boolean;
 }) {
@@ -134,6 +137,7 @@ function LeaderboardRow({
       >
         #{row.position}
       </span>
+      <Avatar url={row.avatar_url} name={row.full_name} size="sm" />
       <div className="min-w-0 flex-1">
         <p
           className={cn(
