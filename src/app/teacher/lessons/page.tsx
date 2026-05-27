@@ -1,13 +1,9 @@
-import { createClient } from '@/lib/supabase/server';
 import Link from 'next/link';
+import { BookOpen, Plus, Zap } from 'lucide-react';
+import { createClient } from '@/lib/supabase/server';
 import { buttonVariants } from '@/components/ui/button';
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from '@/components/ui/card';
+import { PageHeader } from '@/components/page-header';
+import { EmptyState } from '@/components/empty-state';
 import { quickStartLesson } from './actions';
 
 export default async function LessonsListPage() {
@@ -19,76 +15,72 @@ export default async function LessonsListPage() {
     .order('lesson_number', { ascending: true });
 
   return (
-    <main className="container mx-auto max-w-4xl p-6">
-      <div className="mb-6 flex items-start justify-between gap-4">
-        <div>
-          <Link
-            href="/teacher"
-            className="mb-2 inline-block text-sm text-blue-600 hover:underline"
-          >
-            ← Dashboard
-          </Link>
-          <h1 className="text-3xl font-bold">Lessons</h1>
-        </div>
-        <div className="flex gap-2">
-          <form action={quickStartLesson}>
-            <button type="submit" className={buttonVariants()}>
-              Quick start
-            </button>
-          </form>
-          <Link
-            href="/teacher/lessons/new"
-            className={buttonVariants({ variant: 'outline' })}
-          >
-            New lesson
-          </Link>
-        </div>
-      </div>
-
-      <p className="mb-6 text-xs text-slate-500">
-        Quick start creates an untitled lesson and jumps you straight into a card.
-        Lessons are class-agnostic — when you teach a lesson, you unlock it for the
-        specific class on the lesson&apos;s detail page.
-      </p>
+    <div className="mx-auto max-w-4xl space-y-6">
+      <PageHeader
+        title="Lessons"
+        subtitle="Quick start creates an untitled lesson and jumps you straight into a card. Lessons are class-agnostic — unlock each one per class when you teach it."
+        actions={
+          <>
+            <form action={quickStartLesson}>
+              <button type="submit" className={buttonVariants({ size: 'sm' })}>
+                <Zap className="h-4 w-4" />
+                Quick start
+              </button>
+            </form>
+            <Link
+              href="/teacher/lessons/new"
+              className={buttonVariants({ variant: 'outline', size: 'sm' })}
+            >
+              <Plus className="h-4 w-4" />
+              New lesson
+            </Link>
+          </>
+        }
+      />
 
       {!lessons || lessons.length === 0 ? (
-        <Card>
-          <CardContent className="py-12 text-center">
-            <p className="text-slate-600">No lessons yet.</p>
-            <p className="mt-2 text-sm text-slate-500">
-              Create your first lesson to start building cards.
-            </p>
-          </CardContent>
-        </Card>
+        <EmptyState
+          icon={BookOpen}
+          title="No lessons yet"
+          description="Create your first lesson to start building cards."
+        />
       ) : (
-        <div className="space-y-3">
+        <ul className="divide-y divide-border overflow-hidden rounded-lg border border-border bg-card">
           {lessons.map((lesson) => {
             const unlockedForCount = lesson.lesson_unlocks?.length ?? 0;
             return (
-              <Link key={lesson.id} href={`/teacher/lessons/${lesson.id}`}>
-                <Card className="transition-colors hover:bg-slate-50">
-                  <CardHeader>
-                    <CardTitle>{lesson.title}</CardTitle>
-                    <CardDescription>Lesson {lesson.lesson_number}</CardDescription>
-                  </CardHeader>
-                  <CardContent>
-                    <p className="text-sm text-slate-600">
-                      {unlockedForCount === 0 ? (
-                        <span className="text-slate-500">Not unlocked for any class yet</span>
-                      ) : (
-                        <span className="font-medium text-green-700">
-                          Unlocked for {unlockedForCount}{' '}
-                          {unlockedForCount === 1 ? 'class' : 'classes'}
-                        </span>
-                      )}
-                    </p>
-                  </CardContent>
-                </Card>
-              </Link>
+              <li key={lesson.id}>
+                <Link
+                  href={`/teacher/lessons/${lesson.id}`}
+                  className="block p-5 transition-colors hover:bg-muted/40"
+                >
+                  <div className="flex items-start justify-between gap-4">
+                    <div className="min-w-0 flex-1">
+                      <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
+                        Lesson {lesson.lesson_number}
+                      </p>
+                      <p className="mt-0.5 truncate text-sm font-medium">
+                        {lesson.title}
+                      </p>
+                    </div>
+                    <span
+                      className={`shrink-0 rounded-full px-2.5 py-0.5 text-xs font-medium ${
+                        unlockedForCount === 0
+                          ? 'bg-muted text-muted-foreground'
+                          : 'bg-primary/10 text-primary'
+                      }`}
+                    >
+                      {unlockedForCount === 0
+                        ? 'Locked'
+                        : `Unlocked × ${unlockedForCount}`}
+                    </span>
+                  </div>
+                </Link>
+              </li>
             );
           })}
-        </div>
+        </ul>
       )}
-    </main>
+    </div>
   );
 }

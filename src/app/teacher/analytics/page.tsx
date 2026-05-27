@@ -511,14 +511,14 @@ export default async function AnalyticsPage({
       {/* Class filter */}
       {classes && classes.length > 0 && (
         <form method="get" className="mb-6 flex items-center gap-2 text-sm">
-          <label htmlFor="class" className="font-medium text-slate-700">
+          <label htmlFor="class" className="font-medium text-foreground">
             Class:
           </label>
           <select
             id="class"
             name="class"
             defaultValue={classFilter ?? 'all'}
-            className="rounded-md border border-slate-300 bg-white px-3 py-1 text-sm shadow-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+            className="rounded-md border border-input bg-card px-3 py-1.5 text-sm shadow-sm focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary"
           >
             <option value="all">All classes</option>
             {classes.map((c) => (
@@ -529,7 +529,7 @@ export default async function AnalyticsPage({
           </select>
           <button
             type="submit"
-            className="rounded-md border border-slate-300 bg-white px-3 py-1 text-xs font-medium text-slate-700 hover:bg-slate-50"
+            className="rounded-md border border-input bg-card px-3 py-1.5 text-xs font-medium text-foreground transition-colors hover:bg-muted"
           >
             Apply
           </button>
@@ -563,12 +563,12 @@ export default async function AnalyticsPage({
           </CardHeader>
           <CardContent>
             {atRisk.length === 0 ? (
-              <p className="text-sm text-slate-500">
+              <p className="text-sm text-muted-foreground">
                 Nobody flagged. Either everyone&apos;s on track or there
                 isn&apos;t enough data yet.
               </p>
             ) : (
-              <ul className="divide-y divide-slate-200 rounded-md border border-slate-200">
+              <ul className="divide-y divide-border rounded-md border border-border">
                 {atRisk.map((s) => {
                   const link = s.classId
                     ? `/teacher/classes/${s.classId}/students/${s.studentId}`
@@ -582,16 +582,16 @@ export default async function AnalyticsPage({
                         {link ? (
                           <Link
                             href={link}
-                            className="font-medium text-slate-900 hover:text-blue-600 hover:underline"
+                            className="font-medium text-foreground hover:text-primary hover:underline"
                           >
                             {s.fullName}
                           </Link>
                         ) : (
-                          <span className="font-medium text-slate-900">
+                          <span className="font-medium text-foreground">
                             {s.fullName}
                           </span>
                         )}
-                        <span className="ml-2 text-xs text-slate-500">
+                        <span className="ml-2 text-xs text-muted-foreground">
                           {s.classId
                             ? (classNameById.get(s.classId) ?? 'Unknown')
                             : 'Unassigned'}
@@ -601,7 +601,7 @@ export default async function AnalyticsPage({
                         {s.reasons.map((r) => (
                           <span
                             key={r}
-                            className="rounded bg-red-100 px-2 py-0.5 text-xs font-medium text-red-800"
+                            className="rounded-full bg-destructive/10 px-2 py-0.5 text-xs font-medium text-destructive"
                           >
                             {r}
                           </span>
@@ -626,24 +626,24 @@ export default async function AnalyticsPage({
           </CardHeader>
           <CardContent>
             {totalStudents === 0 ? (
-              <p className="text-sm text-slate-500">No students in scope.</p>
+              <p className="text-sm text-muted-foreground">No students in scope.</p>
             ) : (
               <ul className="space-y-2">
                 {velocityBuckets.map((b) => (
                   <li key={b.range} className="text-xs">
                     <div className="flex items-center gap-3">
-                      <span className="w-16 shrink-0 font-mono text-slate-500">
+                      <span className="w-16 shrink-0 font-mono text-muted-foreground">
                         {b.range}
                       </span>
                       <div className="flex-1">
                         <div
-                          className="h-5 rounded-md bg-slate-700"
+                          className="h-5 rounded-md bg-foreground/80"
                           style={{
                             width: `${Math.max(1, (b.count / maxVelocityBucket) * 100)}%`,
                           }}
                         />
                       </div>
-                      <span className="w-20 text-right tabular-nums text-slate-700">
+                      <span className="w-20 text-right tabular-nums text-foreground">
                         {b.count}{' '}
                         {b.count === 1 ? 'student' : 'students'}
                       </span>
@@ -665,24 +665,24 @@ export default async function AnalyticsPage({
           </CardHeader>
           <CardContent>
             {weekBuckets.every((b) => b.total === 0) ? (
-              <p className="text-sm text-slate-500">No XP this period.</p>
+              <p className="text-sm text-muted-foreground">No XP this period.</p>
             ) : (
               <ul className="space-y-2">
                 {weekBuckets.map((b) => (
                   <li key={b.start.toISOString()} className="text-xs">
                     <div className="flex items-center gap-3">
-                      <span className="w-16 shrink-0 font-mono text-slate-500">
+                      <span className="w-16 shrink-0 font-mono text-muted-foreground">
                         {b.label}
                       </span>
                       <div className="flex-1">
                         <div
-                          className="h-5 rounded-md bg-blue-500"
+                          className="h-5 rounded-md bg-primary"
                           style={{
                             width: `${Math.max(1, (b.total / maxWeekly) * 100)}%`,
                           }}
                         />
                       </div>
-                      <span className="w-20 text-right tabular-nums text-slate-700">
+                      <span className="w-20 text-right tabular-nums text-foreground">
                         {b.total.toLocaleString()} XP
                       </span>
                     </div>
@@ -703,7 +703,7 @@ export default async function AnalyticsPage({
           </CardHeader>
           <CardContent>
             {completionRows.length === 0 ? (
-              <p className="text-sm text-slate-500">
+              <p className="text-sm text-muted-foreground">
                 No quest activity yet.
               </p>
             ) : (
@@ -711,24 +711,24 @@ export default async function AnalyticsPage({
                 {completionRows.map((row) => (
                   <li
                     key={row.quest_id}
-                    className="rounded-md border border-slate-200 p-3 text-sm"
+                    className="rounded-md border border-border p-3 text-sm"
                   >
                     <div className="flex flex-wrap items-baseline justify-between gap-2">
-                      <span className="font-medium text-slate-900">
+                      <span className="font-medium text-foreground">
                         {row.title}
                       </span>
-                      <span className="text-xs text-slate-500">
+                      <span className="text-xs text-muted-foreground">
                         {row.passed}/{row.total} passed
                         {row.pending > 0 && ` · ${row.pending} in flight`}
                       </span>
                     </div>
-                    <div className="mt-2 h-2 w-full overflow-hidden rounded-full bg-slate-100">
+                    <div className="mt-2 h-2 w-full overflow-hidden rounded-full bg-muted">
                       <div
-                        className="h-full bg-green-500"
+                        className="h-full bg-primary"
                         style={{ width: `${Math.round(row.rate * 100)}%` }}
                       />
                     </div>
-                    <p className="mt-1 text-xs text-slate-500">
+                    <p className="mt-1 text-xs text-muted-foreground">
                       {Math.round(row.rate * 100)}% completion · {row.type}
                     </p>
                   </li>
@@ -748,7 +748,7 @@ export default async function AnalyticsPage({
           </CardHeader>
           <CardContent>
             {totalAttempts === 0 ? (
-              <p className="text-sm text-slate-500">No reviews this period.</p>
+              <p className="text-sm text-muted-foreground">No reviews this period.</p>
             ) : (
               <div className="overflow-x-auto">
                 <table className="text-xs">
@@ -758,7 +758,7 @@ export default async function AnalyticsPage({
                       {Array.from({ length: 24 }, (_, h) => (
                         <th
                           key={h}
-                          className="w-6 px-0.5 text-center font-normal text-slate-400"
+                          className="w-6 px-0.5 text-center font-normal text-muted-foreground/70"
                         >
                           {h % 6 === 0 ? h : ''}
                         </th>
@@ -769,21 +769,21 @@ export default async function AnalyticsPage({
                     {['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'].map(
                       (label, dayIdx) => (
                         <tr key={label}>
-                          <td className="pr-2 text-right text-slate-500">
+                          <td className="pr-2 text-right text-muted-foreground">
                             {label}
                           </td>
                           {heatmap[dayIdx].map((cnt, h) => {
                             const intensity = cnt / maxCell;
                             const bg =
                               cnt === 0
-                                ? 'bg-slate-50'
+                                ? 'bg-muted/40'
                                 : intensity > 0.75
-                                  ? 'bg-blue-700'
+                                  ? 'bg-primary'
                                   : intensity > 0.5
-                                    ? 'bg-blue-500'
+                                    ? 'bg-primary/70'
                                     : intensity > 0.25
-                                      ? 'bg-blue-300'
-                                      : 'bg-blue-100';
+                                      ? 'bg-primary/40'
+                                      : 'bg-primary/20';
                             return (
                               <td key={h} className="p-0.5">
                                 <div
@@ -798,7 +798,7 @@ export default async function AnalyticsPage({
                     )}
                   </tbody>
                 </table>
-                <p className="mt-3 text-xs text-slate-500">
+                <p className="mt-3 text-xs text-muted-foreground">
                   Darker = more reviews. Peak cell: {maxCell} reviews.
                 </p>
               </div>
@@ -817,7 +817,7 @@ export default async function AnalyticsPage({
           </CardHeader>
           <CardContent>
             {retentionRows.length === 0 ? (
-              <p className="text-sm text-slate-500">
+              <p className="text-sm text-muted-foreground">
                 No reviewed cards yet.
               </p>
             ) : (
@@ -825,16 +825,16 @@ export default async function AnalyticsPage({
                 {retentionRows.map((row) => (
                   <li key={row.lessonId} className="text-xs">
                     <div className="flex items-center gap-3">
-                      <span className="min-w-0 flex-1 truncate font-medium text-slate-700">
+                      <span className="min-w-0 flex-1 truncate font-medium text-foreground">
                         {row.label}
                       </span>
-                      <span className="w-32 text-right tabular-nums text-slate-500">
+                      <span className="w-32 text-right tabular-nums text-muted-foreground">
                         {row.avgStability.toFixed(2)}d · {row.n} cards
                       </span>
                     </div>
-                    <div className="mt-1 h-2 w-full overflow-hidden rounded-full bg-slate-100">
+                    <div className="mt-1 h-2 w-full overflow-hidden rounded-full bg-muted">
                       <div
-                        className="h-full bg-purple-500"
+                        className="h-full bg-primary"
                         style={{
                           width: `${Math.max(2, (row.avgStability / maxRetention) * 100)}%`,
                         }}
@@ -857,43 +857,43 @@ export default async function AnalyticsPage({
           </CardHeader>
           <CardContent>
             {feed.length === 0 ? (
-              <p className="text-sm text-slate-500">Nothing yet.</p>
+              <p className="text-sm text-muted-foreground">Nothing yet.</p>
             ) : (
               <ul className="space-y-1 text-sm">
                 {feed.map((item) => {
                   const dot =
                     item.kind === 'xp'
-                      ? 'bg-blue-400'
+                      ? 'bg-primary'
                       : item.kind === 'submission'
                         ? 'bg-amber-400'
-                        : 'bg-green-500';
+                        : 'bg-primary/70';
                   const studentLink = item.classId
                     ? `/teacher/classes/${item.classId}/students/${item.studentId}`
                     : null;
                   return (
                     <li
                       key={item.key}
-                      className="flex items-baseline gap-2 border-b border-slate-100 py-1 last:border-0"
+                      className="flex items-baseline gap-2 border-b border-border py-1.5 last:border-0"
                     >
                       <span
                         className={`mt-1 inline-block h-2 w-2 shrink-0 rounded-full ${dot}`}
                       />
-                      <span className="flex-1 text-slate-700">
+                      <span className="flex-1 text-foreground">
                         {studentLink ? (
                           <Link
                             href={studentLink}
-                            className="font-medium text-slate-900 hover:text-blue-600 hover:underline"
+                            className="font-medium text-foreground hover:text-primary hover:underline"
                           >
                             {item.studentName}
                           </Link>
                         ) : (
-                          <span className="font-medium text-slate-900">
+                          <span className="font-medium text-foreground">
                             {item.studentName}
                           </span>
                         )}{' '}
                         {item.detail}
                       </span>
-                      <span className="shrink-0 text-xs text-slate-400">
+                      <span className="shrink-0 text-xs text-muted-foreground/70">
                         {formatSaigon(item.when)}
                       </span>
                     </li>
@@ -905,7 +905,7 @@ export default async function AnalyticsPage({
         </Card>
 
         {/* Footer note about RLS */}
-        <p className="text-xs text-slate-400">
+        <p className="text-xs text-muted-foreground/70">
           Per-class filter scopes the rollups, charts, and feed. Pending coop
           matchmaking is reflected in &quot;Quest completion&quot; via the
           &quot;in flight&quot; count. Class:{' '}
@@ -921,13 +921,11 @@ export default async function AnalyticsPage({
 
 function RollupCard({ label, value }: { label: string; value: string }) {
   return (
-    <div className="rounded-lg border border-slate-200 bg-white p-3">
-      <p className="text-xs font-medium uppercase tracking-wide text-slate-500">
+    <div className="rounded-lg border border-border bg-card p-4">
+      <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
         {label}
       </p>
-      <p className="mt-1 text-2xl font-bold text-slate-900 tabular-nums">
-        {value}
-      </p>
+      <p className="mt-1.5 text-2xl font-semibold tabular-nums">{value}</p>
     </div>
   );
 }

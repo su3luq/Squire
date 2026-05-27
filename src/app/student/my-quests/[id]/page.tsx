@@ -1,4 +1,3 @@
-import Link from 'next/link';
 import { notFound, redirect } from 'next/navigation';
 import { createClient } from '@/lib/supabase/server';
 import {
@@ -8,6 +7,7 @@ import {
   CardTitle,
 } from '@/components/ui/card';
 import { MarkdownRenderer } from '@/components/markdown-renderer';
+import { PageHeader } from '@/components/page-header';
 import { SubmissionForm } from '../submission-form';
 
 export const dynamic = 'force-dynamic';
@@ -57,14 +57,12 @@ export default async function MyQuestWorkspacePage({
     redirect(`/student/quests/${questId}`);
   }
 
-  // Pre-matchmaking enrollment → board page
   if (acceptance.status === 'enrolled') {
     redirect(`/student/quests/${questId}`);
   }
 
   const isCoop = acceptance.instance_id !== null;
 
-  // Resolve instance + team members (for coop)
   let instance: {
     id: string;
     status: string;
@@ -81,10 +79,6 @@ export default async function MyQuestWorkspacePage({
       .maybeSingle();
     instance = inst ?? null;
 
-    // Two-step fetch: PostgREST embeds via the FK on quest_acceptances
-    // resolve to the `profiles` table (whose RLS only exposes own row),
-    // not the `public_profiles` view. Read the ids first, then resolve
-    // names through the view explicitly.
     const { data: memberRows } = await supabase
       .from('quest_acceptances')
       .select('student_id')
@@ -112,7 +106,6 @@ export default async function MyQuestWorkspacePage({
     ? teamMembers.find((m) => m.id === instance?.captain_id) ?? null
     : null;
 
-  // Fetch submission history for this acceptance / instance, newest first.
   const submissionQuery = supabase
     .from('quest_submissions')
     .select(
@@ -123,7 +116,6 @@ export default async function MyQuestWorkspacePage({
     ? await submissionQuery.eq('instance_id', acceptance.instance_id!)
     : await submissionQuery.eq('acceptance_id', acceptance.id);
 
-  // Resolve submitter names through the view (cross-student-safe).
   const submitterIds = Array.from(
     new Set((submissions ?? []).map((s) => s.submitted_by).filter(Boolean))
   );
@@ -146,9 +138,6 @@ export default async function MyQuestWorkspacePage({
 
   const isCompleted = acceptance.status === 'passed';
 
-  // Can we submit right now?
-  // - Solo: acceptance is active AND no pending submission
-  // - Coop: instance is active AND no pending submission AND viewer is the captain
   const canSubmit =
     !isCompleted &&
     !pendingSubmission &&
@@ -157,224 +146,217 @@ export default async function MyQuestWorkspacePage({
       : acceptance.status === 'active');
 
   return (
-    <main className="container mx-auto max-w-3xl p-6">
-      <Link
-        href="/student/my-quests"
-        className="mb-4 inline-block text-sm text-blue-600 hover:underline"
-      >
-        ← My Quests
-      </Link>
+    <div className="mx-auto max-w-3xl space-y-6">
+      <PageHeader title={quest.title} />
 
-      <div className="mb-6">
-        <h1 className="text-3xl font-bold">{quest.title}</h1>
-        <div className="mt-2 flex flex-wrap items-center gap-2 text-sm text-slate-600">
-          <span
-            className={`rounded-full px-2 py-0.5 text-xs font-medium ${isCoop ? 'bg-purple-100 text-purple-800' : 'bg-blue-100 text-blue-800'}`}
-          >
-            {isCoop ? 'co-op' : 'solo'}
+      <div className="flex flex-wrap items-center gap-2 text-xs">
+        <span className="rounded-full bg-muted px-2.5 py-0.5 font-medium capitalize text-muted-foreground">
+          {isCoop ? 'co-op' : 'solo'}
+        </span>
+        {isCoop && instance?.team_number != null && (
+          <span className="rounded-full bg-muted px-2.5 py-0.5 font-medium text-muted-foreground">
+            Team {instance.team_number}
           </span>
-          {isCoop && instance?.team_number != null && (
-            <span className="rounded-full bg-slate-200 px-2 py-0.5 text-xs font-medium text-slate-800">
-              Team {instance.team_number}
+        )}
+        {isCaptain && (
+          <span className="rounded-full bg-primary/10 px-2.5 py-0.5 font-medium text-primary">
+            You are the captain
+          </span>
+        )}
+        <span className="text-muted-foreground">+{quest.xp_reward} XP</span>
+        {quest.word_limit_min != null && quest.word_limit_min > 0 && (
+          <>
+            <span className="text-muted-foreground">·</span>
+            <span className="text-muted-foreground">
+              target {quest.word_limit_min} words
             </span>
-          )}
-          {isCaptain && (
-            <span className="rounded-full bg-purple-100 px-2 py-0.5 text-xs font-medium text-purple-800">
-              You are the captain
-            </span>
-          )}
-          <span>+{quest.xp_reward} XP</span>
-          {quest.word_limit_min != null && quest.word_limit_min > 0 && (
-            <>
-              <span>·</span>
-              <span>target {quest.word_limit_min} words</span>
-            </>
-          )}
-        </div>
+          </>
+        )}
       </div>
 
-      <div className="space-y-6">
-        {/* Brief */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="text-base">Brief</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <MarkdownRenderer
+            source={quest.description ?? ''}
+            emptyPlaceholder="No description provided."
+          />
+        </CardContent>
+      </Card>
+
+      {isCoop && (
         <Card>
           <CardHeader>
-            <CardTitle>Brief</CardTitle>
+            <CardTitle className="text-base">
+              {instance?.team_number != null
+                ? `Team ${instance.team_number}`
+                : 'Your team'}
+            </CardTitle>
           </CardHeader>
-          <CardContent>
-            <MarkdownRenderer
-              source={quest.description ?? ''}
-              emptyPlaceholder="No description provided."
-            />
+          <CardContent className="space-y-3">
+            <ul className="space-y-1 text-sm">
+              {teamMembers.map((m) => (
+                <li key={m.id} className="flex items-center gap-2">
+                  <span className="text-foreground">{m.full_name}</span>
+                  {m.id === instance?.captain_id && (
+                    <span className="rounded-full bg-primary/10 px-2 py-0.5 text-[10px] font-medium uppercase tracking-wide text-primary">
+                      captain
+                    </span>
+                  )}
+                </li>
+              ))}
+            </ul>
+            {!isCaptain &&
+              !isCompleted &&
+              instance?.status === 'active' && (
+                <p className="rounded-md bg-muted px-3 py-2 text-xs text-muted-foreground">
+                  {captain?.full_name ?? 'Your captain'} will submit on behalf of
+                  the team. Coordinate your draft with them.
+                </p>
+              )}
           </CardContent>
         </Card>
+      )}
 
-        {/* Team panel for coop */}
-        {isCoop && (
-          <Card>
-            <CardHeader>
-              <CardTitle>
-                {instance?.team_number != null
-                  ? `Team ${instance.team_number}`
-                  : 'Your team'}
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-3">
-              <ul className="text-sm text-slate-700">
-                {teamMembers.map((m) => (
-                  <li key={m.id}>
-                    • {m.full_name}
-                    {m.id === instance?.captain_id && (
-                      <span className="ml-2 rounded bg-purple-100 px-1.5 py-0.5 text-[10px] font-medium text-purple-800">
-                        captain
-                      </span>
-                    )}
-                  </li>
-                ))}
-              </ul>
-              {!isCaptain &&
-                !isCompleted &&
-                instance?.status === 'active' && (
-                  <p className="rounded-md bg-slate-50 px-3 py-2 text-xs text-slate-600">
-                    {captain?.full_name ?? 'Your captain'} will submit on behalf
-                    of the team. Coordinate your draft with them.
-                  </p>
-                )}
-            </CardContent>
-          </Card>
-        )}
-
-        {/* State-specific UI */}
-        {isCompleted && (
-          <Card className="border-green-200 bg-green-50">
-            <CardContent className="pt-6">
-              <h3 className="text-lg font-semibold text-green-900">
-                Passed — +{quest.xp_reward} XP earned
-              </h3>
-              <p className="mt-1 text-sm text-green-800">
-                Reviewed {formatSaigon(acceptance.completed_at)}.
+      {isCompleted && (
+        <Card>
+          <CardContent className="space-y-3 pt-6">
+            <div className="flex items-center gap-2">
+              <span className="rounded-full bg-primary/10 px-2.5 py-0.5 text-xs font-medium uppercase tracking-wide text-primary">
+                Passed
+              </span>
+              <p className="text-sm font-medium">
+                +{quest.xp_reward} XP earned
               </p>
-              {latestSubmission?.teacher_feedback && (
-                <div className="mt-3 rounded-md bg-white p-3 text-sm text-slate-700">
-                  <p className="mb-1 text-xs font-semibold uppercase tracking-wide text-slate-500">
-                    Teacher feedback
-                  </p>
-                  <MarkdownRenderer source={latestSubmission.teacher_feedback} />
-                </div>
-              )}
-            </CardContent>
-          </Card>
-        )}
-
-        {pendingSubmission && (
-          <Card className="border-amber-200 bg-amber-50">
-            <CardContent className="pt-6 space-y-3">
-              <h3 className="text-lg font-semibold text-amber-900">
-                Awaiting review
-              </h3>
-              <p className="text-sm text-amber-800">
-                Submitted {formatSaigon(pendingSubmission.submitted_at)}
-                {' · '}
-                {pendingSubmission.word_count} words
-                {isCoop &&
-                  submitterNameById.get(pendingSubmission.submitted_by) &&
-                  ` · by ${submitterNameById.get(pendingSubmission.submitted_by)}`}
-              </p>
-              <div className="rounded-md bg-white p-3 text-sm text-slate-700">
-                <MarkdownRenderer source={pendingSubmission.text_content ?? ''} />
+            </div>
+            <p className="text-xs text-muted-foreground">
+              Reviewed {formatSaigon(acceptance.completed_at)}.
+            </p>
+            {latestSubmission?.teacher_feedback && (
+              <div className="rounded-md border border-border bg-muted/40 p-4">
+                <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+                  Teacher feedback
+                </p>
+                <MarkdownRenderer source={latestSubmission.teacher_feedback} />
               </div>
-            </CardContent>
-          </Card>
-        )}
+            )}
+          </CardContent>
+        </Card>
+      )}
 
-        {/* Failed-resubmit UX (Spec A) */}
-        {lastFailed && !isCompleted && (
-          <Card className="border-red-200 bg-red-50">
-            <CardContent className="pt-6 space-y-3">
-              <h3 className="text-lg font-semibold text-red-900">
+      {pendingSubmission && (
+        <Card>
+          <CardContent className="space-y-3 pt-6">
+            <div className="flex items-center gap-2">
+              <span className="rounded-full bg-amber-100 px-2.5 py-0.5 text-xs font-medium uppercase tracking-wide text-amber-900">
+                Awaiting review
+              </span>
+            </div>
+            <p className="text-xs text-muted-foreground">
+              Submitted {formatSaigon(pendingSubmission.submitted_at)}
+              {' · '}
+              {pendingSubmission.word_count} words
+              {isCoop &&
+                submitterNameById.get(pendingSubmission.submitted_by) &&
+                ` · by ${submitterNameById.get(pendingSubmission.submitted_by)}`}
+            </p>
+            <div className="rounded-md border border-border bg-muted/40 p-4 text-sm">
+              <MarkdownRenderer source={pendingSubmission.text_content ?? ''} />
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
+      {lastFailed && !isCompleted && (
+        <Card>
+          <CardContent className="space-y-3 pt-6">
+            <div className="flex items-center gap-2">
+              <span className="rounded-full bg-destructive/10 px-2.5 py-0.5 text-xs font-medium uppercase tracking-wide text-destructive">
                 Needs revision
-              </h3>
-              {lastFailed.teacher_feedback && (
-                <div className="rounded-md bg-white p-3 text-sm text-slate-800">
-                  <p className="mb-1 text-xs font-semibold uppercase tracking-wide text-slate-500">
-                    Teacher feedback
-                  </p>
-                  <MarkdownRenderer source={lastFailed.teacher_feedback} />
-                </div>
-              )}
-              <details className="rounded-md bg-white p-3 text-sm text-slate-700">
-                <summary className="cursor-pointer text-xs font-semibold uppercase tracking-wide text-slate-500">
-                  Your previous submission ({lastFailed.word_count} words ·{' '}
-                  {formatSaigon(lastFailed.submitted_at)})
-                </summary>
-                <div className="mt-2">
-                  <MarkdownRenderer source={lastFailed.text_content ?? ''} />
-                </div>
-              </details>
-              {canSubmit && (
-                <SubmissionForm
-                  questId={quest.id}
-                  acceptanceId={isCoop ? null : acceptance.id}
-                  instanceId={isCoop ? acceptance.instance_id : null}
-                  wordTarget={quest.word_limit_min}
-                  initialText={lastFailed.text_content ?? ''}
-                  startCollapsed
-                  collapsedLabel="Resubmit"
-                />
-              )}
-            </CardContent>
-          </Card>
-        )}
-
-        {/* Editor for first submission */}
-        {canSubmit && !lastFailed && (
-          <Card>
-            <CardHeader>
-              <CardTitle>Your submission</CardTitle>
-            </CardHeader>
-            <CardContent>
+              </span>
+            </div>
+            {lastFailed.teacher_feedback && (
+              <div className="rounded-md border border-border bg-muted/40 p-4">
+                <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+                  Teacher feedback
+                </p>
+                <MarkdownRenderer source={lastFailed.teacher_feedback} />
+              </div>
+            )}
+            <details className="rounded-md border border-border bg-muted/40 p-4 text-sm">
+              <summary className="cursor-pointer text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+                Your previous submission ({lastFailed.word_count} words ·{' '}
+                {formatSaigon(lastFailed.submitted_at)})
+              </summary>
+              <div className="mt-3">
+                <MarkdownRenderer source={lastFailed.text_content ?? ''} />
+              </div>
+            </details>
+            {canSubmit && (
               <SubmissionForm
                 questId={quest.id}
                 acceptanceId={isCoop ? null : acceptance.id}
                 instanceId={isCoop ? acceptance.instance_id : null}
                 wordTarget={quest.word_limit_min}
+                initialText={lastFailed.text_content ?? ''}
+                startCollapsed
+                collapsedLabel="Resubmit"
               />
-            </CardContent>
-          </Card>
-        )}
+            )}
+          </CardContent>
+        </Card>
+      )}
 
-        {/* History */}
-        {(submissions?.length ?? 0) > 1 && (
-          <Card>
-            <CardHeader>
-              <CardTitle>History</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <ul className="space-y-2 text-sm text-slate-600">
-                {(submissions ?? []).slice(1).map((s) => (
+      {canSubmit && !lastFailed && (
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-base">Your submission</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <SubmissionForm
+              questId={quest.id}
+              acceptanceId={isCoop ? null : acceptance.id}
+              instanceId={isCoop ? acceptance.instance_id : null}
+              wordTarget={quest.word_limit_min}
+            />
+          </CardContent>
+        </Card>
+      )}
+
+      {(submissions?.length ?? 0) > 1 && (
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-base">History</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <ul className="space-y-2 text-sm">
+              {(submissions ?? []).slice(1).map((s) => {
+                const tone =
+                  s.status === 'passed'
+                    ? 'text-primary'
+                    : s.status === 'failed'
+                      ? 'text-destructive'
+                      : 'text-amber-700';
+                return (
                   <li
                     key={s.id}
-                    className="rounded-md border border-slate-200 px-3 py-2"
+                    className="flex items-center justify-between rounded-md border border-border px-3 py-2 text-xs text-muted-foreground"
                   >
-                    <p className="text-xs text-slate-500">
-                      {formatSaigon(s.submitted_at)} · {s.word_count} words ·{' '}
-                      <span
-                        className={
-                          s.status === 'passed'
-                            ? 'text-green-700'
-                            : s.status === 'failed'
-                              ? 'text-red-700'
-                              : 'text-amber-700'
-                        }
-                      >
-                        {s.status}
-                      </span>
-                    </p>
+                    <span>
+                      {formatSaigon(s.submitted_at)} · {s.word_count} words
+                    </span>
+                    <span className={`font-medium capitalize ${tone}`}>
+                      {s.status}
+                    </span>
                   </li>
-                ))}
-              </ul>
-            </CardContent>
-          </Card>
-        )}
-      </div>
-    </main>
+                );
+              })}
+            </ul>
+          </CardContent>
+        </Card>
+      )}
+    </div>
   );
 }

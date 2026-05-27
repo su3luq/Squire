@@ -1,13 +1,10 @@
 import Link from 'next/link';
+import { Layers, Plus } from 'lucide-react';
 import { createClient } from '@/lib/supabase/server';
 import { buttonVariants } from '@/components/ui/button';
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from '@/components/ui/card';
+import { PageHeader } from '@/components/page-header';
+import { EmptyState } from '@/components/empty-state';
+import { cn } from '@/lib/utils';
 
 export const dynamic = 'force-dynamic';
 
@@ -38,77 +35,65 @@ export default async function ClassesListPage() {
   }
 
   return (
-    <main className="container mx-auto max-w-3xl p-6">
-      <div className="mb-6 flex items-start justify-between gap-4">
-        <div>
+    <div className="mx-auto max-w-3xl space-y-6">
+      <PageHeader
+        title="Classes"
+        subtitle="Open a class to let new students register into it. Archive classes you've finished teaching to keep them out of student-facing lists."
+        actions={
           <Link
-            href="/teacher"
-            className="mb-2 inline-block text-sm text-blue-600 hover:underline"
+            href="/teacher/classes/new"
+            className={buttonVariants({ size: 'sm' })}
           >
-            ← Dashboard
+            <Plus className="h-4 w-4" />
+            New class
           </Link>
-          <h1 className="text-3xl font-bold">Classes</h1>
-        </div>
-        <Link href="/teacher/classes/new" className={buttonVariants()}>
-          New class
-        </Link>
-      </div>
-
-      <p className="mb-6 text-xs text-slate-500">
-        Open a class to let new students register into it. Archive classes
-        you&apos;ve finished teaching to keep them out of student-facing lists.
-      </p>
+        }
+      />
 
       {!classes || classes.length === 0 ? (
-        <Card>
-          <CardContent className="py-12 text-center">
-            <p className="text-slate-600">No classes yet.</p>
-            <p className="mt-2 text-sm text-slate-500">
-              Create your first class to start enrolling students.
-            </p>
-          </CardContent>
-        </Card>
+        <EmptyState
+          icon={Layers}
+          title="No classes yet"
+          description="Create your first class to start enrolling students."
+        />
       ) : (
-        <div className="space-y-3">
+        <ul className="divide-y divide-border overflow-hidden rounded-lg border border-border bg-card">
           {classes.map((c) => {
             const count = studentCountByClass.get(c.id) ?? 0;
             const archived = c.archived_at !== null;
             return (
-              <Link key={c.id} href={`/teacher/classes/${c.id}`}>
-                <Card
-                  className={`transition-colors hover:bg-slate-50 ${archived ? 'opacity-60' : ''}`}
+              <li key={c.id} className={cn(archived && 'opacity-60')}>
+                <Link
+                  href={`/teacher/classes/${c.id}`}
+                  className="block p-5 transition-colors hover:bg-muted/40"
                 >
-                  <CardHeader>
-                    <div className="flex items-start justify-between gap-3">
-                      <div className="min-w-0 flex-1">
-                        <CardTitle className="truncate">{c.name}</CardTitle>
-                        <CardDescription className="pt-1 text-xs">
-                          {count} {count === 1 ? 'student' : 'students'}
-                        </CardDescription>
-                      </div>
-                      <div className="flex flex-col items-end gap-1">
-                        {archived ? (
-                          <span className="rounded bg-slate-200 px-2 py-0.5 text-xs font-medium text-slate-700">
-                            Archived
-                          </span>
-                        ) : c.registration_open ? (
-                          <span className="rounded bg-green-100 px-2 py-0.5 text-xs font-medium text-green-800">
-                            Registration open
-                          </span>
-                        ) : (
-                          <span className="rounded bg-slate-100 px-2 py-0.5 text-xs font-medium text-slate-700">
-                            Registration closed
-                          </span>
-                        )}
-                      </div>
+                  <div className="flex items-start justify-between gap-4">
+                    <div className="min-w-0 flex-1">
+                      <p className="truncate text-sm font-medium">{c.name}</p>
+                      <p className="mt-0.5 text-xs text-muted-foreground">
+                        {count} {count === 1 ? 'student' : 'students'}
+                      </p>
                     </div>
-                  </CardHeader>
-                </Card>
-              </Link>
+                    {archived ? (
+                      <span className="shrink-0 rounded-full bg-muted px-2.5 py-0.5 text-xs font-medium text-muted-foreground">
+                        Archived
+                      </span>
+                    ) : c.registration_open ? (
+                      <span className="shrink-0 rounded-full bg-primary/10 px-2.5 py-0.5 text-xs font-medium text-primary">
+                        Registration open
+                      </span>
+                    ) : (
+                      <span className="shrink-0 rounded-full bg-muted px-2.5 py-0.5 text-xs font-medium text-muted-foreground">
+                        Registration closed
+                      </span>
+                    )}
+                  </div>
+                </Link>
+              </li>
             );
           })}
-        </div>
+        </ul>
       )}
-    </main>
+    </div>
   );
 }

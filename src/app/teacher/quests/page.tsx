@@ -1,13 +1,9 @@
 import Link from 'next/link';
+import { Plus, Sword } from 'lucide-react';
 import { createClient } from '@/lib/supabase/server';
 import { buttonVariants } from '@/components/ui/button';
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from '@/components/ui/card';
+import { PageHeader } from '@/components/page-header';
+import { EmptyState } from '@/components/empty-state';
 import { formatLongCountdown } from './indicator';
 
 export default async function QuestsListPage() {
@@ -48,42 +44,38 @@ export default async function QuestsListPage() {
     }
   }
 
-  // eslint-disable-next-line react-hooks/purity -- Server Component rendered per request; "now" is deliberate.
+  // eslint-disable-next-line react-hooks/purity -- Server Component rendered per request.
   const now = Date.now();
 
   return (
-    <main className="container mx-auto max-w-4xl p-6">
-      <div className="mb-6 flex items-start justify-between gap-4">
-        <div>
+    <div className="mx-auto max-w-4xl space-y-6">
+      <PageHeader
+        title="Quests"
+        subtitle="Quests are visible to every class. For co-op, matchmaking forms teams inside each class independently at the deadline."
+        actions={
           <Link
-            href="/teacher"
-            className="mb-2 inline-block text-sm text-blue-600 hover:underline"
+            href="/teacher/quests/new"
+            className={buttonVariants({ size: 'sm' })}
           >
-            ← Dashboard
+            <Plus className="h-4 w-4" />
+            New quest
           </Link>
-          <h1 className="text-3xl font-bold">Quests</h1>
-        </div>
-        <Link href="/teacher/quests/new" className={buttonVariants()}>
-          New quest
-        </Link>
-      </div>
-
-      <p className="mb-6 text-xs text-slate-500">
-        Quests are visible to every class. For co-op, matchmaking forms teams
-        inside each class independently at the deadline.
-      </p>
+        }
+      />
 
       {!quests || quests.length === 0 ? (
-        <Card>
-          <CardContent className="py-12 text-center">
-            <p className="text-slate-600">No quests yet.</p>
-            <p className="mt-2 text-sm text-slate-500">
-              Create your first quest to give students something to work on.
-            </p>
-          </CardContent>
-        </Card>
+        <EmptyState
+          icon={Sword}
+          title="No quests yet"
+          description="Create your first quest to give students something to work on."
+          action={
+            <Link href="/teacher/quests/new" className={buttonVariants()}>
+              Create a quest
+            </Link>
+          }
+        />
       ) : (
-        <div className="space-y-3">
+        <ul className="divide-y divide-border overflow-hidden rounded-lg border border-border bg-card">
           {quests.map((q) => {
             const acceptances = q.quest_acceptances ?? [];
             const instances = q.coop_quest_instances ?? [];
@@ -94,7 +86,9 @@ export default async function QuestsListPage() {
 
             let indicator: React.ReactNode = null;
             if (q.quest_type === 'solo') {
-              const active = acceptances.filter((a) => a.status === 'active').length;
+              const active = acceptances.filter(
+                (a) => a.status === 'active'
+              ).length;
               indicator = <span>{active} active across all classes</span>;
             } else {
               const matchmakingDone = instances.length > 0;
@@ -118,8 +112,9 @@ export default async function QuestsListPage() {
                   </span>
                 );
               } else {
-                const enrolled = acceptances.filter((a) => a.status === 'enrolled')
-                  .length;
+                const enrolled = acceptances.filter(
+                  (a) => a.status === 'enrolled'
+                ).length;
                 if (q.expires_at) {
                   const target = new Date(q.expires_at).getTime();
                   const cd = formatLongCountdown(target, now);
@@ -136,51 +131,47 @@ export default async function QuestsListPage() {
             }
 
             return (
-              <Link key={q.id} href={`/teacher/quests/${q.id}`}>
-                <Card className="transition-colors hover:bg-slate-50">
-                  <CardHeader>
-                    <div className="flex items-start justify-between gap-3">
-                      <div className="min-w-0 flex-1">
-                        <CardTitle className="truncate">{q.title}</CardTitle>
-                        <CardDescription className="flex flex-wrap items-center gap-2 pt-1">
-                          <span
-                            className={`rounded-full px-2 py-0.5 text-xs font-medium ${q.quest_type === 'solo' ? 'bg-blue-100 text-blue-800' : 'bg-purple-100 text-purple-800'}`}
-                          >
-                            {q.quest_type}
-                          </span>
-                          <span className="text-xs text-slate-500">
-                            +{q.xp_reward} XP
-                          </span>
-                        </CardDescription>
-                      </div>
-                      <div className="flex flex-col items-end gap-1">
-                        {isClosed && (
-                          <span className="rounded bg-slate-200 px-2 py-0.5 text-xs text-slate-700">
-                            Closed
-                          </span>
-                        )}
-                        {!isClosed && isExpired && q.quest_type === 'solo' && (
-                          <span className="rounded bg-amber-100 px-2 py-0.5 text-xs text-amber-900">
-                            Expired
-                          </span>
-                        )}
-                        {pendingCount > 0 && (
-                          <span className="rounded bg-amber-100 px-2 py-0.5 text-xs font-medium text-amber-900">
-                            {pendingCount} to review
-                          </span>
-                        )}
+              <li key={q.id}>
+                <Link
+                  href={`/teacher/quests/${q.id}`}
+                  className="block p-5 transition-colors hover:bg-muted/40"
+                >
+                  <div className="flex items-start justify-between gap-4">
+                    <div className="min-w-0 flex-1">
+                      <p className="truncate text-sm font-medium">{q.title}</p>
+                      <div className="mt-1 flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
+                        <span className="rounded-full bg-muted px-2 py-0.5 font-medium capitalize">
+                          {q.quest_type}
+                        </span>
+                        <span>+{q.xp_reward} XP</span>
+                        <span>·</span>
+                        {indicator}
                       </div>
                     </div>
-                  </CardHeader>
-                  <CardContent>
-                    <p className="text-sm text-slate-600">{indicator}</p>
-                  </CardContent>
-                </Card>
-              </Link>
+                    <div className="flex shrink-0 flex-col items-end gap-1">
+                      {isClosed && (
+                        <span className="rounded-full bg-muted px-2 py-0.5 text-xs text-muted-foreground">
+                          Closed
+                        </span>
+                      )}
+                      {!isClosed && isExpired && q.quest_type === 'solo' && (
+                        <span className="rounded-full bg-amber-100 px-2 py-0.5 text-xs text-amber-900">
+                          Expired
+                        </span>
+                      )}
+                      {pendingCount > 0 && (
+                        <span className="rounded-full bg-amber-100 px-2 py-0.5 text-xs font-medium text-amber-900">
+                          {pendingCount} to review
+                        </span>
+                      )}
+                    </div>
+                  </div>
+                </Link>
+              </li>
             );
           })}
-        </div>
+        </ul>
       )}
-    </main>
+    </div>
   );
 }

@@ -8,6 +8,7 @@ import {
   CardTitle,
 } from '@/components/ui/card';
 import { MarkdownRenderer } from '@/components/markdown-renderer';
+import { PageHeader } from '@/components/page-header';
 import { LiveCountdown } from '../countdown';
 import { QuestActionButton } from '../accept-button';
 
@@ -61,13 +62,10 @@ export default async function StudentQuestDetailPage({
   const now = Date.now();
   const isExpired =
     quest.expires_at !== null && new Date(quest.expires_at).getTime() <= now;
-  // Per-class scoping: matchmaking done elsewhere doesn't redirect this student.
   const matchmakingDoneForMyClass = (quest.coop_quest_instances ?? []).some(
     (i) => i.class_id === profile?.class_id
   );
 
-  // If a coop quest has already matched for THIS student's class, send them
-  // to their work area.
   if (quest.quest_type === 'coop' && matchmakingDoneForMyClass) {
     redirect('/student/my-quests');
   }
@@ -82,7 +80,7 @@ export default async function StudentQuestDetailPage({
 
   if (quest.closed_at) {
     statusBanner = (
-      <div className="rounded-md border border-slate-200 bg-slate-50 px-3 py-2 text-sm text-slate-700">
+      <div className="rounded-md border border-border bg-muted px-3 py-2 text-sm text-muted-foreground">
         This quest is closed. No new accepts or enrollments.
       </div>
     );
@@ -99,7 +97,7 @@ export default async function StudentQuestDetailPage({
       action = (
         <Link
           href="/student/my-quests"
-          className="text-sm font-medium text-blue-600 hover:underline"
+          className="text-sm font-medium text-primary hover:underline"
         >
           You&apos;ve accepted this — go to My Quests →
         </Link>
@@ -109,7 +107,9 @@ export default async function StudentQuestDetailPage({
       ownAcceptance?.status === 'failed'
     ) {
       action = (
-        <p className="text-sm text-slate-500">You&apos;ve already worked on this.</p>
+        <p className="text-sm text-muted-foreground">
+          You&apos;ve already worked on this.
+        </p>
       );
     } else if (!quest.closed_at && !isExpired) {
       action = (
@@ -121,7 +121,6 @@ export default async function StudentQuestDetailPage({
       );
     }
   } else {
-    // coop
     if (
       ownAcceptance?.status === 'passed' ||
       ownAcceptance?.status === 'active'
@@ -129,7 +128,7 @@ export default async function StudentQuestDetailPage({
       action = (
         <Link
           href="/student/my-quests"
-          className="text-sm font-medium text-blue-600 hover:underline"
+          className="text-sm font-medium text-primary hover:underline"
         >
           Go to My Quests →
         </Link>
@@ -137,10 +136,10 @@ export default async function StudentQuestDetailPage({
     } else if (ownAcceptance?.status === 'enrolled') {
       action = (
         <div className="flex flex-col items-start gap-2">
-          <span className="rounded bg-green-100 px-2 py-0.5 text-xs font-medium text-green-800">
+          <span className="rounded-full bg-primary/10 px-2.5 py-0.5 text-xs font-medium text-primary">
             You&apos;re enrolled
           </span>
-          <p className="text-xs text-slate-500">
+          <p className="text-xs text-muted-foreground">
             Enrollments are final. You&apos;ll be matched into a team at the
             deadline.
           </p>
@@ -152,38 +151,34 @@ export default async function StudentQuestDetailPage({
   }
 
   return (
-    <main className="container mx-auto max-w-3xl p-6">
-      <Link
-        href="/student/quests"
-        className="mb-4 inline-block text-sm text-blue-600 hover:underline"
-      >
-        ← Quests
-      </Link>
+    <div className="mx-auto max-w-3xl space-y-6">
+      <PageHeader title={quest.title} />
 
-      <div className="mb-6">
-        <h1 className="text-3xl font-bold">{quest.title}</h1>
-        <div className="mt-2 flex flex-wrap items-center gap-2 text-sm text-slate-600">
-          <span
-            className={`rounded-full px-2 py-0.5 text-xs font-medium ${quest.quest_type === 'solo' ? 'bg-blue-100 text-blue-800' : 'bg-purple-100 text-purple-800'}`}
-          >
+      <div className="space-y-2">
+        <div className="flex flex-wrap items-center gap-2 text-xs">
+          <span className="rounded-full bg-muted px-2.5 py-0.5 font-medium capitalize text-muted-foreground">
             {quest.quest_type}
           </span>
-          <span>+{quest.xp_reward} XP</span>
+          <span className="text-muted-foreground">+{quest.xp_reward} XP</span>
           {quest.word_limit_min != null && quest.word_limit_min > 0 && (
             <>
-              <span>·</span>
-              <span>target {quest.word_limit_min} words</span>
+              <span className="text-muted-foreground">·</span>
+              <span className="text-muted-foreground">
+                target {quest.word_limit_min} words
+              </span>
             </>
           )}
           {quest.quest_type === 'coop' && quest.max_team_size && (
             <>
-              <span>·</span>
-              <span>teams up to {quest.max_team_size}</span>
+              <span className="text-muted-foreground">·</span>
+              <span className="text-muted-foreground">
+                teams up to {quest.max_team_size}
+              </span>
             </>
           )}
         </div>
         {quest.expires_at && (
-          <p className="mt-1 text-xs text-slate-500">
+          <p className="text-xs text-muted-foreground">
             {quest.quest_type === 'coop' ? 'Matchmaking' : 'Closes'} at{' '}
             {formatSaigon(quest.expires_at)} (Saigon)
             {!isExpired && (
@@ -195,33 +190,31 @@ export default async function StudentQuestDetailPage({
           </p>
         )}
         {quest.quest_type === 'coop' && (
-          <p className="mt-1 text-xs text-slate-500">
+          <p className="text-xs text-muted-foreground">
             {enrolledCount} student{enrolledCount === 1 ? '' : 's'} enrolled
           </p>
         )}
       </div>
 
-      {statusBanner && <div className="mb-6">{statusBanner}</div>}
+      {statusBanner}
 
-      <div className="space-y-6">
+      <Card>
+        <CardHeader>
+          <CardTitle className="text-base">Brief</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <MarkdownRenderer
+            source={quest.description ?? ''}
+            emptyPlaceholder="No description provided."
+          />
+        </CardContent>
+      </Card>
+
+      {action && (
         <Card>
-          <CardHeader>
-            <CardTitle>Brief</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <MarkdownRenderer
-              source={quest.description ?? ''}
-              emptyPlaceholder="No description provided."
-            />
-          </CardContent>
+          <CardContent className="pt-6">{action}</CardContent>
         </Card>
-
-        {action && (
-          <Card>
-            <CardContent className="pt-6">{action}</CardContent>
-          </Card>
-        )}
-      </div>
-    </main>
+      )}
+    </div>
   );
 }

@@ -1,12 +1,10 @@
 import Link from 'next/link';
 import { redirect } from 'next/navigation';
+import { Scroll } from 'lucide-react';
 import { createClient } from '@/lib/supabase/server';
-import {
-  Card,
-  CardContent,
-  CardHeader,
-  CardTitle,
-} from '@/components/ui/card';
+import { PageHeader } from '@/components/page-header';
+import { EmptyState } from '@/components/empty-state';
+import { cn } from '@/lib/utils';
 
 export const dynamic = 'force-dynamic';
 
@@ -21,6 +19,29 @@ function formatSaigon(iso: string | null): string {
   }).format(new Date(iso));
 }
 
+type Bucket =
+  | 'in_progress'
+  | 'enrolled'
+  | 'awaiting_review'
+  | 'resubmit_needed'
+  | 'completed';
+
+const BUCKET_TONE: Record<Bucket, string> = {
+  in_progress: 'bg-primary/10 text-primary',
+  enrolled: 'bg-muted text-muted-foreground',
+  awaiting_review: 'bg-amber-100 text-amber-900',
+  resubmit_needed: 'bg-destructive/10 text-destructive',
+  completed: 'bg-primary/15 text-primary',
+};
+
+const BUCKET_LABEL: Record<Bucket, string> = {
+  in_progress: 'In progress',
+  enrolled: 'Enrolled',
+  awaiting_review: 'Awaiting review',
+  resubmit_needed: 'Resubmit needed',
+  completed: 'Completed',
+};
+
 export default async function MyQuestsPage() {
   const supabase = await createClient();
 
@@ -29,8 +50,6 @@ export default async function MyQuestsPage() {
   } = await supabase.auth.getUser();
   if (!user) redirect('/login');
 
-  // Pull all the student's acceptances + their quest metadata. RLS scopes to
-  // self. Sort newest first.
   const { data: acceptances } = await supabase
     .from('quest_acceptances')
     .select(
@@ -42,7 +61,6 @@ export default async function MyQuestsPage() {
     .eq('student_id', user.id)
     .order('accepted_at', { ascending: false });
 
-  // Resolve all instance statuses in one shot
   const instanceIds = (acceptances ?? [])
     .map((a) => a.instance_id)
     .filter((x): x is string => x != null);
@@ -63,8 +81,6 @@ export default async function MyQuestsPage() {
     );
   }
 
-  // Pull all submissions the student can read (RLS handles scoping). Latest
-  // first per acceptance / instance.
   const acceptanceIds = (acceptances ?? []).map((a) => a.id);
   const latestByAcceptance = new Map<
     string,
@@ -98,13 +114,6 @@ export default async function MyQuestsPage() {
     }
   }
 
-  type Bucket =
-    | 'in_progress'
-    | 'enrolled'
-    | 'awaiting_review'
-    | 'resubmit_needed'
-    | 'completed';
-
   type EnrichedAcceptance = {
     acceptanceId: string;
     quest: NonNullable<NonNullable<typeof acceptances>[number]['quest']>;
@@ -116,7 +125,6 @@ export default async function MyQuestsPage() {
 
   const enriched: EnrichedAcceptance[] = (acceptances ?? [])
     .map((a): EnrichedAcceptance | null => {
-      // Quest is embedded as a single object (foreign key)
       const quest = a.quest as
         | {
             id: string;
@@ -134,7 +142,6 @@ export default async function MyQuestsPage() {
       const instanceStatus = instance?.status ?? null;
       const teamNumber = instance?.team_number ?? null;
 
-      // Determine bucket
       let bucket: Bucket;
 
       if (a.status === 'passed') {
@@ -142,14 +149,12 @@ export default async function MyQuestsPage() {
       } else if (a.status === 'enrolled') {
         bucket = 'enrolled';
       } else if (a.status === 'active') {
-        // Solo path
         if (!a.instance_id) {
           const sub = latestByAcceptance.get(a.id);
           if (sub?.status === 'pending_review') bucket = 'awaiting_review';
           else if (sub?.status === 'failed') bucket = 'resubmit_needed';
           else bucket = 'in_progress';
         } else {
-          // Coop path
           const sub = latestByInstance.get(a.instance_id);
           if (instanceStatus === 'submitted' || sub?.status === 'pending_review') {
             bucket = 'awaiting_review';
@@ -160,8 +165,6 @@ export default async function MyQuestsPage() {
           }
         }
       } else {
-        // 'submitted' or 'failed' status on the acceptance itself is unlikely
-        // given the new RPC flow, but treat them as in_progress fallback.
         bucket = 'in_progress';
       }
 
@@ -180,116 +183,112 @@ export default async function MyQuestsPage() {
     })
     .filter((x): x is EnrichedAcceptance => x !== null);
 
-  const sections: { title: string; bucket: Bucket; emptyText: string }[] = [
-    {
-      title: 'In progress',
-      bucket: 'in_progress',
-      emptyText: 'Nothing to work on right now.',
-    },
-    {
-      title: 'Resubmit needed',
-      bucket: 'resubmit_needed',
-      emptyText: '',
-    },
-    {
-      title: 'Awaiting review',
-      bucket: 'awaiting_review',
-      emptyText: '',
-    },
-    {
-      title: 'Enrolled in co-op',
-      bucket: 'enrolled',
-      emptyText: '',
-    },
-    {
-      title: 'Completed',
-      bucket: 'completed',
-      emptyText: '',
-    },
+  const sectionOrder: Bucket[] = [
+    'in_progress',
+    'resubmit_needed',
+    'awaiting_review',
+    'enrolled',
+    'completed',
   ];
 
-  return (
-    <main className="container mx-auto max-w-3xl p-6">
-      <Link
-        href="/student"
-        className="mb-4 inline-block text-sm text-blue-600 hover:underline"
-      >
-        ← Home
-      </Link>
-      <h1 className="mb-2 text-3xl font-bold">My Quests</h1>
-      <p className="mb-6 text-sm text-slate-600">
-        Everything you&apos;ve accepted or enrolled in.
-      </p>
+  if (enriched.length === 0) {
+    return (
+      <div className="mx-auto max-w-4xl space-y-6">
+        <PageHeader
+          title="My quests"
+          subtitle="Everything you've accepted or enrolled in."
+        />
+        <EmptyState
+          icon={Scroll}
+          title="No quests yet"
+          description="Browse the quest board to find solo and co-op work."
+          action={
+            <Link
+              href="/student/quests"
+              className="inline-flex items-center gap-1 text-sm font-medium text-primary hover:underline"
+            >
+              Browse the board →
+            </Link>
+          }
+        />
+      </div>
+    );
+  }
 
-      <div className="space-y-8">
-        {sections.map(({ title, bucket, emptyText }) => {
-          const items = enriched.filter((e) => e.bucket === bucket);
-          if (items.length === 0 && !emptyText) return null;
-          return (
-            <section key={bucket}>
-              <h2 className="mb-3 border-b border-slate-200 pb-1 text-lg font-semibold text-slate-900">
-                {title} {items.length > 0 && `(${items.length})`}
+  return (
+    <div className="mx-auto max-w-4xl space-y-8">
+      <PageHeader
+        title="My quests"
+        subtitle="Everything you've accepted or enrolled in."
+      />
+
+      {sectionOrder.map((bucket) => {
+        const items = enriched.filter((e) => e.bucket === bucket);
+        if (items.length === 0) return null;
+        return (
+          <section key={bucket}>
+            <div className="mb-3 flex items-center gap-2">
+              <h2 className="text-sm font-semibold uppercase tracking-wide text-muted-foreground">
+                {BUCKET_LABEL[bucket]}
               </h2>
-              {items.length === 0 ? (
-                <p className="text-sm text-slate-500">{emptyText}</p>
-              ) : (
-                <div className="space-y-2">
-                  {items.map((item) => (
-                    <Link
-                      key={item.acceptanceId}
-                      href={
-                        item.bucket === 'enrolled'
-                          ? `/student/quests/${item.quest.id}`
-                          : `/student/my-quests/${item.quest.id}`
-                      }
-                    >
-                      <Card className="transition-colors hover:bg-slate-50">
-                        <CardHeader className="py-3">
-                          <CardTitle className="text-base">
-                            {item.quest.title}
-                          </CardTitle>
-                        </CardHeader>
-                        <CardContent className="py-2 pt-0 text-xs text-slate-500">
-                          <span
-                            className={`mr-2 inline-block rounded-full px-2 py-0.5 font-medium ${item.quest.quest_type === 'solo' ? 'bg-blue-100 text-blue-800' : 'bg-purple-100 text-purple-800'}`}
-                          >
+              <span className="rounded-full bg-muted px-2 py-0.5 text-xs font-medium text-muted-foreground">
+                {items.length}
+              </span>
+            </div>
+            <ul className="divide-y divide-border overflow-hidden rounded-lg border border-border bg-card">
+              {items.map((item) => (
+                <li key={item.acceptanceId}>
+                  <Link
+                    href={
+                      item.bucket === 'enrolled'
+                        ? `/student/quests/${item.quest.id}`
+                        : `/student/my-quests/${item.quest.id}`
+                    }
+                    className="block p-5 transition-colors hover:bg-muted/40"
+                  >
+                    <div className="flex items-start justify-between gap-4">
+                      <div className="min-w-0 flex-1">
+                        <p className="truncate text-sm font-medium">
+                          {item.quest.title}
+                        </p>
+                        <div className="mt-1 flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
+                          <span className="capitalize">
                             {item.quest.quest_type}
                           </span>
+                          <span>·</span>
+                          <span>+{item.quest.xp_reward} XP</span>
                           {item.teamNumber != null && (
-                            <span className="mr-2 inline-block rounded-full bg-slate-200 px-2 py-0.5 font-medium text-slate-800">
-                              Team {item.teamNumber}
-                            </span>
+                            <>
+                              <span>·</span>
+                              <span>Team {item.teamNumber}</span>
+                            </>
                           )}
-                          +{item.quest.xp_reward} XP
                           {item.latestSubmittedAt && (
-                            <span>
-                              {' · '}submitted {formatSaigon(item.latestSubmittedAt)}
-                            </span>
+                            <>
+                              <span>·</span>
+                              <span>
+                                submitted {formatSaigon(item.latestSubmittedAt)}
+                              </span>
+                            </>
                           )}
-                        </CardContent>
-                      </Card>
-                    </Link>
-                  ))}
-                </div>
-              )}
-            </section>
-          );
-        })}
-
-        {enriched.length === 0 && (
-          <Card>
-            <CardContent className="py-12 text-center text-sm text-slate-600">
-              You haven&apos;t accepted any quests yet.{' '}
-              <Link
-                href="/student/quests"
-                className="text-blue-600 hover:underline"
-              >
-                Browse the quest board →
-              </Link>
-            </CardContent>
-          </Card>
-        )}
-      </div>
-    </main>
+                        </div>
+                      </div>
+                      <span
+                        className={cn(
+                          'shrink-0 rounded-full px-2.5 py-0.5 text-xs font-medium',
+                          BUCKET_TONE[bucket]
+                        )}
+                      >
+                        {BUCKET_LABEL[bucket]}
+                      </span>
+                    </div>
+                  </Link>
+                </li>
+              ))}
+            </ul>
+          </section>
+        );
+      })}
+    </div>
   );
 }

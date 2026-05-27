@@ -1,13 +1,9 @@
 import Link from 'next/link';
 import { redirect } from 'next/navigation';
+import { Sword, Users } from 'lucide-react';
 import { createClient } from '@/lib/supabase/server';
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from '@/components/ui/card';
+import { PageHeader } from '@/components/page-header';
+import { EmptyState } from '@/components/empty-state';
 import { LiveCountdown } from './countdown';
 import { QuestActionButton } from './accept-button';
 
@@ -30,26 +26,18 @@ export default async function StudentQuestsBoardPage() {
 
   if (!profile.class_id) {
     return (
-      <main className="container mx-auto max-w-3xl p-6">
-        <Link
-          href="/student"
-          className="mb-4 inline-block text-sm text-blue-600 hover:underline"
-        >
-          ← Home
-        </Link>
-        <h1 className="text-3xl font-bold">Quests</h1>
-        <Card className="mt-6">
-          <CardContent className="py-12 text-center text-sm text-slate-600">
-            You&apos;re not enrolled in a class yet. Ask your teacher to add you.
-          </CardContent>
-        </Card>
-      </main>
+      <div className="mx-auto max-w-4xl space-y-6">
+        <PageHeader title="Quests" />
+        <EmptyState
+          title="Not enrolled in a class yet"
+          description="Ask your teacher to add you, then come back to see what's open."
+        />
+      </div>
     );
   }
 
   const nowIso = new Date().toISOString();
 
-  // All open, non-expired quests visible to this student (RLS scopes by class).
   const { data: quests } = await supabase
     .from('quests')
     .select(
@@ -64,8 +52,6 @@ export default async function StudentQuestsBoardPage() {
     .or(`expires_at.is.null,expires_at.gt.${nowIso}`)
     .order('created_at', { ascending: false });
 
-  // Global "you're busy" state. Filter by quest_type so that having an active
-  // solo doesn't block coop enrollment (and vice versa).
   const allAcceptances = (quests ?? []).flatMap((q) =>
     (q.quest_acceptances ?? []).filter((a) => a.student_id === user.id)
   );
@@ -78,8 +64,6 @@ export default async function StudentQuestsBoardPage() {
       (a.status === 'active' || a.status === 'enrolled')
   );
 
-  // A coop quest is hidden from this student's board only if matchmaking has
-  // already run for THEIR class. Matchmaking in other classes does not block.
   const visible = (quests ?? []).filter((q) => {
     if (q.quest_type !== 'coop') return true;
     const instances = q.coop_quest_instances ?? [];
@@ -97,17 +81,21 @@ export default async function StudentQuestsBoardPage() {
       (a) => a.student_id === user!.id
     );
     if (ownAcceptance?.status === 'active') {
-      return <span className="text-xs text-slate-500">Already accepted</span>;
+      return (
+        <span className="text-xs text-muted-foreground">Already accepted</span>
+      );
     }
     if (
       ownAcceptance?.status === 'passed' ||
       ownAcceptance?.status === 'failed'
     ) {
-      return <span className="text-xs text-slate-500">Already done</span>;
+      return (
+        <span className="text-xs text-muted-foreground">Already done</span>
+      );
     }
     if (hasActiveSoloElsewhere) {
       return (
-        <span className="text-xs text-slate-500">
+        <span className="text-xs text-muted-foreground">
           Finish your active solo first
         </span>
       );
@@ -123,18 +111,20 @@ export default async function StudentQuestsBoardPage() {
       ownAcceptance?.status === 'passed' ||
       ownAcceptance?.status === 'active'
     ) {
-      return <span className="text-xs text-slate-500">Already done</span>;
+      return (
+        <span className="text-xs text-muted-foreground">Already done</span>
+      );
     }
     if (ownAcceptance?.status === 'enrolled') {
       return (
-        <span className="rounded bg-green-100 px-2 py-0.5 text-xs font-medium text-green-800">
+        <span className="rounded-full bg-primary/10 px-2.5 py-0.5 text-xs font-medium text-primary">
           Enrolled
         </span>
       );
     }
     if (hasActiveOrEnrolledCoopElsewhere) {
       return (
-        <span className="text-xs text-slate-500">
+        <span className="text-xs text-muted-foreground">
           You&apos;re busy with another co-op
         </span>
       );
@@ -148,99 +138,102 @@ export default async function StudentQuestsBoardPage() {
   }
 
   return (
-    <main className="container mx-auto max-w-3xl p-6">
-      <Link
-        href="/student"
-        className="mb-4 inline-block text-sm text-blue-600 hover:underline"
-      >
-        ← Home
-      </Link>
-      <h1 className="mb-2 text-3xl font-bold">Quests</h1>
-      <p className="mb-6 text-sm text-slate-600">
-        Solo quests are work you do on your own. Co-op quests collect
-        enrollments and then form teams at the matchmaking deadline.
-      </p>
+    <div className="mx-auto max-w-4xl space-y-8">
+      <PageHeader
+        title="Quests"
+        subtitle="Solo quests are work you do on your own. Co-op quests collect enrollments and form teams at the matchmaking deadline."
+      />
 
-      <div className="space-y-8">
-        <section>
-          <h2 className="mb-3 border-b border-slate-200 pb-1 text-lg font-semibold text-slate-900">
-            Solo quests
+      <section>
+        <div className="mb-3 flex items-center gap-2">
+          <Sword className="h-4 w-4 text-muted-foreground" />
+          <h2 className="text-sm font-semibold uppercase tracking-wide text-muted-foreground">
+            Solo
           </h2>
-          {soloQuests.length === 0 ? (
-            <p className="text-sm text-slate-500">No solo quests right now.</p>
-          ) : (
-            <div className="space-y-3">
-              {soloQuests.map((q) => (
-                <Card key={q.id}>
-                  <CardHeader>
-                    <div className="flex items-start justify-between gap-3">
-                      <div className="min-w-0 flex-1">
-                        <Link href={`/student/quests/${q.id}`}>
-                          <CardTitle className="truncate hover:text-blue-600">
-                            {q.title}
-                          </CardTitle>
-                        </Link>
-                        <CardDescription className="pt-1 text-xs">
-                          +{q.xp_reward} XP
-                          {q.expires_at && (
-                            <>
-                              {' · '}
-                              <LiveCountdown
-                                targetIso={q.expires_at}
-                                label="closes"
-                              />
-                            </>
-                          )}
-                        </CardDescription>
-                      </div>
-                      <div className="shrink-0">{renderActionForSolo(q)}</div>
-                    </div>
-                  </CardHeader>
-                </Card>
-              ))}
-            </div>
-          )}
-        </section>
-
-        <section>
-          <h2 className="mb-3 border-b border-slate-200 pb-1 text-lg font-semibold text-slate-900">
-            Co-op quests
-          </h2>
-          {coopQuests.length === 0 ? (
-            <p className="text-sm text-slate-500">No co-op quests right now.</p>
-          ) : (
-            <div className="space-y-3">
-              {coopQuests.map((q) => (
-                <Card key={q.id}>
-                  <CardHeader>
-                    <div className="flex items-start justify-between gap-3">
-                      <div className="min-w-0 flex-1">
-                        <Link href={`/student/quests/${q.id}`}>
-                          <CardTitle className="truncate hover:text-blue-600">
-                            {q.title}
-                          </CardTitle>
-                        </Link>
-                        <CardDescription className="pt-1 text-xs">
-                          +{q.xp_reward} XP · teams up to {q.max_team_size}
+        </div>
+        {soloQuests.length === 0 ? (
+          <EmptyState
+            icon={Sword}
+            title="No solo quests right now"
+            description="Check back later — new quests appear here when your teacher publishes them."
+          />
+        ) : (
+          <ul className="divide-y divide-border overflow-hidden rounded-lg border border-border bg-card">
+            {soloQuests.map((q) => (
+              <li key={q.id}>
+                <div className="flex items-start justify-between gap-4 p-5">
+                  <div className="min-w-0 flex-1">
+                    <Link
+                      href={`/student/quests/${q.id}`}
+                      className="block truncate text-sm font-medium hover:text-primary"
+                    >
+                      {q.title}
+                    </Link>
+                    <p className="mt-1 text-xs text-muted-foreground">
+                      +{q.xp_reward} XP
+                      {q.expires_at && (
+                        <>
                           {' · '}
-                          {enrolledCount(q)} enrolled
-                          {q.expires_at && (
-                            <>
-                              {' · matchmaking '}
-                              <LiveCountdown targetIso={q.expires_at} />
-                            </>
-                          )}
-                        </CardDescription>
-                      </div>
-                      <div className="shrink-0">{renderActionForCoop(q)}</div>
-                    </div>
-                  </CardHeader>
-                </Card>
-              ))}
-            </div>
-          )}
-        </section>
-      </div>
-    </main>
+                          <LiveCountdown
+                            targetIso={q.expires_at}
+                            label="closes"
+                          />
+                        </>
+                      )}
+                    </p>
+                  </div>
+                  <div className="shrink-0">{renderActionForSolo(q)}</div>
+                </div>
+              </li>
+            ))}
+          </ul>
+        )}
+      </section>
+
+      <section>
+        <div className="mb-3 flex items-center gap-2">
+          <Users className="h-4 w-4 text-muted-foreground" />
+          <h2 className="text-sm font-semibold uppercase tracking-wide text-muted-foreground">
+            Co-op
+          </h2>
+        </div>
+        {coopQuests.length === 0 ? (
+          <EmptyState
+            icon={Users}
+            title="No co-op quests right now"
+            description="Co-op quests collect enrollments before matchmaking forms teams."
+          />
+        ) : (
+          <ul className="divide-y divide-border overflow-hidden rounded-lg border border-border bg-card">
+            {coopQuests.map((q) => (
+              <li key={q.id}>
+                <div className="flex items-start justify-between gap-4 p-5">
+                  <div className="min-w-0 flex-1">
+                    <Link
+                      href={`/student/quests/${q.id}`}
+                      className="block truncate text-sm font-medium hover:text-primary"
+                    >
+                      {q.title}
+                    </Link>
+                    <p className="mt-1 text-xs text-muted-foreground">
+                      +{q.xp_reward} XP · teams up to {q.max_team_size}
+                      {' · '}
+                      {enrolledCount(q)} enrolled
+                      {q.expires_at && (
+                        <>
+                          {' · matchmaking '}
+                          <LiveCountdown targetIso={q.expires_at} />
+                        </>
+                      )}
+                    </p>
+                  </div>
+                  <div className="shrink-0">{renderActionForCoop(q)}</div>
+                </div>
+              </li>
+            ))}
+          </ul>
+        )}
+      </section>
+    </div>
   );
 }

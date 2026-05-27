@@ -1,22 +1,12 @@
-import { createClient } from '@/lib/supabase/server';
 import Link from 'next/link';
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from '@/components/ui/card';
-
-// Student card library. Lists lessons (filtered by RLS to those unlocked for
-// the student's class) and the cards within each lesson. Click a card →
-// intercepting route opens the detail modal.
+import { Library } from 'lucide-react';
+import { createClient } from '@/lib/supabase/server';
+import { PageHeader } from '@/components/page-header';
+import { EmptyState } from '@/components/empty-state';
 
 export default async function LibraryPage() {
   const supabase = await createClient();
 
-  // RLS handles filtering: only lessons unlocked for the student's class come
-  // through, and only the cards in those lessons.
   const { data: lessons } = await supabase
     .from('lessons')
     .select('id, title, lesson_number, review_cards(id, headline, position)')
@@ -30,36 +20,32 @@ export default async function LibraryPage() {
   }));
 
   return (
-    <main className="container mx-auto max-w-4xl p-6">
-      <Link
-        href="/student"
-        className="mb-4 inline-block text-sm text-blue-600 hover:underline"
-      >
-        ← Home
-      </Link>
-      <h1 className="mb-2 text-3xl font-bold">Library</h1>
-      <p className="mb-6 text-sm text-slate-600">
-        Cards your teacher has unlocked for your class. Click a card to read it.
-      </p>
+    <div className="mx-auto max-w-4xl space-y-6">
+      <PageHeader
+        title="Library"
+        subtitle="Cards your teacher has unlocked for your class. Click a card to read it."
+      />
 
       {lessonsWithCards.length === 0 ? (
-        <Card>
-          <CardContent className="py-12 text-center">
-            <p className="text-slate-600">No cards available yet.</p>
-            <p className="mt-2 text-sm text-slate-500">
-              Your teacher will unlock them after class.
-            </p>
-          </CardContent>
-        </Card>
+        <EmptyState
+          icon={Library}
+          title="No cards available yet"
+          description="Your teacher will unlock them after class."
+        />
       ) : (
-        <div className="space-y-6">
+        <div className="space-y-8">
           {lessonsWithCards.map((lesson) => (
             <section key={lesson.id}>
-              <h2 className="mb-3 border-b border-slate-200 pb-1 text-lg font-semibold text-slate-900">
-                Lesson {lesson.lesson_number} · {lesson.title}
-              </h2>
+              <div className="mb-3 flex items-baseline gap-2">
+                <h2 className="text-sm font-semibold uppercase tracking-wide text-muted-foreground">
+                  Lesson {lesson.lesson_number}
+                </h2>
+                <span className="text-sm text-foreground">{lesson.title}</span>
+              </div>
               {lesson.review_cards.length === 0 ? (
-                <p className="text-sm text-slate-500">No cards in this lesson yet.</p>
+                <p className="text-sm text-muted-foreground">
+                  No cards in this lesson yet.
+                </p>
               ) : (
                 <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
                   {lesson.review_cards.map((card) => (
@@ -67,15 +53,14 @@ export default async function LibraryPage() {
                       key={card.id}
                       href={`/student/library/cards/${card.id}`}
                       scroll={false}
+                      className="group rounded-lg border border-border bg-card p-4 transition-colors hover:border-primary/40 hover:bg-muted/40"
                     >
-                      <Card className="h-full transition-colors hover:border-blue-300 hover:bg-blue-50/30">
-                        <CardHeader>
-                          <CardTitle className="text-base">{card.headline}</CardTitle>
-                          <CardDescription className="text-xs">
-                            Tap to read
-                          </CardDescription>
-                        </CardHeader>
-                      </Card>
+                      <p className="text-sm font-medium text-foreground">
+                        {card.headline}
+                      </p>
+                      <p className="mt-1 text-xs text-muted-foreground group-hover:text-primary">
+                        Tap to read →
+                      </p>
                     </Link>
                   ))}
                 </div>
@@ -84,6 +69,6 @@ export default async function LibraryPage() {
           ))}
         </div>
       )}
-    </main>
+    </div>
   );
 }

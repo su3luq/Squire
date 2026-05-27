@@ -1,10 +1,12 @@
-import Link from 'next/link';
 import { redirect } from 'next/navigation';
+import { Bell } from 'lucide-react';
 import { createClient } from '@/lib/supabase/server';
-import { Card, CardContent } from '@/components/ui/card';
+import { PageHeader } from '@/components/page-header';
+import { EmptyState } from '@/components/empty-state';
 import { MarkAllReadButton } from './mark-all-read-button';
 import { NotificationLink } from './notification-link';
 import { NotificationClickable } from './notification-clickable';
+import { cn } from '@/lib/utils';
 
 export const dynamic = 'force-dynamic';
 
@@ -35,29 +37,30 @@ function NotificationRow({
   unread: boolean;
   href: string | null;
 }) {
-  const baseClass = `block rounded-md border p-4 transition-colors ${
+  const baseClass = cn(
+    'block rounded-lg border p-4 transition-colors',
     unread
-      ? 'border-blue-200 bg-blue-50 hover:bg-blue-100'
-      : 'border-slate-200 bg-white hover:bg-slate-50'
-  }`;
+      ? 'border-primary/20 bg-primary/5 hover:bg-primary/10'
+      : 'border-border bg-card hover:bg-muted/40'
+  );
   const inner = (
     <>
       <div className="flex items-start justify-between gap-3">
         <div className="min-w-0 flex-1">
-          <p className="text-sm font-semibold text-slate-900">
+          <p className="flex items-center gap-2 text-sm font-medium">
             {title}
             {unread && (
-              <span className="ml-2 inline-block h-2 w-2 rounded-full bg-blue-500" />
+              <span className="h-2 w-2 shrink-0 rounded-full bg-primary" />
             )}
           </p>
-          <p className="mt-1 text-sm text-slate-700">{body}</p>
+          <p className="mt-1 text-sm text-muted-foreground">{body}</p>
         </div>
-        <span className="shrink-0 text-xs text-slate-400">
+        <span className="shrink-0 text-xs text-muted-foreground">
           {formatSaigon(createdAt)}
         </span>
       </div>
-      <p className="mt-2 text-xs uppercase tracking-wide text-slate-400">
-        {type}
+      <p className="mt-2 text-xs uppercase tracking-wide text-muted-foreground/70">
+        {type.replace(/_/g, ' ')}
       </p>
     </>
   );
@@ -83,14 +86,6 @@ export default async function NotificationsInboxPage() {
   } = await supabase.auth.getUser();
   if (!user) redirect('/login');
 
-  const { data: profile } = await supabase
-    .from('profiles')
-    .select('role')
-    .eq('id', user.id)
-    .single();
-  const homeHref = profile?.role === 'teacher' ? '/teacher' : '/student';
-
-  // RLS scopes to own.
   const { data: notifications } = await supabase
     .from('notifications')
     .select('id, type, title, body, data, created_at, read_at, pushed_at')
@@ -98,36 +93,28 @@ export default async function NotificationsInboxPage() {
     .limit(100);
 
   const unreadCount = (notifications ?? []).filter((n) => !n.read_at).length;
+  const totalCount = (notifications ?? []).length;
 
   return (
-    <main className="container mx-auto max-w-2xl p-6">
-      <Link
-        href={homeHref}
-        className="mb-4 inline-block text-sm text-blue-600 hover:underline"
-      >
-        ← Home
-      </Link>
+    <div className="mx-auto max-w-2xl space-y-6">
+      <PageHeader
+        title="Notifications"
+        subtitle={
+          totalCount === 0
+            ? 'Nothing here yet.'
+            : unreadCount > 0
+              ? `${unreadCount} unread`
+              : 'All caught up.'
+        }
+        actions={unreadCount > 0 ? <MarkAllReadButton /> : undefined}
+      />
 
-      <div className="mb-6 flex items-baseline justify-between gap-3">
-        <div>
-          <h1 className="text-3xl font-bold">Notifications</h1>
-          <p className="mt-1 text-sm text-slate-600">
-            {(notifications ?? []).length === 0
-              ? 'Nothing here yet.'
-              : unreadCount > 0
-                ? `${unreadCount} unread`
-                : 'All caught up.'}
-          </p>
-        </div>
-        {unreadCount > 0 && <MarkAllReadButton />}
-      </div>
-
-      {(notifications ?? []).length === 0 ? (
-        <Card>
-          <CardContent className="py-12 text-center text-sm text-slate-500">
-            You haven&apos;t received any notifications.
-          </CardContent>
-        </Card>
+      {totalCount === 0 ? (
+        <EmptyState
+          icon={Bell}
+          title="No notifications yet"
+          description="You'll see review feedback, quest updates, and rank ups here."
+        />
       ) : (
         <ul className="space-y-2">
           {(notifications ?? []).map((n) => {
@@ -149,6 +136,6 @@ export default async function NotificationsInboxPage() {
           })}
         </ul>
       )}
-    </main>
+    </div>
   );
 }

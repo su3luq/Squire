@@ -1,11 +1,8 @@
 import Link from 'next/link';
+import { ClipboardCheck } from 'lucide-react';
 import { createClient } from '@/lib/supabase/server';
-import {
-  Card,
-  CardContent,
-  CardHeader,
-  CardTitle,
-} from '@/components/ui/card';
+import { PageHeader } from '@/components/page-header';
+import { EmptyState } from '@/components/empty-state';
 
 export const dynamic = 'force-dynamic';
 
@@ -64,9 +61,6 @@ export default async function ReviewQueuePage({
     quest_type: 'solo' | 'coop' | 'daily_quiz';
   };
 
-  // Build attempt counts: for each pending submission, how many submissions
-  // exist for its acceptance/instance (the count IS the attempt number, since
-  // the pending one is the latest).
   const acceptanceIds = Array.from(
     new Set(
       (submissions ?? [])
@@ -117,8 +111,9 @@ export default async function ReviewQueuePage({
       quests: Quest | null;
     } | null;
     const quest = accept?.quests ?? inst?.quests ?? null;
-    const submitter = s.profiles as { full_name: string; class_id: string | null } | null;
-    // For solo: class derived from the submitter. For coop: class on the instance.
+    const submitter = s.profiles as
+      | { full_name: string; class_id: string | null }
+      | null;
     const classId = inst?.class_id ?? submitter?.class_id ?? null;
     const attempt = s.acceptance_id
       ? (attemptByAcceptance.get(s.acceptance_id) ?? 1)
@@ -143,29 +138,22 @@ export default async function ReviewQueuePage({
       : allItems;
 
   return (
-    <main className="container mx-auto max-w-4xl p-6">
-      <Link
-        href="/teacher"
-        className="mb-4 inline-block text-sm text-blue-600 hover:underline"
-      >
-        ← Dashboard
-      </Link>
-      <h1 className="mb-2 text-3xl font-bold">Review queue</h1>
-      <p className="mb-6 text-sm text-slate-600">
-        Pending submissions, oldest first.
-      </p>
+    <div className="mx-auto max-w-4xl space-y-6">
+      <PageHeader
+        title="Review queue"
+        subtitle="Pending submissions, oldest first."
+      />
 
-      {/* Class filter */}
       {classes && classes.length > 0 && (
-        <form method="get" className="mb-4 flex items-center gap-2 text-sm">
-          <label htmlFor="class" className="font-medium text-slate-700">
+        <form method="get" className="flex items-center gap-2 text-sm">
+          <label htmlFor="class" className="font-medium text-foreground">
             Class:
           </label>
           <select
             id="class"
             name="class"
             defaultValue={classFilter ?? 'all'}
-            className="rounded-md border border-slate-300 bg-white px-3 py-1 text-sm shadow-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+            className="rounded-md border border-input bg-card px-3 py-1.5 text-sm shadow-sm focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary"
           >
             <option value="all">All classes ({allItems.length})</option>
             {classes.map((c) => {
@@ -179,7 +167,7 @@ export default async function ReviewQueuePage({
           </select>
           <button
             type="submit"
-            className="rounded-md border border-slate-300 bg-white px-3 py-1 text-xs font-medium text-slate-700 hover:bg-slate-50"
+            className="rounded-md border border-input bg-card px-3 py-1.5 text-xs font-medium text-foreground transition-colors hover:bg-muted"
           >
             Apply
           </button>
@@ -187,63 +175,56 @@ export default async function ReviewQueuePage({
       )}
 
       {items.length === 0 ? (
-        <Card>
-          <CardContent className="py-12 text-center text-sm text-slate-600">
-            {classFilter && classFilter !== 'all'
-              ? 'Nothing pending in this class.'
-              : 'Nothing to review. All caught up.'}
-          </CardContent>
-        </Card>
+        <EmptyState
+          icon={ClipboardCheck}
+          title={
+            classFilter && classFilter !== 'all'
+              ? 'Nothing pending in this class'
+              : 'All caught up'
+          }
+          description="New submissions will appear here when students send them in."
+        />
       ) : (
-        <div className="space-y-2">
+        <ul className="divide-y divide-border overflow-hidden rounded-lg border border-border bg-card">
           {items.map((item) => (
-            <Link key={item.id} href={`/teacher/review/${item.id}`}>
-              <Card className="transition-colors hover:bg-slate-50">
-                <CardHeader className="py-3">
-                  <div className="flex items-start justify-between gap-3">
-                    <div className="min-w-0 flex-1">
-                      <CardTitle className="truncate text-base">
-                        {item.quest?.title ?? '(quest deleted)'}
-                      </CardTitle>
-                      <p className="mt-1 flex flex-wrap items-center gap-2 text-xs text-slate-500">
-                        {item.isCoop ? (
-                          <span className="rounded-full bg-purple-100 px-2 py-0.5 font-medium text-purple-800">
-                            co-op
-                          </span>
-                        ) : (
-                          <span className="rounded-full bg-blue-100 px-2 py-0.5 font-medium text-blue-800">
-                            solo
-                          </span>
-                        )}
-                        {item.classId && (
-                          <span className="rounded-full bg-slate-100 px-2 py-0.5 font-medium text-slate-700">
-                            {classNameById.get(item.classId) ?? 'Unknown class'}
-                          </span>
-                        )}
-                        {item.attempt > 1 && (
-                          <span className="rounded-full bg-amber-100 px-2 py-0.5 font-medium text-amber-900">
-                            Attempt {item.attempt}
-                          </span>
-                        )}
-                        <span>{item.submitterName}</span>
-                        <span>·</span>
-                        <span>
-                          {item.wordCount} words
-                          {item.quest?.word_limit_min != null &&
-                            item.quest.word_limit_min > 0 &&
-                            ` · target ${item.quest.word_limit_min}`}
-                        </span>
-                        <span>·</span>
-                        <span>submitted {formatSaigon(item.submittedAt)}</span>
-                      </p>
-                    </div>
-                  </div>
-                </CardHeader>
-              </Card>
-            </Link>
+            <li key={item.id}>
+              <Link
+                href={`/teacher/review/${item.id}`}
+                className="block p-5 transition-colors hover:bg-muted/40"
+              >
+                <p className="truncate text-sm font-medium">
+                  {item.quest?.title ?? '(quest deleted)'}
+                </p>
+                <div className="mt-1.5 flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
+                  <span className="rounded-full bg-muted px-2 py-0.5 font-medium capitalize">
+                    {item.isCoop ? 'co-op' : 'solo'}
+                  </span>
+                  {item.classId && (
+                    <span className="rounded-full bg-muted px-2 py-0.5 font-medium">
+                      {classNameById.get(item.classId) ?? 'Unknown class'}
+                    </span>
+                  )}
+                  {item.attempt > 1 && (
+                    <span className="rounded-full bg-amber-100 px-2 py-0.5 font-medium text-amber-900">
+                      Attempt {item.attempt}
+                    </span>
+                  )}
+                  <span>{item.submitterName}</span>
+                  <span>·</span>
+                  <span>
+                    {item.wordCount} words
+                    {item.quest?.word_limit_min != null &&
+                      item.quest.word_limit_min > 0 &&
+                      ` · target ${item.quest.word_limit_min}`}
+                  </span>
+                  <span>·</span>
+                  <span>submitted {formatSaigon(item.submittedAt)}</span>
+                </div>
+              </Link>
+            </li>
           ))}
-        </div>
+        </ul>
       )}
-    </main>
+    </div>
   );
 }
