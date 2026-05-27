@@ -181,6 +181,22 @@ export async function disbandQuest(
   };
 }
 
+export async function forceFinalizeTeamSubmission(
+  instanceId: string,
+  questId: string
+): Promise<{ error: string | null }> {
+  const supabase = await createClient();
+  const { data, error } = await supabase.rpc('force_finalize_team_submission', {
+    p_instance_id: instanceId,
+  });
+  if (error) return { error: `Force submit failed: ${error.message}` };
+  const result = data as { ok: boolean; error?: string };
+  if (!result.ok) return { error: result.error ?? 'Force submit failed.' };
+  revalidatePath(`/teacher/quests/${questId}`);
+  revalidatePath('/teacher/review');
+  return { error: null };
+}
+
 export async function runMatchmakingNow(
   questId: string
 ): Promise<{ error: string | null }> {

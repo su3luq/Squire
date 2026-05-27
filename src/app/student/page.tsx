@@ -156,13 +156,13 @@ export default async function StudentHome() {
         {acceptances && acceptances.length > 0 ? (
           <ul className="divide-y divide-border">
             {acceptances.map((a) => {
-              const questTitle = Array.isArray(a.quest)
-                ? a.quest[0]?.title
-                : a.quest?.title;
+              const questObj = Array.isArray(a.quest) ? a.quest[0] : a.quest;
+              const questTitle = questObj?.title;
+              const questId = questObj?.id;
               return (
                 <li key={a.id}>
                   <Link
-                    href={`/student/my-quests/${a.id}`}
+                    href={questId ? `/student/my-quests/${questId}` : '/student/quests'}
                     className="flex items-center justify-between gap-3 p-4 transition-colors hover:bg-muted/40"
                   >
                     <div className="min-w-0 flex-1">

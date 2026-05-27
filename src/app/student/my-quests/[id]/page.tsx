@@ -9,6 +9,7 @@ import {
 import { MarkdownRenderer } from '@/components/markdown-renderer';
 import { PageHeader } from '@/components/page-header';
 import { SubmissionForm } from '../submission-form';
+import { TeamWorkspace, type DraftMember } from './team-workspace';
 
 export const dynamic = 'force-dynamic';
 
@@ -53,24 +54,22 @@ export default async function MyQuestWorkspacePage({
     .eq('quest_id', questId)
     .maybeSingle();
 
-  if (!acceptance) {
-    redirect(`/student/quests/${questId}`);
-  }
-
-  if (acceptance.status === 'enrolled') {
-    redirect(`/student/quests/${questId}`);
-  }
+  if (!acceptance) redirect(`/student/quests/${questId}`);
+  if (acceptance.status === 'enrolled') redirect(`/student/quests/${questId}`);
 
   const isCoop = acceptance.instance_id !== null;
 
-  let instance: {
-    id: string;
-    status: string;
-    submitted_at: string | null;
-    team_number: number | null;
-    captain_id: string | null;
-  } | null = null;
-  let teamMembers: { id: string; full_name: string }[] = [];
+  // Coop-specific fetches: instance, member drafts, captain
+  let instance:
+    | {
+        id: string;
+        status: string;
+        submitted_at: string | null;
+        team_number: number | null;
+        captain_id: string | null;
+      }
+    | null = null;
+  let draftMembers: DraftMember[] = [];
   if (isCoop && acceptance.instance_id) {
     const { data: inst } = await supabase
       .from('coop_quest_instances')
@@ -79,33 +78,41 @@ export default async function MyQuestWorkspacePage({
       .maybeSingle();
     instance = inst ?? null;
 
-    const { data: memberRows } = await supabase
-      .from('quest_acceptances')
-      .select('student_id')
+    const { data: drafts } = await supabase
+      .from('coop_member_drafts')
+      .select('id, student_id, body_md, submitted_at')
       .eq('instance_id', acceptance.instance_id);
-    const memberIds = (memberRows ?? [])
-      .map((r) => r.student_id)
+
+    const memberIds = (drafts ?? [])
+      .map((d) => d.student_id)
       .filter((id): id is string => id !== null);
 
+    const profilesById = new Map<string, string>();
     if (memberIds.length > 0) {
-      const { data: memberProfiles } = await supabase
+      const { data: profiles } = await supabase
         .from('public_profiles')
         .select('id, full_name')
         .in('id', memberIds);
-      teamMembers = (memberProfiles ?? [])
-        .filter(
-          (p): p is { id: string; full_name: string } =>
-            p.id !== null && p.full_name !== null
-        )
-        .map((p) => ({ id: p.id, full_name: p.full_name }));
+      for (const p of profiles ?? []) {
+        if (p.id && p.full_name) profilesById.set(p.id, p.full_name);
+      }
     }
+
+    draftMembers = (drafts ?? [])
+      .map((d): DraftMember => ({
+        draftId: d.id,
+        studentId: d.student_id,
+        fullName: profilesById.get(d.student_id) ?? '(unknown)',
+        bodyMd: d.body_md ?? '',
+        submittedAt: d.submitted_at,
+        isCaptain: instance?.captain_id === d.student_id,
+      }))
+      .sort((a, b) => a.fullName.localeCompare(b.fullName));
   }
 
   const isCaptain = isCoop && instance?.captain_id === user.id;
-  const captain = isCoop
-    ? teamMembers.find((m) => m.id === instance?.captain_id) ?? null
-    : null;
 
+  // Submission history (latest first)
   const submissionQuery = supabase
     .from('quest_submissions')
     .select(
@@ -135,15 +142,12 @@ export default async function MyQuestWorkspacePage({
     latestSubmission?.status === 'pending_review' ? latestSubmission : null;
   const lastFailed =
     latestSubmission?.status === 'failed' ? latestSubmission : null;
-
   const isCompleted = acceptance.status === 'passed';
 
-  const canSubmit =
-    !isCompleted &&
-    !pendingSubmission &&
-    (isCoop
-      ? instance?.status === 'active' && isCaptain
-      : acceptance.status === 'active');
+  // For solo only: simple submit gate. For coop: TeamWorkspace handles
+  // its own gates (per-member submit, instance status).
+  const canSoloSubmit =
+    !isCoop && !isCompleted && !pendingSubmission && acceptance.status === 'active';
 
   return (
     <div className="mx-auto max-w-3xl space-y-6">
@@ -186,40 +190,29 @@ export default async function MyQuestWorkspacePage({
         </CardContent>
       </Card>
 
-      {isCoop && (
+      {/* Coop: team workspace (drafts + dropdown + submit toggle) */}
+      {isCoop && acceptance.instance_id && instance && !isCompleted && (
         <Card>
           <CardHeader>
             <CardTitle className="text-base">
-              {instance?.team_number != null
-                ? `Team ${instance.team_number}`
-                : 'Your team'}
+              {instance.team_number != null
+                ? `Team ${instance.team_number} workspace`
+                : 'Team workspace'}
             </CardTitle>
           </CardHeader>
-          <CardContent className="space-y-3">
-            <ul className="space-y-1 text-sm">
-              {teamMembers.map((m) => (
-                <li key={m.id} className="flex items-center gap-2">
-                  <span className="text-foreground">{m.full_name}</span>
-                  {m.id === instance?.captain_id && (
-                    <span className="rounded-full bg-primary/10 px-2 py-0.5 text-[10px] font-medium uppercase tracking-wide text-primary">
-                      captain
-                    </span>
-                  )}
-                </li>
-              ))}
-            </ul>
-            {!isCaptain &&
-              !isCompleted &&
-              instance?.status === 'active' && (
-                <p className="rounded-md bg-muted px-3 py-2 text-xs text-muted-foreground">
-                  {captain?.full_name ?? 'Your captain'} will submit on behalf of
-                  the team. Coordinate your draft with them.
-                </p>
-              )}
+          <CardContent>
+            <TeamWorkspace
+              instanceId={acceptance.instance_id}
+              questId={questId}
+              members={draftMembers}
+              viewerId={user.id}
+              editable={instance.status === 'active'}
+            />
           </CardContent>
         </Card>
       )}
 
+      {/* Completed celebration (solo + coop) */}
       {isCompleted && (
         <Card>
           <CardContent className="space-y-3 pt-6">
@@ -242,11 +235,21 @@ export default async function MyQuestWorkspacePage({
                 <MarkdownRenderer source={latestSubmission.teacher_feedback} />
               </div>
             )}
+            {/* For coop completion, show each member's section too */}
+            {isCoop && latestSubmission?.text_content && (
+              <div className="rounded-md border border-border bg-muted/40 p-4">
+                <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+                  Submitted team work
+                </p>
+                <MarkdownRenderer source={latestSubmission.text_content} />
+              </div>
+            )}
           </CardContent>
         </Card>
       )}
 
-      {pendingSubmission && (
+      {/* Awaiting review banner */}
+      {pendingSubmission && !isCompleted && (
         <Card>
           <CardContent className="space-y-3 pt-6">
             <div className="flex items-center gap-2">
@@ -260,7 +263,7 @@ export default async function MyQuestWorkspacePage({
               {pendingSubmission.word_count} words
               {isCoop &&
                 submitterNameById.get(pendingSubmission.submitted_by) &&
-                ` · by ${submitterNameById.get(pendingSubmission.submitted_by)}`}
+                ` · last submit by ${submitterNameById.get(pendingSubmission.submitted_by)}`}
             </p>
             <div className="rounded-md border border-border bg-muted/40 p-4 text-sm">
               <MarkdownRenderer source={pendingSubmission.text_content ?? ''} />
@@ -269,6 +272,8 @@ export default async function MyQuestWorkspacePage({
         </Card>
       )}
 
+      {/* Failed-needs-revision: solo shows the resubmit form; coop unlocks
+          via the TeamWorkspace above when instance flips back to 'active'. */}
       {lastFailed && !isCompleted && (
         <Card>
           <CardContent className="space-y-3 pt-6">
@@ -287,29 +292,36 @@ export default async function MyQuestWorkspacePage({
             )}
             <details className="rounded-md border border-border bg-muted/40 p-4 text-sm">
               <summary className="cursor-pointer text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-                Your previous submission ({lastFailed.word_count} words ·{' '}
+                Previous submission ({lastFailed.word_count} words ·{' '}
                 {formatSaigon(lastFailed.submitted_at)})
               </summary>
               <div className="mt-3">
                 <MarkdownRenderer source={lastFailed.text_content ?? ''} />
               </div>
             </details>
-            {canSubmit && (
+            {!isCoop && canSoloSubmit && (
               <SubmissionForm
                 questId={quest.id}
-                acceptanceId={isCoop ? null : acceptance.id}
-                instanceId={isCoop ? acceptance.instance_id : null}
+                acceptanceId={acceptance.id}
+                instanceId={null}
                 wordTarget={quest.word_limit_min}
                 initialText={lastFailed.text_content ?? ''}
                 startCollapsed
                 collapsedLabel="Resubmit"
               />
             )}
+            {isCoop && (
+              <p className="rounded-md bg-muted px-3 py-2 text-xs text-muted-foreground">
+                Revise your drafts in the team workspace above, then each
+                member re-submits.
+              </p>
+            )}
           </CardContent>
         </Card>
       )}
 
-      {canSubmit && !lastFailed && (
+      {/* Solo: first-submit form */}
+      {!isCoop && canSoloSubmit && !lastFailed && (
         <Card>
           <CardHeader>
             <CardTitle className="text-base">Your submission</CardTitle>
@@ -317,14 +329,15 @@ export default async function MyQuestWorkspacePage({
           <CardContent>
             <SubmissionForm
               questId={quest.id}
-              acceptanceId={isCoop ? null : acceptance.id}
-              instanceId={isCoop ? acceptance.instance_id : null}
+              acceptanceId={acceptance.id}
+              instanceId={null}
               wordTarget={quest.word_limit_min}
             />
           </CardContent>
         </Card>
       )}
 
+      {/* History (more than one submission) */}
       {(submissions?.length ?? 0) > 1 && (
         <Card>
           <CardHeader>

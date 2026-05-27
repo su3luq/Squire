@@ -1010,6 +1010,10 @@ export type Database = {
       }
     }
     Functions: {
+      _coop_concatenate_drafts: {
+        Args: { p_instance_id: string }
+        Returns: string
+      }
       accept_coop_quest: { Args: { p_quest_id: string }; Returns: Json }
       accept_solo_quest: { Args: { p_quest_id: string }; Returns: Json }
       admin_create_teacher: {
@@ -1021,6 +1025,14 @@ export type Database = {
       delete_student: { Args: { p_student_id: string }; Returns: Json }
       disband_coop_instance: { Args: { p_instance_id: string }; Returns: Json }
       disband_quest: { Args: { p_quest_id: string }; Returns: Json }
+      finalize_team_submission: {
+        Args: { p_instance_id: string }
+        Returns: Json
+      }
+      force_finalize_team_submission: {
+        Args: { p_instance_id: string }
+        Returns: Json
+      }
       get_registration_state: { Args: never; Returns: Json }
       is_my_acceptance: { Args: { p_acceptance_id: string }; Returns: boolean }
       is_my_coop_instance: { Args: { p_instance_id: string }; Returns: boolean }

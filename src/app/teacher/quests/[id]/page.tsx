@@ -14,6 +14,7 @@ import { DeleteQuestButton } from './delete-quest-button';
 import { CloseQuestButton } from './close-quest-button';
 import { DisbandQuestButton } from './disband-quest-button';
 import { DisbandInstanceButton } from './disband-instance-button';
+import { ForceFinalizeButton } from './force-finalize-button';
 
 const SAIGON_TZ = 'Asia/Ho_Chi_Minh';
 
@@ -68,6 +69,29 @@ export default async function QuestDetailPage({
     )
     .eq('quest_id', id)
     .order('started_at', { ascending: true });
+
+  // Per-instance draft submit counts (Phase 8 Day 3). We compute submitted /
+  // total per instance to drive the teacher "Force submit" affordance.
+  const instanceIdList = (instances ?? []).map((i) => i.id);
+  const draftCountsByInstance = new Map<
+    string,
+    { total: number; submitted: number }
+  >();
+  if (instanceIdList.length > 0) {
+    const { data: draftRows } = await supabase
+      .from('coop_member_drafts')
+      .select('instance_id, submitted_at')
+      .in('instance_id', instanceIdList);
+    for (const row of draftRows ?? []) {
+      const cur = draftCountsByInstance.get(row.instance_id) ?? {
+        total: 0,
+        submitted: 0,
+      };
+      cur.total += 1;
+      if (row.submitted_at != null) cur.submitted += 1;
+      draftCountsByInstance.set(row.instance_id, cur);
+    }
+  }
 
   const { data: submissions } = await supabase
     .from('quest_submissions')
@@ -350,6 +374,16 @@ export default async function QuestDetailPage({
                                       >
                                         {inst.status}
                                       </span>
+                                      {inst.status === 'active' &&
+                                        (() => {
+                                          const c = draftCountsByInstance.get(inst.id);
+                                          if (!c || c.total === 0) return null;
+                                          return (
+                                            <span className="ml-2 rounded-full bg-muted px-2 py-0.5 text-xs font-normal text-muted-foreground">
+                                              {c.submitted}/{c.total} drafts submitted
+                                            </span>
+                                          );
+                                        })()}
                                     </p>
                                     <ul className="mt-2 space-y-0.5 text-xs text-muted-foreground">
                                       {members.map((m) => {
@@ -374,9 +408,31 @@ export default async function QuestDetailPage({
                                     </ul>
                                   </div>
                                   {inst.status === 'active' && (
-                                    <DisbandInstanceButton
-                                      instanceId={inst.id}
-                                    />
+                                    <div className="flex shrink-0 flex-col gap-2">
+                                      {(() => {
+                                        const counts = draftCountsByInstance.get(inst.id);
+                                        if (
+                                          counts &&
+                                          counts.total > 0 &&
+                                          counts.submitted < counts.total
+                                        ) {
+                                          return (
+                                            <ForceFinalizeButton
+                                              instanceId={inst.id}
+                                              questId={quest.id}
+                                              pendingCount={
+                                                counts.total - counts.submitted
+                                              }
+                                              totalCount={counts.total}
+                                            />
+                                          );
+                                        }
+                                        return null;
+                                      })()}
+                                      <DisbandInstanceButton
+                                        instanceId={inst.id}
+                                      />
+                                    </div>
                                   )}
                                 </div>
                               </li>

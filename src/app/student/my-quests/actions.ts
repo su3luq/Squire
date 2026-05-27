@@ -52,3 +52,49 @@ export async function submitQuest(input: {
     word_count: result.word_count,
   };
 }
+
+// Phase 8: per-member draft actions for co-op quests. Drafts live in the
+// coop_member_drafts table; RLS gates writes (own row + active instance
+// only). The auto-finalize trigger fires when submitted_at is set on the
+// last member's row.
+
+export async function saveMemberDraft(input: {
+  instanceId: string;
+  bodyMd: string;
+}): Promise<{ error: string | null }> {
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) return { error: 'Not authenticated.' };
+
+  const { error } = await supabase
+    .from('coop_member_drafts')
+    .update({ body_md: input.bodyMd })
+    .eq('instance_id', input.instanceId)
+    .eq('student_id', user.id);
+  if (error) return { error: `Save failed: ${error.message}` };
+  return { error: null };
+}
+
+export async function toggleMemberDraftSubmit(input: {
+  instanceId: string;
+  questId: string;
+  submitted: boolean;
+}): Promise<{ error: string | null }> {
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) return { error: 'Not authenticated.' };
+
+  const { error } = await supabase
+    .from('coop_member_drafts')
+    .update({ submitted_at: input.submitted ? new Date().toISOString() : null })
+    .eq('instance_id', input.instanceId)
+    .eq('student_id', user.id);
+  if (error) return { error: `Update failed: ${error.message}` };
+
+  revalidatePath(`/student/my-quests/${input.questId}`);
+  return { error: null };
+}
