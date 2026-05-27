@@ -8,7 +8,7 @@ import Link from 'next/link';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Button, buttonVariants } from '@/components/ui/button';
-import { MarkdownEditor } from '@/components/markdown-editor';
+import { BlockNoteEditor } from '@/components/blocknote-editor';
 import {
   cardSchema,
   emptyCard,
@@ -78,19 +78,18 @@ export function CardEditorForm({
 
       <div className="space-y-2">
         <Label htmlFor="body">Body</Label>
-        <p className="text-xs text-slate-500">
-          Markdown. Images via <code>![alt](url)</code>, links auto-detect YouTube and
-          direct video URLs (Phase 2 commit #4 will enable embed rendering).
+        <p className="text-xs text-muted-foreground">
+          Type <code>/</code> for block commands. Images via <code>![alt](url)</code>.
+          Lone YouTube and direct video URLs become embeds when the card is rendered.
         </p>
         <Controller
           control={control}
           name="body"
           render={({ field }) => (
-            <MarkdownEditor
+            <BlockNoteEditor
               value={field.value}
               onChange={field.onChange}
-              disabled={isPending}
-              placeholder="# Concept&#10;&#10;Explanation in markdown..."
+              editable={!isPending}
             />
           )}
         />

@@ -3,7 +3,7 @@
 import { useState, useTransition } from 'react';
 import { useRouter } from 'next/navigation';
 import { Button } from '@/components/ui/button';
-import { MarkdownEditor } from '@/components/markdown-editor';
+import { BlockNoteEditor } from '@/components/blocknote-editor';
 import { countWords } from '@/lib/word-count';
 import { submitQuest } from './actions';
 
@@ -60,11 +60,10 @@ export function SubmissionForm({
 
   return (
     <div className="space-y-3">
-      <MarkdownEditor
+      <BlockNoteEditor
         value={text}
         onChange={setText}
-        disabled={isPending}
-        placeholder="Write your submission in markdown. Embed images via ![alt](url) and links to YouTube or video files render as embeds."
+        editable={!isPending}
       />
 
       <div className="flex flex-wrap items-center justify-between gap-3 text-sm">
