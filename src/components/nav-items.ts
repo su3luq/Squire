@@ -62,8 +62,12 @@ export function getTeacherNav(counts: TeacherCounts): NavItem[] {
 export function getStudentNav(counts: StudentCounts): NavItem[] {
   return [
     { href: '/student/review', label: 'Review', icon: 'student-review', badge: counts.dueReviews },
-    { href: '/student/quests', label: 'Quests', icon: 'quests' },
-    { href: '/student/my-quests', label: 'My Quests', icon: 'my-quests' },
+    {
+      href: '/student/quests',
+      label: 'Quests',
+      icon: 'quests',
+      activePaths: ['/student/my-quests'],
+    },
     { href: '/student/library', label: 'Library', icon: 'library' },
     { href: '/leaderboard', label: 'Ranks', icon: 'leaderboard' },
   ];

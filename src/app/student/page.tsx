@@ -146,10 +146,10 @@ export default async function StudentHome() {
         <div className="flex items-center justify-between border-b border-border p-5">
           <h2 className="text-base font-semibold">Active quests</h2>
           <Link
-            href="/student/my-quests"
+            href="/student/quests"
             className="inline-flex items-center gap-1 text-sm font-medium text-primary hover:underline"
           >
-            All my quests
+            Quest board
             <ArrowRight className="h-3.5 w-3.5" />
           </Link>
         </div>
