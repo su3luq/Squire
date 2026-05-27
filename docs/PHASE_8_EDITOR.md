@@ -1,19 +1,32 @@
-# Phase 8 — BlockNote Editor + Co-op Per-Member Drafts
+# Phase 8 — MDXEditor + Co-op Per-Member Drafts
 
-**Status:** Planned, ready to implement
+**Status:** Day 1 done. MDXEditor on teacher card body and student solo submission.
 **Owner:** Single-developer build
 **Estimated effort:** 4–5 working days
 **Last updated:** 2026-05-27
 
 ---
 
+## Editor choice — MDXEditor (rev 2)
+
+Initially planned with BlockNote, but the Notion-style block UI clipped its hovering "+" and drag handles when embedded inside form layouts. Reverted to **MDXEditor** (Lexical-based, markdown-first) which has a top toolbar and inline-styled paragraphs that fit form layouts cleanly.
+
+What MDXEditor gives us:
+- Live formatting as you type (`#` → heading, `**` → bold, `- ` → list).
+- Toolbar pinned to the top of the editor with bold/italic/headings/lists/link/image/table/HR.
+- Block-type select dropdown for converting paragraphs to headings/lists/code.
+- Markdown remains the on-disk format — no JSON schema needed.
+- Round-trip verified byte-perfect on existing card content.
+
+What we lose vs BlockNote: hovering "+" affordance on each line, drag-handles for block reordering, slash menu. Tradeoff accepted for the cleaner embedded-in-forms behavior.
+
 ## Goals
 
-1. Replace the current markdown textarea+preview editor with **BlockNote** across all five authoring surfaces, giving teachers and students a Notion-style "click the line, get options" experience.
+1. Replace the current markdown textarea+preview editor with **MDXEditor** across all five authoring surfaces.
 2. Restructure co-op quest submissions so **every team member writes their own draft** (instead of the captain-only flow). Add a dropdown to read teammates' drafts, per-member submit/unsubmit, automatic finalization when the last member submits.
 3. Add a **team notes sidebar** — async shared scratchpad with auto-save, visible only to the team during drafting and to the teacher after submission.
 
-Non-goals: real-time multi-cursor collab (rejected in favor of simpler per-member drafts), block-level commenting inside the draft (deferred), structural rich blocks beyond Notion's standard set (callouts, columns, etc. — deferred).
+Non-goals: real-time multi-cursor collab (rejected in favor of simpler per-member drafts), block-level commenting inside the draft (deferred), structural rich blocks (callouts, columns, etc. — deferred).
 
 ---
 
@@ -44,17 +57,8 @@ Non-goals: real-time multi-cursor collab (rejected in favor of simpler per-membe
 
 ## Storage
 
-### Existing tables (additive columns only)
-Add `body_json jsonb null` to each of:
-- `review_cards.body` → also `body_json`
-- `quests.description` → also `description_json`
-- `quest_submissions.text_content` → also `text_content_json`
-- `quest_submissions.teacher_feedback` → also `teacher_feedback_json`
-- `teacher_notes.note` → also `note_json`
-
-**`body_json` is the BlockNote source-of-truth while editing.** On save, serialize to markdown and write `body_md` (the existing column). The renderer reads `body_md` and is untouched.
-
-**Migration is lazy.** Existing markdown stays in `body_md` only. On first edit, the BlockNote editor parses markdown → blocks → JSON, populates `body_json`, and both fields stay in sync going forward. Old, never-edited content never gets a `body_json`.
+### Existing tables
+**No schema changes.** Markdown stays the only source of truth — `body`, `description`, `text_content`, `teacher_feedback`, `note` are all read/written as markdown text. MDXEditor parses on mount and serializes on save. Verified byte-perfect round-trip.
 
 ### New tables
 
@@ -63,8 +67,7 @@ create table public.coop_member_drafts (
   id uuid primary key default gen_random_uuid(),
   instance_id uuid not null references public.coop_quest_instances(id) on delete cascade,
   student_id uuid not null references public.profiles(id) on delete cascade,
-  body_json jsonb,
-  body_md text default '',
+  body_md text not null default '',
   submitted_at timestamptz null,
   updated_at timestamptz not null default now(),
   created_at timestamptz not null default now(),
@@ -151,53 +154,54 @@ forming → active → (each member writes a draft)
 
 ---
 
-## BlockNote integration details
+## MDXEditor integration details
 
 ### Library choice
-- **`@blocknote/core`** — engine
-- **`@blocknote/react`** — React bindings
-- **`@blocknote/shadcn`** — shadcn-styled default UI (matches our shadcn setup)
-- **`@blocknote/xl-multi-column`** — *not* installed; we don't need multi-column blocks in v1
+- **`@mdxeditor/editor`** ^4.0.1 — engine + React component + Lexical under the hood. Single dep, includes its own stylesheet.
 
 ### Markdown round-trip
-- BlockNote ships `editor.blocksToMarkdownLossy(blocks)` and `editor.tryParseMarkdownToBlocks(md)`.
-- "Lossy" naming is upstream's — for our content shape (text + headings + lists + code + tables + links + images) the round-trip is faithful.
-- **Our lone-URL embed convention is preserved as plain text in BlockNote.** The renderer's `singleLinkHref` logic still fires in published views, so embeds appear correctly on cards / quest briefs / submission previews.
+- MDXEditor reads the `markdown` prop on mount; it's not reactive after that (we use react-hook-form Controller's value once).
+- On change, MDXEditor serializes back to markdown via Lexical → MDAST → string.
+- **Verified byte-perfect** on existing card content (Lorem Ipsum + heading): 594 chars in, 594 chars out, no drift.
+- **Our lone-URL embed convention** is preserved as plain text in the editor. The renderer's `singleLinkHref` logic still fires in published views, so embeds appear correctly on cards / quest briefs / submission previews.
 
 ### Component wiring
-A single `BlockNoteEditor` component replaces `MarkdownEditor`:
+A single `MdxEditor` component replaces `MarkdownEditor`:
 
 ```tsx
 'use client';
 
-import { BlockNoteSchema, defaultBlockSpecs } from '@blocknote/core';
-import { useCreateBlockNote } from '@blocknote/react';
-import { BlockNoteView } from '@blocknote/shadcn';
-import '@blocknote/shadcn/style.css';
+import { MDXEditor, headingsPlugin, listsPlugin, /* … */, toolbarPlugin } from '@mdxeditor/editor';
+import '@mdxeditor/editor/style.css';
 
-export function BlockNoteEditor({
-  initialJson,
-  initialMarkdown,
-  onChange,        // (json, markdown) => void
+export function MdxEditor({
+  value,
+  onChange,
   editable = true,
-  placeholder,
+  minHeight = '400px',
 }: Props) {
-  const editor = useCreateBlockNote({
-    initialContent: initialJson ?? undefined,
-    // If only markdown is provided, parse it on mount.
-    // Implementation detail: parse in a useEffect since the API is async.
-  });
-  // ... return <BlockNoteView editor={editor} editable={editable} />
+  return (
+    <MDXEditor
+      markdown={value}
+      onChange={onChange}
+      readOnly={!editable}
+      contentEditableClassName="prose prose-sm ..."
+      plugins={[ /* headings, lists, quote, link, image, table, code, toolbar */ ]}
+    />
+  );
 }
 ```
 
-Each form keeps its own React Hook Form integration. The editor's `onChange` writes both the JSON (to `body_json`) and the derived markdown (to `body_md`). Both go through the existing server actions / RPCs untouched.
+Each form keeps its own React Hook Form integration via `<Controller>`. `value`/`onChange` map directly to `markdown`/`onChange` props on MDXEditor.
+
+### Fixed starting size
+The wrapper accepts a `minHeight` prop (default `400px`). The editor never collapses to a single line — even an empty card body fills the 400px box. Per-surface overrides: card body 420px, student submission 480px (essays expect more vertical room), teacher feedback/notes 200–240px.
 
 ### Dynamic import
-`BlockNoteEditor` is itself a client component, but the import on each authoring page should still go through `next/dynamic({ ssr: false, loading: ... })` to keep the bundle off the initial render.
+`MdxEditor` is itself a `'use client'` component. We can wrap with `next/dynamic({ ssr: false })` in Day 5 polish if the initial render cost becomes noticeable.
 
 ### Embed handling (Option 2, confirmed)
-- In-editor: lone YouTube/video URLs render as plain text links.
+- In-editor: lone YouTube/video URLs render as plain-text links.
 - In published view: `MarkdownRenderer` recognizes them and produces iframes.
 - Tradeoff accepted: teachers paste a URL and don't see the embed until they save. Acceptable for v1.
 
@@ -205,10 +209,10 @@ Each form keeps its own React Hook Form integration. The editor's `onChange` wri
 
 ## Bundle and performance
 
-- BlockNote + shadcn UI: ~200–250 KB gzipped on authoring pages.
-- Loaded only on the 5 authoring routes via `next/dynamic`.
+- MDXEditor: ~150–180 KB gzipped on authoring pages.
+- Loaded only on the 5 authoring routes (each form imports it directly).
 - Renderer pages stay at ~30 KB.
-- On a 1 Mbps Vietnamese mobile connection: ~2–3s first download, cached thereafter. Acceptable for the long-dwell authoring surfaces (essays, card editing).
+- On a 1 Mbps Vietnamese mobile connection: ~1.5–2s first download, cached thereafter. Acceptable for the long-dwell authoring surfaces (essays, card editing).
 - Realtime cost (team notes): ~18k messages/month for an active class — comfortably under the 2M free-tier ceiling.
 
 ---
@@ -217,8 +221,8 @@ Each form keeps its own React Hook Form integration. The editor's `onChange` wri
 
 | Risk | Mitigation |
 |---|---|
-| Markdown round-trip drops formatting on existing content | Test on every existing card before rolling out. Lazy-migration means untouched content never enters BlockNote. |
-| BlockNote v0.x churn breaks our integration | Pin a specific minor version; review changelog on upgrade. |
+| Markdown round-trip drops formatting on existing content | Verified byte-perfect on representative card. Spot-check the other cards before rolling out to remaining surfaces. |
+| MDXEditor v4.x churn breaks our integration | Pin to `^4.0.1`; review changelog on upgrade. |
 | Team gets stuck because one student never submits | Teacher force-submit RPC (already in the design). |
 | RLS bug exposes another team's draft | Migration includes explicit RLS tests on coop_member_drafts. |
 | Comment auto-save spams the DB | 1.5s debounce + `pagehide` flush; no per-keystroke writes. |
@@ -228,29 +232,28 @@ Each form keeps its own React Hook Form integration. The editor's `onChange` wri
 
 ## 5-day timeline
 
-### Day 1 — BlockNote integration, simple surfaces
-- Install deps: `@blocknote/core`, `@blocknote/react`, `@blocknote/shadcn`.
-- Build `src/components/blocknote-editor.tsx` with the standard props.
+### Day 1 — MDXEditor integration, simple surfaces  ✅ DONE
+- ~~Install deps: `@blocknote/core`, `@blocknote/react`, `@blocknote/shadcn`.~~ → Install `@mdxeditor/editor` ^4.0.1.
+- Build `src/components/mdx-editor.tsx` with `value`/`onChange`/`editable`/`minHeight` props.
 - Replace `MarkdownEditor` in:
-  - `card-editor-form.tsx` (teacher card body)
-  - `submission-form.tsx` (student solo submission)
-- Add `body_json` / `description_json` columns via migration (approved, applied).
-- Verify the markdown round-trip on three existing cards.
-- Commit and review with user before Day 2.
+  - `card-editor-form.tsx` (teacher card body, 420px min-height)
+  - `submission-form.tsx` (student solo submission, 480px min-height)
+- Skipped: `body_json` column — markdown stays the only source of truth.
+- Verified the markdown round-trip on the Qualitative Data card: byte-perfect.
 
-### Day 2 — BlockNote on remaining single-user surfaces + co-op schema
+### Day 2 — MDXEditor on remaining single-user surfaces + co-op schema
 - Replace `MarkdownEditor` in:
-  - `quest-form.tsx` (teacher quest description)
-  - `review-form.tsx` (teacher feedback)
-  - `notes-section.tsx` (teacher notes on student)
+  - `quest-form.tsx` (teacher quest description, 320px min-height)
+  - `review-form.tsx` (teacher feedback, 200px min-height)
+  - `notes-section.tsx` (teacher notes on student, 200px min-height)
+- Delete the obsolete `markdown-editor.tsx` / `markdown-toolbar.tsx` after all surfaces are migrated.
 - Migration: create `coop_member_drafts` table + RLS policies + indexes.
-- Migration: alter `quest_submissions` to support per-member finalization (no schema change to text_content_json yet — that's handled in the finalize RPC).
 - Initialize drafts when an instance is formed: extend the matchmaking RPC to seed one `coop_member_drafts` row per team member.
 
 ### Day 3 — Co-op workspace UI + finalize flow
 - Rewrite `src/app/student/my-quests/[id]/page.tsx` to detect co-op + render the team workspace:
   - Top of page: PageHeader with quest title + status pills.
-  - Tabbed/dropdown switcher for teammate drafts (your draft is selected by default, editable; teammates' drafts are read-only BlockNote views).
+  - Tabbed/dropdown switcher for teammate drafts (your draft is selected by default, editable; teammates' drafts are read-only MDXEditor views).
   - "Submit my draft" / "Un-submit" button toggle.
   - Status indicator showing how many members have submitted.
 - Migration: `finalize_team_submission(instance_id)` RPC + `force_finalize_team_submission(instance_id)` RPC.
@@ -274,11 +277,11 @@ Each form keeps its own React Hook Form integration. The editor's `onChange` wri
 
 ## Open items (intentionally deferred)
 
-- Block-level commenting inside the draft (Notion-style anchored comments) — out of scope.
+- Block-level commenting inside the draft (Google-Docs-style anchored comments) — out of scope.
 - Real-time co-editing — explicitly rejected.
-- Custom BlockNote blocks for our YouTube/video embeds — deferred. Lone URLs render as text in editor, iframe in renderer.
-- Migration of historical markdown to `body_json` — deferred. Lazy on first edit.
-- BlockNote theming alignment with our forest-green brand — done on Day 1 if straightforward, otherwise polished on Day 5.
+- Custom in-editor previews for our YouTube/video embeds — deferred. Lone URLs render as text in editor, iframe in renderer.
+- Persisting an MDXEditor JSON column — not required; markdown is the only source of truth.
+- MDXEditor theming alignment with our forest-green brand — Day 1 done at the variable-override level (toolbar accent, focus ring). Further polish on Day 5 if needed.
 
 ---
 

@@ -3,7 +3,7 @@
 import { useState, useTransition } from 'react';
 import { useRouter } from 'next/navigation';
 import { Button } from '@/components/ui/button';
-import { BlockNoteEditor } from '@/components/blocknote-editor';
+import { MdxEditor } from '@/components/mdx-editor';
 import { countWords } from '@/lib/word-count';
 import { submitQuest } from './actions';
 
@@ -60,10 +60,11 @@ export function SubmissionForm({
 
   return (
     <div className="space-y-3">
-      <BlockNoteEditor
+      <MdxEditor
         value={text}
         onChange={setText}
         editable={!isPending}
+        minHeight="480px"
       />
 
       <div className="flex flex-wrap items-center justify-between gap-3 text-sm">

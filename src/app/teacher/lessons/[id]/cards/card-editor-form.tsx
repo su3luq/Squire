@@ -8,7 +8,7 @@ import Link from 'next/link';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Button, buttonVariants } from '@/components/ui/button';
-import { BlockNoteEditor } from '@/components/blocknote-editor';
+import { MdxEditor } from '@/components/mdx-editor';
 import {
   cardSchema,
   emptyCard,
@@ -86,10 +86,11 @@ export function CardEditorForm({
           control={control}
           name="body"
           render={({ field }) => (
-            <BlockNoteEditor
+            <MdxEditor
               value={field.value}
               onChange={field.onChange}
               editable={!isPending}
+              minHeight="420px"
             />
           )}
         />

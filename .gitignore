@@ -28,6 +28,9 @@
 /.playwright-mcp/
 /*.png
 
+# CodeGraph index + local screenshot scratch
+/.codegraph/
+
 # debug
 npm-debug.log*
 yarn-debug.log*
