@@ -53,7 +53,6 @@ export function ReviewForm({
           value={feedback}
           onChange={setFeedback}
           editable={!isPending}
-          minHeight="220px"
         />
       </div>
 

@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useRef, useState } from 'react';
 import {
+  Check,
   ChevronLeft,
   ChevronRight,
   MessageSquare,
@@ -68,10 +69,11 @@ export function TeamNotesSidebar({
       }
       dirtyRef.current = false;
       setSavingState('saved');
-      // Reset saved indicator after a moment.
+      // Keep the "Saved" indicator visible long enough that students
+      // actually notice it before fading.
       setTimeout(() => {
         setSavingState((s) => (s === 'saved' ? 'idle' : s));
-      }, 1500);
+      }, 2500);
     },
     [ownNote, supabase],
   );
@@ -322,11 +324,16 @@ function SaveIndicator({
   state: 'idle' | 'pending' | 'saving' | 'saved';
 }) {
   if (state === 'idle') return null;
-  const label =
-    state === 'pending' ? 'Editing…' : state === 'saving' ? 'Saving…' : 'Saved';
-  return (
-    <span className="text-[11px] text-muted-foreground">{label}</span>
-  );
+  if (state === 'saved') {
+    return (
+      <span className="inline-flex items-center gap-1 text-[11px] font-medium text-primary">
+        <Check className="h-3.5 w-3.5" />
+        Saved
+      </span>
+    );
+  }
+  const label = state === 'pending' ? 'Editing…' : 'Saving…';
+  return <span className="text-[11px] text-muted-foreground">{label}</span>;
 }
 
 function RelativeTime({ iso }: { iso: string }) {

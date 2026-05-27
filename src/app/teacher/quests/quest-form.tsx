@@ -149,7 +149,6 @@ export function QuestForm({
                 value={field.value ?? ''}
                 onChange={field.onChange}
                 editable={!isPending}
-                minHeight="320px"
               />
             )}
           />

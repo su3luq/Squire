@@ -64,7 +64,6 @@ export function SubmissionForm({
         value={text}
         onChange={setText}
         editable={!isPending}
-        minHeight="480px"
       />
 
       <div className="flex flex-wrap items-center justify-between gap-3 text-sm">

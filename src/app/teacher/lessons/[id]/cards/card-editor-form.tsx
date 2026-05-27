@@ -90,7 +90,6 @@ export function CardEditorForm({
               value={field.value}
               onChange={field.onChange}
               editable={!isPending}
-              minHeight="420px"
             />
           )}
         />

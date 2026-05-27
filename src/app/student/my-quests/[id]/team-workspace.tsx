@@ -130,7 +130,6 @@ export function TeamWorkspace({
             value={draftBody}
             onChange={setDraftBody}
             editable={!isToggling && !ownSubmitted}
-            minHeight="420px"
           />
           {error && <p className="text-sm text-destructive">{error}</p>}
           <div className="flex flex-wrap items-center justify-end gap-2">

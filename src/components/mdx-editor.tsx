@@ -37,12 +37,6 @@ type Props = {
   value: string;
   onChange: (markdown: string) => void;
   editable?: boolean;
-  /**
-   * Minimum height of the editing area. Defaults to a solid `400px` so the
-   * editor never looks like a one-line textarea. Override per surface
-   * (e.g. shorter for feedback / notes, longer for essays).
-   */
-  minHeight?: string;
   /** Extra classes on the outer wrapper. */
   className?: string;
 };
@@ -51,7 +45,6 @@ export function MdxEditor({
   value,
   onChange,
   editable = true,
-  minHeight = '400px',
   className,
 }: Props) {
   const ref = useRef<MDXEditorMethods>(null);
@@ -90,30 +83,11 @@ export function MdxEditor({
     }
   }, []);
 
-  // MDXEditor only treats clicks inside its contentEditable as text input;
-  // the surrounding padding doesn't reach the cursor. When the user clicks
-  // anywhere in the editor's white area, forward focus to the contentEditable
-  // element so the cursor lands there.
-  const focusEditor = useCallback((e: React.MouseEvent<HTMLDivElement>) => {
-    if (!editable) return;
-    // If the user already clicked inside the contentEditable, do nothing
-    // (otherwise we'd disturb the natural caret placement).
-    const target = e.target as HTMLElement;
-    if (target.closest('[contenteditable="true"]')) return;
-    if (target.closest('.mdxeditor-toolbar')) return;
-    const root = e.currentTarget.querySelector<HTMLElement>(
-      '[contenteditable="true"]',
-    );
-    if (root) root.focus();
-  }, [editable]);
-
   return (
     <div
       onBlur={flush}
-      onMouseDown={focusEditor}
       className={cn(
         'rounded-md border border-input bg-card text-sm focus-within:border-ring focus-within:ring-1 focus-within:ring-ring',
-        editable && 'cursor-text',
         // The shipped MDXEditor stylesheet uses its own design tokens. We
         // pull them into our brand palette where it matters most.
         '[--accentBase:var(--color-primary)] [--accentBgSubtle:color-mix(in_oklch,var(--color-primary)_10%,transparent)] [--accentLine:var(--color-border)] [--accentBorder:var(--color-border)] [--accentBorderHover:var(--color-border)] [--accentSolid:var(--color-primary)] [--accentSolidHover:var(--color-primary)] [--accentText:var(--color-primary)] [--accentTextContrast:var(--color-primary-foreground)]',
@@ -168,47 +142,9 @@ export function MdxEditor({
         ]}
       />
       <style jsx>{`
-        /*
-         * Put min-height on the contenteditable element itself, not on
-         * its container. MDXEditor's DOM is:
-         *   .mdxeditor-root-contenteditable > div > [contenteditable]
-         * If we size only the outer wrapper, the contenteditable stays
-         * as short as the text, so clicks below the text land on the
-         * wrapper — the cursor lands at line 0 instead of where the
-         * user clicked. Sizing the contenteditable makes it fill the
-         * visible area, so Lexical places the caret at the last
-         * paragraph wherever the user clicks.
-         */
-        :global(.mdxeditor-root-contenteditable [contenteditable]) {
-          min-height: ${minHeight};
-          max-width: 100%;
-          overflow-wrap: break-word;
-          word-break: break-word;
-        }
-
-        /*
-         * Mobile / tablet responsiveness for rich content. Tables,
-         * images, and code blocks would otherwise burst out of the
-         * editor box and force horizontal page scroll. Tables become
-         * their own horizontally-scrollable region; images cap at the
-         * available width and keep their aspect ratio; pre blocks
-         * scroll inline.
-         */
-        :global(.mdxeditor-root-contenteditable [contenteditable] table) {
-          display: block;
-          width: max-content;
-          max-width: 100%;
-          overflow-x: auto;
-        }
-        :global(.mdxeditor-root-contenteditable [contenteditable] img) {
-          max-width: 100%;
-          height: auto;
-        }
-        :global(.mdxeditor-root-contenteditable [contenteditable] pre) {
-          max-width: 100%;
-          overflow-x: auto;
-        }
-
+        /* Toolbar styling kept — matches our brand palette and lets
+         * buttons wrap to a second row on narrow viewports. All
+         * editor-content sizing is left to MDXEditor's defaults. */
         :global(.mdxeditor-toolbar) {
           border-bottom: 1px solid var(--color-border);
           background: var(--color-card);
