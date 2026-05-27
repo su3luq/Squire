@@ -176,10 +176,11 @@ export function TeamNotesSidebar({
             <button
               type="button"
               onClick={() => setDesktopOpen(false)}
-              className="rounded-md p-1 text-muted-foreground hover:bg-card hover:text-foreground"
+              className="inline-flex items-center gap-1 rounded-md border border-border bg-card px-2 py-1 text-xs font-medium text-muted-foreground hover:bg-muted hover:text-foreground"
               aria-label="Hide team notes"
             >
-              <ChevronRight className="h-4 w-4" />
+              <ChevronRight className="h-3.5 w-3.5" />
+              Hide
             </button>
           </header>
 

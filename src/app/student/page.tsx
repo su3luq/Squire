@@ -6,7 +6,7 @@ import { ReviewLauncher } from '@/components/review-launcher';
 import { EnableNotificationsButton } from '@/components/enable-notifications-button';
 import { StatCard } from '@/components/stat-card';
 import { Progress } from '@/components/ui/progress';
-import { rankName, rankProgress, RANKS } from '@/lib/ranks';
+import { nextRankUp, rankProgress } from '@/lib/ranks';
 import { cn } from '@/lib/utils';
 
 export const dynamic = 'force-dynamic';
@@ -72,10 +72,9 @@ export default async function StudentHome() {
   const activeQuests = activeQuestsRaw ?? 0;
   const leaderboardPosition = (aheadCount ?? 0) + 1;
 
-  const tier = profile.current_rank ?? 1;
-  const currentRankName = rankName(tier);
+  const tier = profile.current_rank ?? 7;
   const xp = profile.xp_total ?? 0;
-  const nextRank = RANKS[tier];
+  const nextRank = nextRankUp(tier);
   const progress = rankProgress(xp, tier);
   const xpToNext = nextRank ? Math.max(0, nextRank.minXp - xp) : 0;
 
@@ -86,11 +85,11 @@ export default async function StudentHome() {
           Welcome back, {profile.full_name}
         </h1>
         <p className="mt-1 text-sm text-muted-foreground">
-          {currentRankName} · {xp.toLocaleString()} XP
+          Rank {tier} · {xp.toLocaleString()} XP
           {nextRank ? (
             <>
               {' '}
-              · {xpToNext.toLocaleString()} XP to {rankName(tier + 1)}
+              · {xpToNext.toLocaleString()} XP to Rank {nextRank.tier}
             </>
           ) : (
             <> · Top rank reached</>

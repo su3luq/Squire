@@ -2,7 +2,6 @@ import { createClient } from '@/lib/supabase/server';
 import { redirect } from 'next/navigation';
 import { Card, CardContent } from '@/components/ui/card';
 import { cn } from '@/lib/utils';
-import { rankName } from '@/lib/ranks';
 import { InsightsTabs } from '@/components/insights-tabs';
 
 export const dynamic = 'force-dynamic';
@@ -149,9 +148,7 @@ function LeaderboardRow({
             </span>
           ) : null}
         </p>
-        <p className="text-xs text-muted-foreground">
-          {rankName(row.current_rank)} · tier {row.current_rank}
-        </p>
+        <p className="text-xs text-muted-foreground">Rank {row.current_rank}</p>
       </div>
       <span className="shrink-0 text-sm font-semibold tabular-nums">
         {row.xp_total.toLocaleString()} XP

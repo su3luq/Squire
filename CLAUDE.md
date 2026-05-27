@@ -75,16 +75,18 @@ RLS policies will enforce all of these. Never expose teacher-only columns in any
 
 ## Core Mechanics Reference
 
-### XP and Ranks (7 tiers)
-| # | Name | XP threshold |
-|---|---|---|
-| 1 | Novice | 0 |
-| 2 | Apprentice | 200 |
-| 3 | Adept | 600 |
-| 4 | Expert | 1,400 |
-| 5 | Master | 2,600 |
-| 6 | Grandmaster | 4,200 |
-| 7 | Luminary | 6,000 |
+### XP and Ranks (7 tiers — lower number = higher rank, per migration 040)
+| Rank | XP threshold |
+|---|---|
+| 1 | 6,000+ (top) |
+| 2 | 4,200 |
+| 3 | 2,600 |
+| 4 | 1,400 |
+| 5 | 600 |
+| 6 | 200 |
+| 7 | 0 (start) |
+
+Students start at Rank 7 and climb toward Rank 1. Ranks are shown by number only — no English names. Source of truth: `compute_rank_from_xp()` Postgres function + `src/lib/ranks.ts`.
 
 XP awarded via `xp_ledger` inserts. A DB trigger auto-updates `profiles.xp_total` and `current_rank`. **Never write to `xp_total` or `current_rank` directly — always insert into `xp_ledger`.**
 
