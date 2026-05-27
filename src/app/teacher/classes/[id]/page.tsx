@@ -93,7 +93,7 @@ export default async function ClassDetailPage({
                     href={`/teacher/classes/${id}/students/${s.id}`}
                     className="block px-4 py-3 transition-colors hover:bg-muted/40"
                   >
-                    <div className="flex flex-wrap items-baseline justify-between gap-3">
+                    <div className="flex items-center gap-4">
                       <div className="min-w-0 flex-1">
                         <p className="truncate text-sm font-medium">
                           {s.full_name}
@@ -103,17 +103,15 @@ export default async function ClassDetailPage({
                           {s.email}
                         </p>
                       </div>
-                      <div className="flex items-center gap-3 text-xs text-muted-foreground">
-                        <span className="rounded-full bg-muted px-2 py-0.5 font-medium">
-                          Rank {s.current_rank}
-                        </span>
-                        <span className="tabular-nums">
-                          {s.xp_total.toLocaleString()} XP
-                        </span>
-                        <span className="tabular-nums">
-                          v {Number(s.learning_velocity ?? 0).toFixed(2)}
-                        </span>
-                      </div>
+                      <span className="hidden w-20 shrink-0 justify-self-start rounded-full bg-muted px-2 py-0.5 text-center text-xs font-medium text-muted-foreground sm:inline-block">
+                        Rank {s.current_rank}
+                      </span>
+                      <span className="hidden w-24 shrink-0 text-right text-xs tabular-nums text-muted-foreground sm:inline-block">
+                        {s.xp_total.toLocaleString()} XP
+                      </span>
+                      <span className="hidden w-16 shrink-0 text-right text-xs tabular-nums text-muted-foreground sm:inline-block">
+                        v {Number(s.learning_velocity ?? 0).toFixed(2)}
+                      </span>
                     </div>
                     {s.last_active_at && (
                       <p className="mt-1 text-xs text-muted-foreground/70">
