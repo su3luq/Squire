@@ -1,5 +1,7 @@
 # Phase 2 — Lessons & Cards: Build Reference
 
+> **STATUS: ✅ Shipped.** Kept as historical reference for the unified-markdown content model decisions. Current state is described in `CLAUDE.md` and `docs/PLAN.md`.
+
 Working reference document for Phase 2 commits. Reflects the unified-markdown content model decided after the initial Phase 2 plan was drafted. Source of truth for what gets built next.
 
 **Phase 2 milestone (per `docs/PLAN.md`):** teacher teaches a lesson and students study the cards.

@@ -1,5 +1,7 @@
 # Phase 8 — MDXEditor + Co-op Per-Member Drafts
 
+> **STATUS: ✅ Shipped.** Kept as historical reference for editor-choice tradeoffs and co-op draft architecture.
+
 **Status:** Days 1–5 done. Editor migrated, co-op per-member drafts + auto-finalize + team notes shipped, mobile polish applied.
 **Owner:** Single-developer build
 **Estimated effort:** 4–5 working days

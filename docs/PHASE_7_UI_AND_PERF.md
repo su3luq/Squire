@@ -1,5 +1,7 @@
 # Phase 7 — UI Redesign + Performance Pass
 
+> **STATUS: ✅ Shipped.** Kept as historical reference for staging decisions and Stage 0 baseline numbers.
+
 Status: planning. Sequencing approved: UI first (with quick perf baseline before), then optimization deep-pass after.
 
 This file is the plan. It is not a contract — adjust as we go.

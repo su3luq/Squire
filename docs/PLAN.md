@@ -4,6 +4,21 @@ Full project plan as agreed between teacher and architect (Claude). This is the 
 
 ---
 
+## Current Status (2026-05-28)
+
+All phases in §8 below are **shipped**. The app is in polish / maintenance mode. The phase write-ups remain as historical reference — they describe what was built and why. Per-phase deep dives:
+
+- `docs/PHASE-2-PLAN.md` — markdown content model (Lessons & Cards)
+- `docs/PHASE-4-PLAN.md` — solo quest loop
+- `docs/PHASE_7_UI_AND_PERF.md` — UI redesign + performance pass
+- `docs/PHASE_8_EDITOR.md` — MDXEditor migration + co-op per-member drafts
+
+Two notable deviations from the original plan:
+1. **AI-likelihood classifier (Phase 5)** — deferred to v2. `quest_submissions.ai_likelihood_score` stays NULL.
+2. **Supabase Storage** — unusable on this project. Avatars are stored as base64 data URLs in `profiles.avatar_url`. See "Known Constraints" in `CLAUDE.md`. Migrations 041–047 trail the debugging.
+
+---
+
 ## 1. Scope
 
 **Users:** 1 teacher (the author), up to 500 high school students at an international school in Saigon, Vietnam. Course is 40 weeks.
@@ -22,9 +37,11 @@ Full project plan as agreed between teacher and architect (Claude). This is the 
 - **Forms:** react-hook-form + zod
 - **Hosting:** Vercel (free tier)
 - **Backend / DB / Auth / Storage / Realtime:** Supabase (project `dicufymnejhrkrakgluu`) — `@supabase/ssr` with three client patterns (browser, server, middleware)
-- **Push:** Web Push API + Service Worker (Phase 6)
+- **Push:** Web Push API + Service Worker (shipped)
 - **SRS:** `ts-fsrs` (FSRS-4.5)
-- **AI-likelihood detection:** TBD at Phase 5 (open-source classifier)
+- **Rich text editor:** MDXEditor (Lexical-based, markdown round-trip) on all five authoring surfaces
+- **AI-likelihood detection:** deferred to v2 (`ai_likelihood_score` stays NULL)
+- **Storage:** Supabase Storage is unusable on this project (see Current Status). Avatars stored as data URLs in `profiles.avatar_url`.
 
 **Costs (paid items, all optional):**
 - Vercel hosting — free tier sufficient for 501 users
@@ -37,15 +54,16 @@ No mandatory paid services. No native-app dev fees.
 
 ## 3. Data Model
 
-17 tables. See `docs/SCHEMA.md` for full column-by-column reference. Logical groupings:
+20 tables. See `docs/SCHEMA.md` for full column-by-column reference. Logical groupings:
 
 **Users & Classes:** `classes`, `profiles`, `teacher_notes`, `student_assessments`
 **Curriculum:** `lessons`, `lesson_unlocks`, `review_cards`, `card_quiz_questions`, `card_reviews`
-**Quests:** `quests`, `coop_quest_instances`, `quest_acceptances`, `quest_submissions`
+**Quests:** `quests`, `coop_quest_instances`, `coop_member_drafts`, `coop_team_notes`, `quest_acceptances`, `quest_submissions`
 **Engagement:** `review_attempts`, `xp_ledger`
 **Comms:** `notifications`, `push_tokens`
+**Config:** `app_settings`
 
-Already created in Supabase. RLS to be added in Phase 1.
+All tables have RLS enabled (foundation: migration 008).
 
 ---
 
@@ -172,7 +190,7 @@ Edge Function vs pure SQL: the architect's plan literally said "Edge Function re
 
 ## 8. Phased Build Order
 
-### Phase 1 — Foundation (~week 1)
+### Phase 1 — Foundation (~week 1) ✅ Shipped
 **Goal:** runnable app, real auth, role-gated routing, students can self-register.
 
 - Next.js 16 scaffold (App Router, TypeScript, Tailwind v4, `src/` directory)
@@ -189,7 +207,7 @@ Edge Function vs pure SQL: the architect's plan literally said "Edge Function re
 - Vercel deploy
 - **Milestone:** a real student can self-register at the public URL and land in the student app.
 
-### Phase 2 — Lessons & Cards (~week 2)
+### Phase 2 — Lessons & Cards (~week 2) ✅ Shipped
 **Goal:** teacher can create lesson content; students can study cards.
 
 Content model is **unified markdown** (migration 011) — `review_cards.body` and `quests.description` are markdown text rendered with `react-markdown` + `remark-gfm`. No structured block editor, no image/audio uploads, no Supabase Storage bucket. External media is referenced via standard markdown image/link syntax with custom embed for YouTube and direct video URLs. See `docs/PHASE-2-PLAN.md` for the detailed reference document.
@@ -206,7 +224,7 @@ Commits land in this order:
 
 - **Milestone:** teacher teaches a lesson and students study the cards.
 
-### Phase 3 — Review-Quiz & XP Engine (~week 3)
+### Phase 3 — Review-Quiz & XP Engine (~week 3) ✅ Shipped
 **Goal:** FSRS-driven review-quiz loop + gamification spine + leaderboard + nightly velocity.
 
 Post-Plan-B pivot (migration 015 applied). The daily-quiz cron is gone; the system is event-driven by `card_reviews.due_at`.
@@ -222,7 +240,7 @@ No 06:00 cron, no `generate-daily-quizzes` Edge Function. Phase 3 is genuinely s
 
 **Milestone:** review loop works end-to-end. XP awards per correct MCQ. Rank changes visible. Leaderboard renders. Velocity updates nightly.
 
-### Phase 4 — Quests Core (~week 4)
+### Phase 4 — Quests Core (~week 4) ✅ Shipped
 **Goal:** solo quest loop fully working.
 
 - Quest creator UI (multi-step modal):
@@ -239,7 +257,7 @@ No 06:00 cron, no `generate-daily-quizzes` Edge Function. Phase 3 is genuinely s
 - Fail → update submission status + feedback → student keeps acceptance, can resubmit
 - **Milestone:** full solo quest loop works for at least one quest end-to-end.
 
-### Phase 5 — Co-op Quests & Polish (~week 5)
+### Phase 5 — Co-op Quests & Polish (~week 5) ✅ Shipped (AI-likelihood deferred to v2)
 **Goal:** coop mechanic + teacher analytics + AI detection.
 
 - Coop quest creator (extends Phase 4 UI): group_size, availability_mode, max_instances
@@ -262,7 +280,7 @@ No 06:00 cron, no `generate-daily-quizzes` Edge Function. Phase 3 is genuinely s
 - AI-likelihood classifier: lightweight model or API on text submissions, score stored in `quest_submissions.ai_likelihood_score`, shown in review modal
 - **Milestone:** all v1 features functional.
 
-### Phase 6 — Web Push Notifications (~week 6)
+### Phase 6 — Web Push Notifications (~week 6) ✅ Shipped
 **Goal:** real push notifications delivered to the browser, including PWA / Add-to-Home-Screen for mobile users.
 
 - Service Worker registration + Web Push API subscription (VAPID keys, stored client-side per browser)
@@ -301,9 +319,9 @@ No 06:00 cron, no `generate-daily-quizzes` Edge Function. Phase 3 is genuinely s
 
 ## 10. Open Decisions / Future Discussions
 
-- Exact open-source AI classifier choice (decide Phase 5)
-- Rank icons: source / commission / generate? (ask before Phase 1 polish)
-- Co-op group formation: pure first-come-first-served (current plan), or some matchmaking? (current plan stays for v1)
+- ~~Exact open-source AI classifier choice (decide Phase 5)~~ — **deferred to v2.** Revisit only if cheating becomes a real problem.
+- ~~Rank icons: source / commission / generate?~~ — **resolved:** ranks are shown by number only, no English names (migration 040).
+- ~~Co-op group formation: pure first-come-first-served vs matchmaking?~~ — **resolved:** first-come-first-served stays for v1.
 - **Rejected for v1:** QR-code class join, multi-step registration with invite-code lookup, and per-class access codes. Replaced by open self-registration with a global `registration_open` toggle and a hardcoded class dropdown. Reasoning: web-only deployment removed the camera-on-mobile use case for QR; the simpler flow is enough for one teacher / 500 students.
 - **Rejected for v1 (migration 011):** structured block editor, in-browser audio recording, image/audio file uploads for content authoring or submissions, standalone quiz quests, drag-and-drop card reorder. Card bodies and quest descriptions/submissions are markdown text with external URL embeds.
 

@@ -22,10 +22,11 @@ RankedLearning is a gamified learning platform for a single teacher (the develop
 | Styling | Tailwind CSS v4 (CSS-first config via `@theme` in `src/app/globals.css`, no `tailwind.config.ts`) |
 | UI primitives | shadcn/ui (in `src/components/ui/`) |
 | Forms | react-hook-form + zod |
-| Backend | Supabase (Postgres + Auth + Realtime + Storage + Edge Functions) — three client patterns: browser / server / middleware |
-| Push notifications | Web Push API + Service Worker (Phase 6) |
+| Backend | Supabase (Postgres + Auth + Realtime + Edge Functions) — three client patterns: browser / server / middleware. Storage is NOT used; see "Known constraints" below. |
+| Push notifications | Web Push API + Service Worker (shipped) |
 | SRS algorithm | FSRS-4.5 via `ts-fsrs` package |
-| AI-likelihood detection | Small open-source classifier (decide at Phase 5) |
+| Rich text editor | MDXEditor (Lexical-based, markdown round-trip) on all five authoring surfaces |
+| AI-likelihood detection | Deferred to v2 — `quest_submissions.ai_likelihood_score` stays NULL |
 
 **Supabase project ID:** `dicufymnejhrkrakgluu` (region: ap-northeast-2 / Seoul)
 **Supabase project name:** RankedLearning
@@ -92,14 +93,14 @@ XP awarded via `xp_ledger` inserts. A DB trigger auto-updates `profiles.xp_total
 
 XP per source: review MCQ = 5 XP per correct answer (no perfect bonus, no XP for wrong), solo quest = 20–35, coop quest = 50–80 per member, special quest = 150–300.
 
-### Learning Velocity (recomputed nightly by Edge Function cron)
-For each student, look at quiz answers in trailing 30 days. Weight each answer by card age:
+### Learning Velocity (recomputed nightly by `pg_cron`)
+For each student, look at review attempts in the trailing **14 days**. Weight each answer by card age:
 - ≤7 days: weight 1.0
 - 8–30 days: weight 1.5
 - 31–90 days: weight 2.5
 - 90+ days: weight 4.0
 
-`velocity = sum(weight * correct) / sum(weight)`, clamped to [0, 1]. Stored on `profiles.learning_velocity`.
+`velocity = Σ(weight × correct) / Σ(weight)`, clamped to [0, 1]. Stored on `profiles.learning_velocity`. Students with zero attempts in the window get velocity = 0. Implementation: SECURITY DEFINER function `recompute_learning_velocity()` (migration 017) scheduled by `pg_cron` at 03:00 Saigon (20:00 UTC). Pure SQL — no Edge Function wrapper.
 
 ### Co-op Quest Instancing
 - Teacher creates a coop quest with `group_size` and `availability_mode` (open / timed / whole_class / limited_instances).
@@ -133,24 +134,36 @@ Missed reviews are tracked: 4 days in a row where the student has due cards and 
 
 ## Database Schema (already created)
 
-16 tables in `public` schema. **Do not run migrations to alter the schema without asking the user first.** Schema reference: see `docs/SCHEMA.md`.
+20 tables in `public` schema. **Do not run migrations to alter the schema without asking the user first.** Schema reference: see `docs/SCHEMA.md`.
 
-Key tables: `profiles`, `classes`, `lessons`, `lesson_unlocks`, `review_cards`, `card_quiz_questions`, `card_reviews`, `review_attempts`, `quests`, `coop_quest_instances`, `quest_acceptances`, `quest_submissions`, `xp_ledger`, `notifications`, `push_tokens`, `teacher_notes`, `student_assessments`.
+Key tables: `profiles`, `classes`, `lessons`, `lesson_unlocks`, `review_cards`, `card_quiz_questions`, `card_reviews`, `review_attempts`, `quests`, `coop_quest_instances`, `coop_member_drafts`, `coop_team_notes`, `quest_acceptances`, `quest_submissions`, `xp_ledger`, `notifications`, `push_tokens`, `teacher_notes`, `student_assessments`, `app_settings`.
 
 **RLS is enabled on all tables via migration 008** (`supabase/migrations/008_rls_policies_and_assessments_split.sql`). Helper functions (`is_teacher`, `user_class_id`, `users_share_class`, `lookup_class_by_invite`, `is_username_available`), the `public_profiles` security-barrier view, and the `student_assessments` split are documented in `docs/SCHEMA.md`.
 
 ---
 
-## Phased Build Plan
+## Current State
 
-See `docs/PLAN.md` for full detail. Quick reference:
+All major planned work is shipped. The app is in polish / maintenance mode.
 
-1. **Phase 1 — Foundation**: Next.js scaffold, Supabase SSR client (browser/server/middleware split), RLS policies (migration 008), auth (username/password w/ email shim), self-registration with class dropdown gated by a global registration toggle, middleware-enforced role guard, placeholder home screens
-2. **Phase 2 — Lessons & Cards**: Lesson CRUD, card creator (headline + body + MCQs), card library, FSRS review session with 4-button rating
-3. **Phase 3 — Review-Quiz & XP Engine**: FSRS-driven MCQ review (no daily cron), XP awards via ledger, leaderboard, velocity nightly cron
-4. **Phase 4 — Quests Core**: Solo quest creator + acceptance + submission, teacher review queue, audio submissions
-5. **Phase 5 — Co-op Quests & Polish**: Coop quest spawning, teacher analytics dashboard, AI-likelihood classifier
-6. **Phase 6 — Web Push Notifications**: Web Push API subscriptions + Service Worker, all notification triggers, quiet hours, in-app notifications inbox, encourage iOS users to Add-to-Home-Screen for native-feeling push support
+| Phase | Status | Notes |
+|---|---|---|
+| 1 — Foundation | ✅ Shipped | Auth, RLS (migration 008), self-registration, role guard |
+| 2 — Lessons & Cards | ✅ Shipped | Markdown content model; see `docs/PHASE-2-PLAN.md` |
+| 3 — Review-Quiz & XP | ✅ Shipped | FSRS-driven review, leaderboard, nightly velocity cron |
+| 4 — Quests Core | ✅ Shipped | Solo quest loop; see `docs/PHASE-4-PLAN.md` |
+| 5 — Co-op + Analytics | ✅ Shipped except AI-likelihood (deferred to v2) |
+| 6 — Web Push | ✅ Shipped | See `docs/PUSH_SETUP.md` |
+| 7 — UI redesign + perf | ✅ Shipped | See `docs/PHASE_7_UI_AND_PERF.md` |
+| 8 — MDXEditor + coop drafts | ✅ Shipped | See `docs/PHASE_8_EDITOR.md` |
+
+`docs/PLAN.md` and the per-phase docs are kept as historical reference; they describe what was built and why. Day-to-day work today is feature polish, bug fixes, and small UX improvements rather than phased shipping.
+
+## Known Constraints
+
+- **Supabase Storage is broken on this project.** Every authenticated upload is rejected by storage-api with `{"statusCode":"403","error":"Unauthorized","message":"new row violates row-level security policy"}` regardless of how permissive RLS is — including a `bucket_id = 'avatars'`-only check with no auth gating, posted with no Authorization header. Direct Postgres INSERTs to `storage.objects` with the same row succeed in simulation as both `authenticated` and `anon`, so the rejection is inside storage-api itself, not at the DB layer. Migrations 041–047 are the trail. **Workaround:** avatars are stored as base64 `data:image/webp;base64,…` URLs directly in `profiles.avatar_url`. Do not propose moving avatars (or any new feature) back to a Supabase bucket without confirming storage has been fixed. The orphan `avatars` bucket row + one dashboard-uploaded test image remain in `storage.buckets` / `storage.objects` (the `storage.protect_delete()` trigger blocks direct DELETE; they're harmless).
+
+- **`ai_likelihood_score`** stays NULL — AI-detection classifier is deferred to v2 unless cheating becomes a real problem.
 
 ---
 
@@ -249,3 +262,4 @@ Every commit-blocking smoke test goes through:
 - In-browser audio recording for any purpose
 - Image/audio file uploads for content authoring or submissions (use markdown image syntax + external hosting instead)
 - Per-card prev/next navigation inside the card detail modal
+- AI-likelihood classifier on text submissions — `quest_submissions.ai_likelihood_score` stays NULL for v1

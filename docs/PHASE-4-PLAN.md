@@ -1,5 +1,7 @@
 # Phase 4 + 5 — Quests: Build Reference (Source of Truth)
 
+> **STATUS: ✅ Shipped** (AI-likelihood scoring deferred to v2). Kept as historical reference for quest mechanics + matchmaking pivot decisions.
+
 Working reference document for Phase 4 (solo + shared infrastructure) and Phase 5 (co-op completion + analytics + AI-likelihood). Architect-locked after the matchmaking pivot.
 
 **Phase 4 milestone:** full solo quest loop works end-to-end. Co-op shell ready (enrollment + matchmaking RPC), but the matchmaking Edge Function and post-match UI ship in Phase 5.
