@@ -1,14 +1,16 @@
-// Client-side avatar pipeline:
-//  1. Read the user's selected image
+// Avatar pipeline:
+//  1. Browser reads the user's selected image
 //  2. Resize + center-crop to 256x256 via <canvas>
 //  3. Encode WebP at quality 0.85 (~30-50 KB typical)
-//  4. Upload to avatars/<userId>/avatar.webp via the Supabase client
+//  4. POST the blob to the uploadAvatar server action, which writes
+//     to Storage and updates profiles.avatar_url with the user's
+//     cookie-based session.
 //
-// The same canonical path is reused on every upload so old files get
-// replaced. The bucket is public-read; the resulting URL is the
-// permanent public URL.
+// The direct browser-to-Storage path races on session hydration with
+// the publishable-key apikey and intermittently sends the publishable
+// key in place of the user's JWT, which trips the storage RLS check.
 
-import { createClient } from '@/lib/supabase/client';
+import { uploadAvatar as uploadAvatarAction } from '@/app/settings/actions';
 
 const TARGET_SIZE = 256;
 const WEBP_QUALITY = 0.85;
@@ -19,10 +21,7 @@ export type AvatarUploadResult = {
   publicUrl: string;
 };
 
-export async function uploadAvatar(
-  userId: string,
-  file: File,
-): Promise<AvatarUploadResult> {
+export async function uploadAvatar(file: File): Promise<AvatarUploadResult> {
   if (file.size > MAX_RAW_BYTES) {
     throw new Error('Image too large (max 5 MB).');
   }
@@ -32,37 +31,14 @@ export async function uploadAvatar(
 
   const blob = await resizeImageToSquare(file, TARGET_SIZE, WEBP_QUALITY);
 
-  const supabase = createClient();
-  const path = `${userId}/avatar.webp`;
+  const formData = new FormData();
+  formData.append('file', blob, 'avatar.webp');
 
-  const { error: uploadError } = await supabase.storage
-    .from('avatars')
-    .upload(path, blob, {
-      contentType: 'image/webp',
-      upsert: true,
-      cacheControl: '3600',
-    });
-  if (uploadError) {
-    throw new Error(uploadError.message);
+  const result = await uploadAvatarAction(formData);
+  if (result.error || !result.publicUrl) {
+    throw new Error(result.error ?? 'Upload failed.');
   }
-
-  const {
-    data: { publicUrl },
-  } = supabase.storage.from('avatars').getPublicUrl(path);
-
-  // Append a cache-busting query so the new image shows immediately
-  // even though the path is reused.
-  const bustedUrl = `${publicUrl}?v=${Date.now()}`;
-
-  const { error: profileError } = await supabase
-    .from('profiles')
-    .update({ avatar_url: bustedUrl })
-    .eq('id', userId);
-  if (profileError) {
-    throw new Error(profileError.message);
-  }
-
-  return { publicUrl: bustedUrl };
+  return { publicUrl: result.publicUrl };
 }
 
 async function resizeImageToSquare(

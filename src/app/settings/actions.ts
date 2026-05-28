@@ -66,11 +66,48 @@ export async function updateEmail(input: {
   return { error: null };
 }
 
-// Client uploads the file to Storage directly. The server action here is
-// just used to set profiles.avatar_url after the upload finishes — but
-// we don't currently need it because the upload helper does the
-// profiles update itself. Kept as a stub in case we want to centralize
-// the bookkeeping later.
+// Avatar storage strategy: the browser resizes to a 256x256 webp blob
+// (~30-50 KB), POSTs it here as FormData, and we encode it as a
+// base64 data URL in profiles.avatar_url. Supabase Storage on this
+// project rejects every authenticated upload at the storage-service
+// layer (Postgres simulations of the same INSERT succeed), so we
+// bypass storage entirely and use the profiles table — which has
+// working RLS.
+
+const AVATAR_MAX_BYTES = 200 * 1024;
+
+type AvatarUploadResult = { error: string | null; publicUrl?: string };
+
+export async function uploadAvatar(
+  formData: FormData,
+): Promise<AvatarUploadResult> {
+  const blob = formData.get('file');
+  if (!(blob instanceof Blob)) return { error: 'Missing file.' };
+  if (blob.type !== 'image/webp') {
+    return { error: 'Unsupported file type.' };
+  }
+  if (blob.size > AVATAR_MAX_BYTES) {
+    return { error: 'Image too large after resize.' };
+  }
+
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) return { error: 'Not authenticated.' };
+
+  const buffer = Buffer.from(await blob.arrayBuffer());
+  const dataUrl = `data:image/webp;base64,${buffer.toString('base64')}`;
+
+  const { error: profileError } = await supabase
+    .from('profiles')
+    .update({ avatar_url: dataUrl })
+    .eq('id', user.id);
+  if (profileError) return { error: profileError.message };
+
+  revalidatePath('/settings');
+  return { error: null, publicUrl: dataUrl };
+}
 
 export async function clearAvatar(): Promise<Result> {
   const supabase = await createClient();
@@ -78,10 +115,6 @@ export async function clearAvatar(): Promise<Result> {
     data: { user },
   } = await supabase.auth.getUser();
   if (!user) return { error: 'Not authenticated.' };
-
-  await supabase.storage
-    .from('avatars')
-    .remove([`${user.id}/avatar.webp`]);
 
   const { error } = await supabase
     .from('profiles')

@@ -76,7 +76,7 @@ export default function RegisterPage() {
       // from /settings.
       if (avatarFile && result.userId) {
         try {
-          await uploadAvatar(result.userId, avatarFile);
+          await uploadAvatar(avatarFile);
         } catch (err) {
           console.warn('Avatar upload failed during registration', err);
         }

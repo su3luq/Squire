@@ -11,6 +11,7 @@ import { AssessmentForm } from './assessment-form';
 import { NotesSection } from './notes-section';
 import { TransferForm } from './transfer-form';
 import { DeleteStudentButton } from './delete-student-button';
+import { ZoomableAvatar } from './zoomable-avatar';
 
 export const dynamic = 'force-dynamic';
 
@@ -46,7 +47,7 @@ export default async function StudentDetailPage({
   const { data: student } = await supabase
     .from('profiles')
     .select(
-      'id, full_name, age, email, class_id, xp_total, current_rank, learning_velocity, last_active_at, created_at, role'
+      'id, full_name, age, email, class_id, xp_total, current_rank, learning_velocity, last_active_at, created_at, role, avatar_url'
     )
     .eq('id', studentId)
     .maybeSingle();
@@ -114,7 +115,15 @@ export default async function StudentDetailPage({
 
   return (
     <div className="mx-auto max-w-3xl space-y-6">
-      <PageHeader title={student.full_name} />
+      <PageHeader
+        title={student.full_name}
+        avatar={
+          <ZoomableAvatar
+            url={student.avatar_url}
+            name={student.full_name}
+          />
+        }
+      />
 
       <div className="space-y-1 text-sm">
         <p className="text-muted-foreground">

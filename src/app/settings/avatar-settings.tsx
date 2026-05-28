@@ -8,12 +8,11 @@ import { uploadAvatar } from '@/lib/avatar-upload';
 import { clearAvatar } from './actions';
 
 interface Props {
-  userId: string;
   fullName: string;
   avatarUrl: string | null;
 }
 
-export function AvatarSettings({ userId, fullName, avatarUrl }: Props) {
+export function AvatarSettings({ fullName, avatarUrl }: Props) {
   const router = useRouter();
   const fileRef = useRef<HTMLInputElement>(null);
   const [isUploading, setIsUploading] = useState(false);
@@ -25,7 +24,7 @@ export function AvatarSettings({ userId, fullName, avatarUrl }: Props) {
     setError(null);
     setIsUploading(true);
     try {
-      const { publicUrl } = await uploadAvatar(userId, file);
+      const { publicUrl } = await uploadAvatar(file);
       setPreviewUrl(publicUrl);
       router.refresh();
     } catch (err) {
