@@ -8,6 +8,7 @@ export type ShellData = {
   userName: string;
   userMeta?: string;
   avatarUrl?: string | null;
+  userRank?: number | null;
   homeHref: string;
   unreadCount: number;
 };
@@ -64,6 +65,7 @@ export async function getShellData(): Promise<ShellData> {
     userName: profile.full_name ?? 'Student',
     userMeta: `Rank ${profile.current_rank} · ${profile.xp_total} XP`,
     avatarUrl: profile.avatar_url ?? null,
+    userRank: profile.current_rank ?? null,
     homeHref: '/student',
     unreadCount,
   };

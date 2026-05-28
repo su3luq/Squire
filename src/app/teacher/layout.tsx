@@ -16,7 +16,7 @@ export default async function TeacherLayout({
 
   const [{ data: profile }, { count: pendingReviews }, { count: unreadNotifications }] =
     await Promise.all([
-      supabase.from('profiles').select('full_name').eq('id', user.id).single(),
+      supabase.from('profiles').select('full_name, avatar_url').eq('id', user.id).single(),
       supabase
         .from('quest_submissions')
         .select('id', { count: 'exact', head: true })
@@ -34,6 +34,7 @@ export default async function TeacherLayout({
       navItems={getTeacherNav({ pendingReviews: pendingReviews ?? 0 })}
       userName={profile.full_name ?? 'Teacher'}
       userMeta="Teacher"
+      avatarUrl={profile.avatar_url}
       homeHref="/teacher"
       unreadCount={unreadNotifications ?? 0}
     >

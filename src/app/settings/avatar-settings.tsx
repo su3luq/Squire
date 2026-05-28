@@ -10,9 +10,14 @@ import { clearAvatar } from './actions';
 interface Props {
   fullName: string;
   avatarUrl: string | null;
+  currentRank?: number | null;
 }
 
-export function AvatarSettings({ fullName, avatarUrl }: Props) {
+export function AvatarSettings({
+  fullName,
+  avatarUrl,
+  currentRank,
+}: Props) {
   const router = useRouter();
   const fileRef = useRef<HTMLInputElement>(null);
   const [isUploading, setIsUploading] = useState(false);
@@ -51,7 +56,7 @@ export function AvatarSettings({ fullName, avatarUrl }: Props) {
 
   return (
     <div className="flex items-center gap-5">
-      <Avatar url={previewUrl} name={fullName} size="lg" />
+      <Avatar url={previewUrl} name={fullName} size="lg" rank={currentRank} />
       <div className="space-y-2">
         <input
           ref={fileRef}

@@ -16,6 +16,7 @@ interface AppShellProps {
   userName: string;
   userMeta?: string;
   avatarUrl?: string | null;
+  userRank?: number | null;
   homeHref: string;
   unreadCount: number;
   children: React.ReactNode;
@@ -28,6 +29,7 @@ export function AppShell({
   userName,
   userMeta,
   avatarUrl,
+  userRank,
   homeHref,
   unreadCount,
   children,
@@ -102,7 +104,7 @@ export function AppShell({
               title={`${userName} · settings`}
               className="rounded-full focus-visible:outline focus-visible:outline-2 focus-visible:outline-ring"
             >
-              <Avatar url={avatarUrl} name={userName} size="sm" />
+              <Avatar url={avatarUrl} name={userName} size="sm" rank={userRank} />
             </Link>
             <InboxButton count={unreadCount} />
             <SignOutButton iconOnly />
@@ -116,7 +118,7 @@ export function AppShell({
               className="flex items-center gap-3 rounded-md transition-colors hover:bg-muted/60"
               title="Settings"
             >
-              <Avatar url={avatarUrl} name={userName} size="sm" />
+              <Avatar url={avatarUrl} name={userName} size="sm" rank={userRank} />
               <div className="min-w-0 flex-1 text-sm">
                 <p className="truncate font-medium">{userName}</p>
                 {userMeta ? (

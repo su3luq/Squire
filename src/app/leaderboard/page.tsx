@@ -1,5 +1,6 @@
 import { createClient } from '@/lib/supabase/server';
 import { redirect } from 'next/navigation';
+import Link from 'next/link';
 import { Card, CardContent } from '@/components/ui/card';
 import { cn } from '@/lib/utils';
 import { Avatar } from '@/components/avatar';
@@ -27,7 +28,7 @@ export default async function LeaderboardPage() {
 
   const { data: students } = await supabase
     .from('public_profiles')
-    .select('id, full_name, xp_total, current_rank, avatar_url')
+    .select('id, full_name, xp_total, current_rank, avatar_url, class_id')
     .eq('role', 'student')
     .order('xp_total', { ascending: false })
     .order('full_name', { ascending: true });
@@ -39,6 +40,7 @@ export default async function LeaderboardPage() {
     xp_total: s.xp_total ?? 0,
     current_rank: s.current_rank ?? 1,
     avatar_url: s.avatar_url ?? null,
+    class_id: s.class_id ?? null,
   }));
 
   const userPosition = rows.findIndex((r) => r.id === user.id);
@@ -82,13 +84,16 @@ export default async function LeaderboardPage() {
                   key={r.id}
                   row={r}
                   isCurrentUser={r.id === user.id}
+                  isTeacher={isTeacher}
                 />
               ))}
             </ul>
             {!userInTop && userRow ? (
               <>
-                <div className="border-t border-border bg-muted px-4 py-2 text-center text-xs uppercase tracking-wide text-muted-foreground">
+                <div className="flex items-center gap-2 border-t border-border bg-muted/50 px-4 py-2 text-xs font-medium uppercase tracking-wide text-muted-foreground">
+                  <span className="h-px flex-1 bg-border" aria-hidden />
                   Your position
+                  <span className="h-px flex-1 bg-border" aria-hidden />
                 </div>
                 <ul className="divide-y divide-border">
                   {contextRows.map((r) => (
@@ -96,6 +101,7 @@ export default async function LeaderboardPage() {
                       key={r.id}
                       row={r}
                       isCurrentUser={r.id === user.id}
+                      isTeacher={isTeacher}
                     />
                   ))}
                 </ul>
@@ -109,54 +115,93 @@ export default async function LeaderboardPage() {
   );
 }
 
+
 function LeaderboardRow({
   row,
   isCurrentUser,
+  isTeacher,
 }: {
   row: {
+    id: string;
     position: number;
     full_name: string;
     xp_total: number;
     current_rank: number;
     avatar_url: string | null;
+    class_id: string | null;
   };
   isCurrentUser: boolean;
+  isTeacher: boolean;
 }) {
-  return (
-    <li
-      className={cn(
-        'flex items-center gap-3 px-4 py-3',
-        isCurrentUser && 'bg-primary/5',
-      )}
-    >
+  const inner = (
+    <>
       <span
         className={cn(
-          'w-9 shrink-0 text-sm font-semibold tabular-nums text-muted-foreground',
-          row.position <= 3 && 'text-primary',
+          'w-8 shrink-0 text-center text-xs font-semibold tabular-nums',
+          row.position <= 3 ? 'text-foreground/60' : 'text-muted-foreground',
         )}
       >
         #{row.position}
       </span>
-      <Avatar url={row.avatar_url} name={row.full_name} size="sm" />
+      <Avatar
+        url={row.avatar_url}
+        name={row.full_name}
+        size="md"
+        rank={row.current_rank}
+      />
       <div className="min-w-0 flex-1">
-        <p
-          className={cn(
-            'truncate text-sm font-medium',
-            isCurrentUser ? 'text-primary' : 'text-foreground',
-          )}
-        >
-          {row.full_name}
+        <div className="flex items-center gap-2">
+          <p
+            className={cn(
+              'truncate text-sm font-medium',
+              isCurrentUser ? 'text-primary' : 'text-foreground',
+            )}
+          >
+            {row.full_name}
+          </p>
           {isCurrentUser ? (
-            <span className="ml-2 rounded bg-primary/10 px-1.5 py-0.5 text-xs font-medium text-primary">
+            <span className="shrink-0 rounded bg-primary/10 px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-primary">
               you
             </span>
           ) : null}
-        </p>
-        <p className="text-xs text-muted-foreground">Rank {row.current_rank}</p>
+        </div>
+        <div className="mt-0.5 flex items-center gap-1.5">
+          <span className="inline-flex items-center rounded-full bg-muted px-2 py-0.5 text-[11px] font-semibold tabular-nums text-foreground/80">
+            Rank {row.current_rank}
+          </span>
+        </div>
       </div>
-      <span className="shrink-0 text-sm font-semibold tabular-nums">
-        {row.xp_total.toLocaleString()} XP
+      <span className="shrink-0 text-sm font-semibold tabular-nums text-foreground">
+        {row.xp_total.toLocaleString()}
+        <span className="ml-1 text-xs font-normal text-muted-foreground">
+          XP
+        </span>
       </span>
+    </>
+  );
+
+  const linkable = isTeacher && row.class_id;
+  if (linkable) {
+    return (
+      <li className={cn(isCurrentUser && 'bg-primary/5')}>
+        <Link
+          href={`/teacher/classes/${row.class_id}/students/${row.id}`}
+          className="flex items-center gap-3 px-4 py-3.5 transition hover:bg-muted/60 focus:outline-none focus-visible:bg-muted"
+        >
+          {inner}
+        </Link>
+      </li>
+    );
+  }
+
+  return (
+    <li
+      className={cn(
+        'flex items-center gap-3 px-4 py-3.5',
+        isCurrentUser && 'bg-primary/5',
+      )}
+    >
+      {inner}
     </li>
   );
 }

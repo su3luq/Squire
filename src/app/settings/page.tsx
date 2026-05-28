@@ -22,7 +22,7 @@ export default async function SettingsPage() {
 
   const { data: profile } = await supabase
     .from('profiles')
-    .select('id, full_name, email, role, avatar_url')
+    .select('id, full_name, email, role, avatar_url, current_rank')
     .eq('id', user.id)
     .single();
   if (!profile) redirect('/login');
@@ -45,6 +45,7 @@ export default async function SettingsPage() {
             <AvatarSettings
               fullName={profile.full_name}
               avatarUrl={profile.avatar_url}
+              currentRank={profile.current_rank}
             />
           </CardContent>
         </Card>

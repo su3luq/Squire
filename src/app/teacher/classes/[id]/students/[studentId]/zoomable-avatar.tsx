@@ -6,9 +6,10 @@ import { Avatar } from '@/components/avatar';
 interface Props {
   url: string | null;
   name: string;
+  rank?: number | null;
 }
 
-export function ZoomableAvatar({ url, name }: Props) {
+export function ZoomableAvatar({ url, name, rank }: Props) {
   const [open, setOpen] = useState(false);
 
   useEffect(() => {
@@ -26,7 +27,7 @@ export function ZoomableAvatar({ url, name }: Props) {
   }, [open]);
 
   if (!url) {
-    return <Avatar url={null} name={name} size="lg" />;
+    return <Avatar url={null} name={name} size="lg" rank={rank} />;
   }
 
   return (
@@ -37,7 +38,7 @@ export function ZoomableAvatar({ url, name }: Props) {
         className="rounded-full transition hover:opacity-90 focus:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
         aria-label={`View ${name}'s photo`}
       >
-        <Avatar url={url} name={name} size="lg" />
+        <Avatar url={url} name={name} size="lg" rank={rank} />
       </button>
       {open && (
         <div

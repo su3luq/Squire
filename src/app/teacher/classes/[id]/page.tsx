@@ -45,7 +45,7 @@ export default async function ClassDetailPage({
   const { data: students } = await supabase
     .from('profiles')
     .select(
-      'id, full_name, age, email, xp_total, current_rank, learning_velocity, last_active_at, created_at, avatar_url'
+      'id, full_name, age, email, xp_total, current_rank, learning_velocity, last_active_at, created_at, avatar_url',
     )
     .eq('class_id', id)
     .eq('role', 'student')
@@ -99,6 +99,7 @@ export default async function ClassDetailPage({
                         url={s.avatar_url}
                         name={s.full_name}
                         size="sm"
+                        rank={s.current_rank}
                       />
                       <div className="min-w-0 flex-1">
                         <p className="truncate text-sm font-medium">

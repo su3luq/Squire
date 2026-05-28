@@ -47,7 +47,7 @@ export default async function StudentDetailPage({
   const { data: student } = await supabase
     .from('profiles')
     .select(
-      'id, full_name, age, email, class_id, xp_total, current_rank, learning_velocity, last_active_at, created_at, role, avatar_url'
+      'id, full_name, age, email, class_id, xp_total, current_rank, learning_velocity, last_active_at, created_at, role, avatar_url',
     )
     .eq('id', studentId)
     .maybeSingle();
@@ -121,6 +121,7 @@ export default async function StudentDetailPage({
           <ZoomableAvatar
             url={student.avatar_url}
             name={student.full_name}
+            rank={student.current_rank}
           />
         }
       />

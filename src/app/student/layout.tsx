@@ -19,7 +19,7 @@ export default async function StudentLayout({
     await Promise.all([
       supabase
         .from('profiles')
-        .select('full_name, xp_total, current_rank')
+        .select('full_name, xp_total, current_rank, avatar_url')
         .eq('id', user.id)
         .single(),
       supabase
@@ -39,6 +39,8 @@ export default async function StudentLayout({
       navItems={getStudentNav({ dueReviews: dueReviews ?? 0 })}
       userName={profile.full_name ?? 'Student'}
       userMeta={`Rank ${profile.current_rank} · ${profile.xp_total} XP`}
+      avatarUrl={profile.avatar_url}
+      userRank={profile.current_rank}
       homeHref="/student"
       unreadCount={unreadNotifications ?? 0}
     >
