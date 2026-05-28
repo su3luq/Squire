@@ -1,3 +1,4 @@
+import Link from 'next/link';
 import { redirect } from 'next/navigation';
 import { createClient } from '@/lib/supabase/server';
 import { PageHeader } from '@/components/page-header';
@@ -68,6 +69,26 @@ export default async function SettingsPage() {
           <EmailSettings currentEmail={profile.email ?? user.email ?? ''} />
         </CardContent>
       </Card>
+
+      {profile.role === 'teacher' && (
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-base">App admin</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <Link
+              href="/teacher/settings"
+              className="inline-flex items-center gap-2 text-sm font-medium text-primary hover:underline"
+            >
+              Open app settings →
+            </Link>
+            <p className="mt-2 text-xs text-muted-foreground">
+              Configure the rank ladder, XP thresholds, and other
+              gamification mechanics.
+            </p>
+          </CardContent>
+        </Card>
+      )}
     </div>
   );
 }

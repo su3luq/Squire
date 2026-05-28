@@ -2,6 +2,7 @@ import { redirect } from 'next/navigation';
 import { createClient } from '@/lib/supabase/server';
 import { AppShell } from '@/components/app-shell';
 import { getStudentNav } from '@/components/nav-items';
+import { getRingConfigForTier } from '@/lib/ranks-config';
 
 export default async function StudentLayout({
   children,
@@ -34,6 +35,8 @@ export default async function StudentLayout({
 
   if (!profile) redirect('/login');
 
+  const userRingConfig = await getRingConfigForTier(profile.current_rank);
+
   return (
     <AppShell
       navItems={getStudentNav({ dueReviews: dueReviews ?? 0 })}
@@ -41,6 +44,7 @@ export default async function StudentLayout({
       userMeta={`Rank ${profile.current_rank} · ${profile.xp_total} XP`}
       avatarUrl={profile.avatar_url}
       userRank={profile.current_rank}
+      userRingConfig={userRingConfig}
       homeHref="/student"
       unreadCount={unreadNotifications ?? 0}
     >

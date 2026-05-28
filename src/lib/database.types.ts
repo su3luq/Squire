@@ -241,52 +241,6 @@ export type Database = {
           },
         ]
       }
-      coop_team_notes: {
-        Row: {
-          body: string
-          id: string
-          instance_id: string
-          student_id: string
-          updated_at: string
-        }
-        Insert: {
-          body?: string
-          id?: string
-          instance_id: string
-          student_id: string
-          updated_at?: string
-        }
-        Update: {
-          body?: string
-          id?: string
-          instance_id?: string
-          student_id?: string
-          updated_at?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "coop_team_notes_instance_id_fkey"
-            columns: ["instance_id"]
-            isOneToOne: false
-            referencedRelation: "coop_quest_instances"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "coop_team_notes_student_id_fkey"
-            columns: ["student_id"]
-            isOneToOne: false
-            referencedRelation: "profiles"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "coop_team_notes_student_id_fkey"
-            columns: ["student_id"]
-            isOneToOne: false
-            referencedRelation: "public_profiles"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
       coop_quest_instances: {
         Row: {
           captain_id: string | null
@@ -351,6 +305,52 @@ export type Database = {
             columns: ["quest_id"]
             isOneToOne: false
             referencedRelation: "quests"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      coop_team_notes: {
+        Row: {
+          body: string
+          id: string
+          instance_id: string
+          student_id: string
+          updated_at: string
+        }
+        Insert: {
+          body?: string
+          id?: string
+          instance_id: string
+          student_id: string
+          updated_at?: string
+        }
+        Update: {
+          body?: string
+          id?: string
+          instance_id?: string
+          student_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "coop_team_notes_instance_id_fkey"
+            columns: ["instance_id"]
+            isOneToOne: false
+            referencedRelation: "coop_quest_instances"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "coop_team_notes_student_id_fkey"
+            columns: ["student_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "coop_team_notes_student_id_fkey"
+            columns: ["student_id"]
+            isOneToOne: false
+            referencedRelation: "public_profiles"
             referencedColumns: ["id"]
           },
         ]
@@ -761,6 +761,33 @@ export type Database = {
           title?: string
           word_limit_min?: number | null
           xp_reward?: number
+        }
+        Relationships: []
+      }
+      ranks: {
+        Row: {
+          created_at: string
+          gradient_id: string
+          min_xp: number
+          name: string | null
+          tier: number
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          gradient_id: string
+          min_xp: number
+          name?: string | null
+          tier: number
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          gradient_id?: string
+          min_xp?: number
+          name?: string | null
+          tier?: number
+          updated_at?: string
         }
         Relationships: []
       }

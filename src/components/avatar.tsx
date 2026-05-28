@@ -6,13 +6,18 @@ interface AvatarProps {
   size?: 'xs' | 'sm' | 'md' | 'lg';
   className?: string;
   /**
-   * Student rank tier 1-7 (1 = top, 7 = starting). When provided, a
-   * tier-themed gradient ring is drawn around the avatar so rank is
-   * legible everywhere the avatar appears. Higher tiers get richer
-   * gradients + glow; rank 7 is a muted "stone" ring to communicate
-   * "you have a tier, keep climbing."
+   * Student rank tier — used for the aria-label and as a fallback
+   * for the ring gradient when `ringConfig` isn't passed.
    */
   rank?: number | null;
+  /**
+   * Ring styling resolved from the dynamic ranks table. Pages that
+   * fetch via `getRingConfigForTier()` pass this directly. When
+   * absent, the avatar falls back to `FALLBACK_RING_GRADIENTS` keyed
+   * on `rank` so call sites that haven't been wired through yet keep
+   * rendering a ring.
+   */
+  ringConfig?: { gradient: string; glow?: string | null } | null;
 }
 
 const SIZE_CLASS: Record<NonNullable<AvatarProps['size']>, string> = {
@@ -22,8 +27,6 @@ const SIZE_CLASS: Record<NonNullable<AvatarProps['size']>, string> = {
   lg: 'h-16 w-16 text-lg',
 };
 
-// Ring thickness scales with avatar size so the gradient is legible
-// without overwhelming small avatars.
 const RING_GAP: Record<NonNullable<AvatarProps['size']>, string> = {
   xs: 'p-[1px]',
   sm: 'p-[1.5px]',
@@ -31,21 +34,35 @@ const RING_GAP: Record<NonNullable<AvatarProps['size']>, string> = {
   lg: 'p-[2.5px]',
 };
 
-const RING_GRADIENTS: Record<number, string> = {
-  // Rank 1 — Mythic: fuchsia → violet → gold with strong glow.
-  1: 'bg-gradient-to-br from-fuchsia-400 via-violet-500 to-amber-300 shadow-[0_0_14px_-2px_rgba(216,180,254,0.7)]',
-  // Rank 2 — Sapphire: cyan → blue → indigo, blue shimmer glow.
-  2: 'bg-gradient-to-br from-cyan-300 via-blue-500 to-indigo-700 shadow-[0_0_10px_-2px_rgba(59,130,246,0.55)]',
-  // Rank 3 — Emerald: green → teal, soft glow.
-  3: 'bg-gradient-to-br from-emerald-300 via-teal-400 to-emerald-600 shadow-[0_0_8px_-2px_rgba(16,185,129,0.45)]',
-  // Rank 4 — Gold: warm sunny yellow → amber → orange.
-  4: 'bg-gradient-to-br from-yellow-300 via-amber-400 to-orange-500',
-  // Rank 5 — Silver: cool steel sheen.
-  5: 'bg-gradient-to-br from-slate-100 via-slate-300 to-slate-500',
-  // Rank 6 — Bronze: warm copper.
-  6: 'bg-gradient-to-br from-amber-600 via-orange-700 to-red-800',
-  // Rank 7 — Stone: matte dark slate (starter tier).
-  7: 'bg-gradient-to-br from-slate-400 via-slate-500 to-slate-700',
+// Fallback used when a caller passes `rank` but not `ringConfig`.
+// Kept aligned with the seed values in migration 049 so the visual
+// behavior is identical until the call site is wired to the dynamic
+// helper.
+const FALLBACK_RING_GRADIENTS: Record<number, { gradient: string; glow?: string }> = {
+  1: {
+    gradient: 'linear-gradient(135deg, #f0abfc 0%, #a78bfa 50%, #fde047 100%)',
+    glow: 'rgba(216,180,254,0.70)',
+  },
+  2: {
+    gradient: 'linear-gradient(135deg, #67e8f9 0%, #3b82f6 50%, #4338ca 100%)',
+    glow: 'rgba(59,130,246,0.55)',
+  },
+  3: {
+    gradient: 'linear-gradient(135deg, #6ee7b7 0%, #2dd4bf 50%, #047857 100%)',
+    glow: 'rgba(16,185,129,0.45)',
+  },
+  4: {
+    gradient: 'linear-gradient(135deg, #fde047 0%, #f59e0b 50%, #ea580c 100%)',
+  },
+  5: {
+    gradient: 'linear-gradient(135deg, #f1f5f9 0%, #cbd5e1 50%, #64748b 100%)',
+  },
+  6: {
+    gradient: 'linear-gradient(135deg, #d97706 0%, #c2410c 50%, #9f1239 100%)',
+  },
+  7: {
+    gradient: 'linear-gradient(135deg, #94a3b8 0%, #64748b 50%, #334155 100%)',
+  },
 };
 
 function initials(name: string): string {
@@ -61,6 +78,7 @@ export function Avatar({
   size = 'md',
   className,
   rank,
+  ringConfig,
 }: AvatarProps) {
   const sizeClass = SIZE_CLASS[size];
 
@@ -85,20 +103,26 @@ export function Avatar({
     </span>
   );
 
-  const ringClass = rank != null ? RING_GRADIENTS[rank] : undefined;
-  if (!ringClass) {
-    return <span className={cn('inline-flex shrink-0', className)}>{inner}</span>;
+  const effective =
+    ringConfig ??
+    (rank != null ? FALLBACK_RING_GRADIENTS[rank] ?? null : null);
+
+  if (!effective) {
+    return (
+      <span className={cn('inline-flex shrink-0', className)}>{inner}</span>
+    );
+  }
+
+  const style: React.CSSProperties = { background: effective.gradient };
+  if (effective.glow) {
+    style.boxShadow = `0 0 10px -2px ${effective.glow}`;
   }
 
   return (
     <span
-      className={cn(
-        'inline-flex shrink-0 rounded-full',
-        ringClass,
-        RING_GAP[size],
-        className,
-      )}
-      aria-label={`Rank ${rank}`}
+      className={cn('inline-flex shrink-0 rounded-full', RING_GAP[size], className)}
+      style={style}
+      aria-label={rank != null ? `Rank ${rank}` : undefined}
     >
       <span className="inline-flex rounded-full bg-background p-[1px]">
         {inner}

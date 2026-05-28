@@ -5,6 +5,7 @@ import { Card, CardContent } from '@/components/ui/card';
 import { cn } from '@/lib/utils';
 import { Avatar } from '@/components/avatar';
 import { InsightsTabs } from '@/components/insights-tabs';
+import { getRanksMap } from '@/lib/ranks-config';
 
 export const dynamic = 'force-dynamic';
 
@@ -26,22 +27,32 @@ export default async function LeaderboardPage() {
     .single();
   const isTeacher = viewerProfile?.role === 'teacher';
 
-  const { data: students } = await supabase
-    .from('public_profiles')
-    .select('id, full_name, xp_total, current_rank, avatar_url, class_id')
-    .eq('role', 'student')
-    .order('xp_total', { ascending: false })
-    .order('full_name', { ascending: true });
+  const [{ data: students }, ranksMap] = await Promise.all([
+    supabase
+      .from('public_profiles')
+      .select('id, full_name, xp_total, current_rank, avatar_url, class_id')
+      .eq('role', 'student')
+      .order('xp_total', { ascending: false })
+      .order('full_name', { ascending: true }),
+    getRanksMap(),
+  ]);
 
-  const rows = (students ?? []).map((s, idx) => ({
-    position: idx + 1,
-    id: s.id ?? '',
-    full_name: s.full_name ?? 'Unknown',
-    xp_total: s.xp_total ?? 0,
-    current_rank: s.current_rank ?? 1,
-    avatar_url: s.avatar_url ?? null,
-    class_id: s.class_id ?? null,
-  }));
+  const rows = (students ?? []).map((s, idx) => {
+    const tier = s.current_rank ?? 1;
+    const r = ranksMap.get(tier);
+    return {
+      position: idx + 1,
+      id: s.id ?? '',
+      full_name: s.full_name ?? 'Unknown',
+      xp_total: s.xp_total ?? 0,
+      current_rank: tier,
+      avatar_url: s.avatar_url ?? null,
+      class_id: s.class_id ?? null,
+      ringConfig: r?.gradient
+        ? { gradient: r.gradient.gradient, glow: r.gradient.glow ?? null }
+        : null,
+    };
+  });
 
   const userPosition = rows.findIndex((r) => r.id === user.id);
   const userRow = userPosition >= 0 ? rows[userPosition] : null;
@@ -129,6 +140,7 @@ function LeaderboardRow({
     current_rank: number;
     avatar_url: string | null;
     class_id: string | null;
+    ringConfig: { gradient: string; glow: string | null } | null;
   };
   isCurrentUser: boolean;
   isTeacher: boolean;
@@ -148,6 +160,7 @@ function LeaderboardRow({
         name={row.full_name}
         size="md"
         rank={row.current_rank}
+        ringConfig={row.ringConfig}
       />
       <div className="min-w-0 flex-1">
         <div className="flex items-center gap-2">

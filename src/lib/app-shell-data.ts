@@ -1,6 +1,7 @@
 import { redirect } from 'next/navigation';
 import { createClient } from '@/lib/supabase/server';
 import { getStudentNav, getTeacherNav } from '@/components/nav-items';
+import { getRingConfigForTier } from '@/lib/ranks-config';
 import type { NavItem } from '@/components/nav-items';
 
 export type ShellData = {
@@ -9,6 +10,7 @@ export type ShellData = {
   userMeta?: string;
   avatarUrl?: string | null;
   userRank?: number | null;
+  userRingConfig?: { gradient: string; glow?: string | null } | null;
   homeHref: string;
   unreadCount: number;
 };
@@ -55,10 +57,13 @@ export async function getShellData(): Promise<ShellData> {
   }
 
   const nowIso = new Date().toISOString();
-  const { count: dueReviewsRaw } = await supabase
-    .from('card_reviews')
-    .select('id', { count: 'exact', head: true })
-    .lte('due_at', nowIso);
+  const [{ count: dueReviewsRaw }, userRingConfig] = await Promise.all([
+    supabase
+      .from('card_reviews')
+      .select('id', { count: 'exact', head: true })
+      .lte('due_at', nowIso),
+    getRingConfigForTier(profile.current_rank),
+  ]);
 
   return {
     navItems: getStudentNav({ dueReviews: dueReviewsRaw ?? 0 }),
@@ -66,6 +71,7 @@ export async function getShellData(): Promise<ShellData> {
     userMeta: `Rank ${profile.current_rank} · ${profile.xp_total} XP`,
     avatarUrl: profile.avatar_url ?? null,
     userRank: profile.current_rank ?? null,
+    userRingConfig,
     homeHref: '/student',
     unreadCount,
   };
