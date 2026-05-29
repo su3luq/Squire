@@ -1,12 +1,13 @@
 import Link from 'next/link';
 import { redirect } from 'next/navigation';
-import { Scroll, Sword, Users } from 'lucide-react';
+import { ChevronDown, Scroll, Sparkles, Sword, Trophy, Users } from 'lucide-react';
 import { createClient } from '@/lib/supabase/server';
 import { PageHeader } from '@/components/page-header';
 import { EmptyState } from '@/components/empty-state';
 import { cn } from '@/lib/utils';
 import { LiveCountdown } from './countdown';
 import { QuestActionButton } from './accept-button';
+import { QuestFilterChips } from './quest-filter-chips';
 
 export const dynamic = 'force-dynamic';
 
@@ -37,7 +38,22 @@ const MINE_ORDER: MineBucket[] = [
   'enrolled',
 ];
 
-export default async function StudentQuestsPage() {
+const NEW_BADGE_DAYS = 7;
+
+type FilterType = 'all' | 'solo' | 'coop';
+
+function isFilterType(v: string | undefined): v is FilterType {
+  return v === 'all' || v === 'solo' || v === 'coop';
+}
+
+export default async function StudentQuestsPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ type?: string }>;
+}) {
+  const { type } = await searchParams;
+  const filter: FilterType = isFilterType(type) ? type : 'all';
+
   const supabase = await createClient();
 
   const {
@@ -64,17 +80,23 @@ export default async function StudentQuestsPage() {
     );
   }
 
-  const nowIso = new Date().toISOString();
+  // eslint-disable-next-line react-hooks/purity -- Server Component rendered per request.
+  const now = Date.now();
+  const nowIso = new Date(now).toISOString();
+  const newCutoffIso = new Date(
+    now - NEW_BADGE_DAYS * 86_400_000,
+  ).toISOString();
 
   const [
     { data: boardQuests },
     { data: myAcceptances },
+    { data: myCompleted },
   ] = await Promise.all([
     supabase
       .from('quests')
       .select(
         `
-          id, title, quest_type, xp_reward, expires_at, closed_at, max_team_size,
+          id, title, quest_type, xp_reward, expires_at, closed_at, max_team_size, created_at,
           quest_acceptances(id, student_id, status, quest_type, instance_id),
           coop_quest_instances(id, class_id)
         `
@@ -94,6 +116,17 @@ export default async function StudentQuestsPage() {
       .eq('student_id', user.id)
       .in('status', ['active', 'enrolled'])
       .order('accepted_at', { ascending: false }),
+    supabase
+      .from('quest_acceptances')
+      .select(
+        `
+          id, completed_at, accepted_at,
+          quest:quest_id(id, title, quest_type, xp_reward)
+        `
+      )
+      .eq('student_id', user.id)
+      .eq('status', 'passed')
+      .order('completed_at', { ascending: false, nullsFirst: false }),
   ]);
 
   // --- "Mine" enrichment: bucket each acceptance by latest submission state.
@@ -183,9 +216,9 @@ export default async function StudentQuestsPage() {
     })
     .filter((x): x is MineItem => x !== null);
 
-  // --- "Board" filtering: hide quests already accepted, hide coop where
-  // matchmaking already ran for this student's class. Track availability
-  // flags for action buttons.
+  // --- "Board" filtering: hide quests already accepted (any state),
+  // hide quests already passed/failed by me, hide coop where this class
+  // already has an instance.
   const allBoardAcceptances = (boardQuests ?? []).flatMap((q) =>
     (q.quest_acceptances ?? []).filter((a) => a.student_id === user.id)
   );
@@ -198,14 +231,55 @@ export default async function StudentQuestsPage() {
       (a.status === 'active' || a.status === 'enrolled')
   );
 
+  // Quests this student has finished (passed) or actively been graded on (failed)
+  // shouldn't appear on the available board — they live in the Completed
+  // accordion at the bottom.
+  const myUserId = user.id;
+  function ownTerminalStatus(q: { quest_acceptances?: { student_id: string; status: string }[] }) {
+    const own = (q.quest_acceptances ?? []).find(
+      (a) => a.student_id === myUserId,
+    );
+    return own?.status;
+  }
+
   const visible = (boardQuests ?? []).filter((q) => {
-    if (q.quest_type !== 'coop') return true;
-    const instances = q.coop_quest_instances ?? [];
-    return !instances.some((i) => i.class_id === profile.class_id);
+    const ownStatus = ownTerminalStatus(q);
+    // Hide quests this student already passed/failed.
+    if (ownStatus === 'passed' || ownStatus === 'failed') return false;
+    // For coop: hide if this class already had an instance form (existing rule).
+    if (q.quest_type === 'coop') {
+      const instances = q.coop_quest_instances ?? [];
+      if (instances.some((i) => i.class_id === profile.class_id)) return false;
+    }
+    return true;
   });
 
-  const soloQuests = visible.filter((q) => q.quest_type === 'solo');
-  const coopQuests = visible.filter((q) => q.quest_type === 'coop');
+  // Sort by closing-soonest first; null expires_at goes to the end.
+  const availabilitySort = (
+    a: (typeof visible)[number],
+    b: (typeof visible)[number],
+  ) => {
+    if (a.expires_at && b.expires_at) {
+      return a.expires_at.localeCompare(b.expires_at);
+    }
+    if (a.expires_at) return -1;
+    if (b.expires_at) return 1;
+    return b.created_at.localeCompare(a.created_at); // newest first as tiebreak
+  };
+
+  const soloQuests = visible
+    .filter((q) => q.quest_type === 'solo')
+    .sort(availabilitySort);
+  const coopQuests = visible
+    .filter((q) => q.quest_type === 'coop')
+    .sort(availabilitySort);
+
+  const showSoloBoard = filter === 'all' || filter === 'solo';
+  const showCoopBoard = filter === 'all' || filter === 'coop';
+
+  function isNewlyPublished(createdAtIso: string): boolean {
+    return createdAtIso >= newCutoffIso;
+  }
 
   function renderActionForSolo(q: typeof visible[number]) {
     const own = (q.quest_acceptances ?? []).find(
@@ -214,11 +288,6 @@ export default async function StudentQuestsPage() {
     if (own?.status === 'active') {
       return (
         <span className="text-xs text-muted-foreground">Already accepted</span>
-      );
-    }
-    if (own?.status === 'passed' || own?.status === 'failed') {
-      return (
-        <span className="text-xs text-muted-foreground">Already done</span>
       );
     }
     if (hasActiveSoloElsewhere) {
@@ -235,9 +304,9 @@ export default async function StudentQuestsPage() {
     const own = (q.quest_acceptances ?? []).find(
       (a) => a.student_id === user!.id
     );
-    if (own?.status === 'passed' || own?.status === 'active') {
+    if (own?.status === 'active') {
       return (
-        <span className="text-xs text-muted-foreground">Already done</span>
+        <span className="text-xs text-muted-foreground">Already on a team</span>
       );
     }
     if (own?.status === 'enrolled') {
@@ -261,6 +330,38 @@ export default async function StudentQuestsPage() {
     return (q.quest_acceptances ?? []).filter((a) => a.status === 'enrolled')
       .length;
   }
+
+  // --- Completed accordion data
+  type CompletedItem = {
+    acceptanceId: string;
+    questId: string;
+    title: string;
+    questType: 'solo' | 'coop' | 'daily_quiz';
+    xpReward: number;
+    completedAt: string | null;
+  };
+  const completed: CompletedItem[] = (myCompleted ?? [])
+    .map((a): CompletedItem | null => {
+      const q = a.quest as
+        | {
+            id: string;
+            title: string;
+            quest_type: 'solo' | 'coop' | 'daily_quiz';
+            xp_reward: number;
+          }
+        | null;
+      if (!q) return null;
+      return {
+        acceptanceId: a.id,
+        questId: q.id,
+        title: q.title,
+        questType: q.quest_type,
+        xpReward: q.xp_reward,
+        completedAt: a.completed_at ?? a.accepted_at,
+      };
+    })
+    .filter((x): x is CompletedItem => x !== null);
+  const completedXp = completed.reduce((sum, c) => sum + c.xpReward, 0);
 
   return (
     <div className="mx-auto max-w-4xl space-y-8">
@@ -319,96 +420,172 @@ export default async function StudentQuestsPage() {
         </section>
       )}
 
+      {/* Available board */}
       <section>
-        <div className="mb-3 flex items-center gap-2">
-          <Sword className="h-4 w-4 text-muted-foreground" />
+        <div className="mb-3 flex flex-wrap items-center justify-between gap-3">
           <h2 className="text-sm font-semibold uppercase tracking-wide text-muted-foreground">
-            Solo board
+            Available
           </h2>
-        </div>
-        {soloQuests.length === 0 ? (
-          <EmptyState
-            icon={Sword}
-            title="No solo quests right now"
-            description="Check back later — new quests appear here when your teacher publishes them."
+          <QuestFilterChips
+            soloAvailable={soloQuests.length}
+            coopAvailable={coopQuests.length}
           />
-        ) : (
-          <ul className="divide-y divide-border overflow-hidden rounded-lg border border-border bg-card">
-            {soloQuests.map((q) => (
-              <li key={q.id}>
-                <div className="flex items-start justify-between gap-4 p-5">
-                  <div className="min-w-0 flex-1">
-                    <Link
-                      href={`/student/quests/${q.id}`}
-                      className="block truncate text-sm font-medium hover:text-primary"
-                    >
-                      {q.title}
-                    </Link>
-                    <p className="mt-1 text-xs text-muted-foreground">
-                      +{q.xp_reward} XP
-                      {q.expires_at && (
-                        <>
+        </div>
+
+        {showSoloBoard && (
+          <div className="mb-6">
+            <div className="mb-2 flex items-center gap-2">
+              <Sword className="h-4 w-4 text-muted-foreground" />
+              <h3 className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+                Solo
+              </h3>
+            </div>
+            {soloQuests.length === 0 ? (
+              <EmptyState
+                icon={Sword}
+                title="No solo quests right now"
+                description="Check back later — new quests appear here when your teacher publishes them."
+              />
+            ) : (
+              <ul className="divide-y divide-border overflow-hidden rounded-lg border border-border bg-card">
+                {soloQuests.map((q) => (
+                  <li key={q.id}>
+                    <div className="flex items-start justify-between gap-4 p-5">
+                      <div className="min-w-0 flex-1">
+                        <div className="flex flex-wrap items-center gap-2">
+                          <Link
+                            href={`/student/quests/${q.id}`}
+                            className="min-w-0 truncate text-sm font-medium hover:text-primary"
+                          >
+                            {q.title}
+                          </Link>
+                          {isNewlyPublished(q.created_at) && <NewBadge />}
+                        </div>
+                        <p className="mt-1 text-xs text-muted-foreground">
+                          +{q.xp_reward} XP
+                          {q.expires_at && (
+                            <>
+                              {' · '}
+                              <LiveCountdown
+                                targetIso={q.expires_at}
+                                label="closes"
+                              />
+                            </>
+                          )}
+                        </p>
+                      </div>
+                      <div className="shrink-0">{renderActionForSolo(q)}</div>
+                    </div>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </div>
+        )}
+
+        {showCoopBoard && (
+          <div>
+            <div className="mb-2 flex items-center gap-2">
+              <Users className="h-4 w-4 text-muted-foreground" />
+              <h3 className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+                Co-op
+              </h3>
+            </div>
+            {coopQuests.length === 0 ? (
+              <EmptyState
+                icon={Users}
+                title="No co-op quests right now"
+                description="Co-op quests collect enrollments before matchmaking forms teams."
+              />
+            ) : (
+              <ul className="divide-y divide-border overflow-hidden rounded-lg border border-border bg-card">
+                {coopQuests.map((q) => (
+                  <li key={q.id}>
+                    <div className="flex items-start justify-between gap-4 p-5">
+                      <div className="min-w-0 flex-1">
+                        <div className="flex flex-wrap items-center gap-2">
+                          <Link
+                            href={`/student/quests/${q.id}`}
+                            className="min-w-0 truncate text-sm font-medium hover:text-primary"
+                          >
+                            {q.title}
+                          </Link>
+                          {isNewlyPublished(q.created_at) && <NewBadge />}
+                        </div>
+                        <p className="mt-1 text-xs text-muted-foreground">
+                          +{q.xp_reward} XP · teams up to {q.max_team_size}
                           {' · '}
-                          <LiveCountdown
-                            targetIso={q.expires_at}
-                            label="closes"
-                          />
-                        </>
-                      )}
-                    </p>
-                  </div>
-                  <div className="shrink-0">{renderActionForSolo(q)}</div>
-                </div>
-              </li>
-            ))}
-          </ul>
+                          {enrolledCount(q)} enrolled
+                          {q.expires_at && (
+                            <>
+                              {' · matchmaking '}
+                              <LiveCountdown targetIso={q.expires_at} />
+                            </>
+                          )}
+                        </p>
+                      </div>
+                      <div className="shrink-0">{renderActionForCoop(q)}</div>
+                    </div>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </div>
         )}
       </section>
 
-      <section>
-        <div className="mb-3 flex items-center gap-2">
-          <Users className="h-4 w-4 text-muted-foreground" />
-          <h2 className="text-sm font-semibold uppercase tracking-wide text-muted-foreground">
-            Co-op board
-          </h2>
-        </div>
-        {coopQuests.length === 0 ? (
-          <EmptyState
-            icon={Users}
-            title="No co-op quests right now"
-            description="Co-op quests collect enrollments before matchmaking forms teams."
-          />
-        ) : (
-          <ul className="divide-y divide-border overflow-hidden rounded-lg border border-border bg-card">
-            {coopQuests.map((q) => (
-              <li key={q.id}>
-                <div className="flex items-start justify-between gap-4 p-5">
-                  <div className="min-w-0 flex-1">
-                    <Link
-                      href={`/student/quests/${q.id}`}
-                      className="block truncate text-sm font-medium hover:text-primary"
-                    >
-                      {q.title}
-                    </Link>
-                    <p className="mt-1 text-xs text-muted-foreground">
-                      +{q.xp_reward} XP · teams up to {q.max_team_size}
-                      {' · '}
-                      {enrolledCount(q)} enrolled
-                      {q.expires_at && (
-                        <>
-                          {' · matchmaking '}
-                          <LiveCountdown targetIso={q.expires_at} />
-                        </>
-                      )}
-                    </p>
+      {/* Completed accordion */}
+      {completed.length > 0 && (
+        <section>
+          <details className="group overflow-hidden rounded-lg border border-border bg-card">
+            <summary className="flex cursor-pointer list-none items-center justify-between gap-3 px-5 py-4 transition-colors hover:bg-muted/40">
+              <div className="flex items-center gap-2">
+                <Trophy className="h-4 w-4 text-amber-500" />
+                <span className="text-sm font-semibold">
+                  Completed
+                </span>
+                <span className="rounded-full bg-muted px-2 py-0.5 text-xs font-medium tabular-nums text-muted-foreground">
+                  {completed.length}
+                </span>
+                <span className="text-xs text-muted-foreground">
+                  · {completedXp.toLocaleString()} XP earned
+                </span>
+              </div>
+              <ChevronDown className="h-4 w-4 text-muted-foreground transition-transform group-open:rotate-180" />
+            </summary>
+            <ul className="divide-y divide-border border-t border-border">
+              {completed.map((c) => (
+                <li
+                  key={c.acceptanceId}
+                  className="flex items-center justify-between gap-3 px-5 py-3 text-sm"
+                >
+                  <Link
+                    href={`/student/quests/${c.questId}`}
+                    className="min-w-0 truncate font-medium text-muted-foreground hover:text-foreground"
+                  >
+                    {c.title}
+                  </Link>
+                  <div className="flex shrink-0 items-center gap-2 text-xs text-muted-foreground">
+                    <span className="capitalize">{c.questType}</span>
+                    <span className="rounded-full bg-emerald-50 px-2 py-0.5 font-medium tabular-nums text-emerald-900">
+                      +{c.xpReward}
+                    </span>
                   </div>
-                  <div className="shrink-0">{renderActionForCoop(q)}</div>
-                </div>
-              </li>
-            ))}
-          </ul>
-        )}
-      </section>
+                </li>
+              ))}
+            </ul>
+          </details>
+        </section>
+      )}
     </div>
+  );
+}
+
+function NewBadge() {
+  return (
+    <span className="inline-flex items-center gap-1 rounded-full bg-emerald-100 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide text-emerald-900">
+      <Sparkles className="h-2.5 w-2.5" />
+      New
+    </span>
   );
 }
