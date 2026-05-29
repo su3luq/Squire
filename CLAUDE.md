@@ -20,12 +20,14 @@ RankedLearning is a gamified learning platform for a single teacher (the develop
 | Web build | Next.js on Vercel |
 | Language | TypeScript everywhere |
 | Styling | Tailwind CSS v4 (CSS-first config via `@theme` in `src/app/globals.css`, no `tailwind.config.ts`) |
-| UI primitives | shadcn/ui (in `src/components/ui/`) |
+| UI primitives | shadcn/ui (in `src/components/ui/`) — base-nova style. Installed: alert, alert-dialog, badge, button, card, dropdown-menu, form, input, label, progress, sonner, tabs, textarea, tooltip |
+| Toasts | `sonner` mounted at `src/app/layout.tsx`. Tooltip provider mounts there too. |
 | Forms | react-hook-form + zod |
 | Backend | Supabase (Postgres + Auth + Realtime + Edge Functions) — three client patterns: browser / server / middleware. Storage is NOT used; see "Known constraints" below. |
 | Push notifications | Web Push API + Service Worker (shipped) |
 | SRS algorithm | FSRS-4.5 via `ts-fsrs` package |
-| Rich text editor | MDXEditor (Lexical-based, markdown round-trip) on all five authoring surfaces |
+| Rich text editor | MDXEditor (Lexical-based, markdown round-trip) on all five authoring surfaces. Dynamic-imported via `src/components/mdx-editor.tsx` wrapper → `mdx-editor-impl.tsx` to keep the Lexical bundle off the initial payload. |
+| Celebration effects | `canvas-confetti` for quest-pass bursts; `src/components/celebration-gate.tsx` polls unread `rank_up` + `submission_passed` notifications on student app load. |
 | AI-likelihood detection | Deferred to v2 — `quest_submissions.ai_likelihood_score` stays NULL |
 
 **Supabase project ID:** `dicufymnejhrkrakgluu` (region: ap-northeast-2 / Seoul)
@@ -51,6 +53,8 @@ RankedLearning is a gamified learning platform for a single teacher (the develop
 14. **Create teacher accounts only via `SELECT public.admin_create_teacher(email, password, full_name)`.** Never INSERT directly into `auth.users` — GoTrue's row-scan crashes on NULL token columns. The function handles this and other GoTrue quirks; see migration 013.
 15. **Lessons are class-agnostic content; unlocking is per-class.** A lesson is a bundle of cards with no class affiliation. The `lesson_unlocks(lesson_id, class_id, unlocked_at)` join table records when each lesson is unlocked for each class. Teaching workflow: prep lesson once, unlock for class A when you teach class A, unlock for class B (separately, later) when you teach class B. RLS gates student card access on `lesson_unlocks` rows for the student's class. See migration 014.
 16. **Review-XP must always be awarded via the `submit_mcq_answer` SECURITY DEFINER function.** Never insert into `review_attempts` or `xp_ledger` directly from client code. The function is the audit + validation chokepoint: it verifies card visibility, computes correctness against the teacher-only `correct_choice`, inserts the attempt row, and writes the +5 XP ledger atomically. See migration 015.
+17. **The rank ladder is dynamic.** Tiers, XP thresholds, gradients, and optional names live in the `ranks` table (migration 049) and are edited by teachers at `/teacher/settings/ranks`. The `compute_rank_from_xp()` function reads the table; `src/lib/ranks-config.ts` mirrors it on the client via `getRanksMap()` + `getRankProgress()`. The legacy hardcoded ladder in `src/lib/ranks.ts` is kept for fallback only — prefer the dynamic helpers for new code.
+18. **Streak bookkeeping is trigger-driven.** `profiles.streak_days` + `streak_last_day` are updated by the `trg_update_review_streak` trigger on `review_attempts` INSERT (migration 050). The trigger does the day-boundary math in Saigon time. Never write to these columns directly from app code. The display layer in `src/lib/streak.ts` reconciles the cached value against today/yesterday so a stale streak can't lie between visits.
 
 ---
 
@@ -76,7 +80,10 @@ RLS policies will enforce all of these. Never expose teacher-only columns in any
 
 ## Core Mechanics Reference
 
-### XP and Ranks (7 tiers — lower number = higher rank, per migration 040)
+### XP and Ranks (7 tiers default — dynamic via the `ranks` table, per migration 049)
+
+Default seeded ladder (lower number = higher rank, per migration 040):
+
 | Rank | XP threshold |
 |---|---|
 | 1 | 6,000+ (top) |
@@ -87,7 +94,7 @@ RLS policies will enforce all of these. Never expose teacher-only columns in any
 | 6 | 200 |
 | 7 | 0 (start) |
 
-Students start at Rank 7 and climb toward Rank 1. Ranks are shown by number only — no English names. Source of truth: `compute_rank_from_xp()` Postgres function + `src/lib/ranks.ts`.
+Students start at Rank 7 and climb toward Rank 1. Ranks are shown by number; an optional `name` column on the `ranks` table can override the display. The teacher edits the ladder (tier count, XP thresholds, gradient colors, names) at `/teacher/settings/ranks`. Source of truth: the `ranks` table + `compute_rank_from_xp()` Postgres function + `src/lib/ranks-config.ts` (`getRanksMap()`, `getRankProgress()`).
 
 XP awarded via `xp_ledger` inserts. A DB trigger auto-updates `profiles.xp_total` and `current_rank`. **Never write to `xp_total` or `current_rank` directly — always insert into `xp_ledger`.**
 
@@ -124,6 +131,13 @@ After all MCQs on a card are answered in one cycle: wrong-on-any → FSRS rating
 
 Missed reviews are tracked: 4 days in a row where the student has due cards and doesn't open any review session → teacher gets a notification.
 
+### Daily Review Streak (migration 050)
+`profiles.streak_days` + `streak_last_day` track consecutive Saigon-days with ≥1 review attempt. The `trg_update_review_streak` trigger fires on every `review_attempts` INSERT: same-day attempts are no-ops; a gap of exactly 1 day → +1; any larger gap → reset to 1. Display lives in:
+- `src/components/streak-widget.tsx` — flame + day count, persistent in the student sidebar (full + icon variants) and mobile header
+- `src/components/daily-review-goal.tsx` — replaces the static "Today's review" card with state-aware framing (alive / at-risk / broken / no-cards-due) and a 5-card daily goal
+
+`src/lib/streak.ts::computeEffectiveStreak()` is the canonical read helper — it reconciles the cached column against today/yesterday so a stale streak doesn't lie between visits without writing to the DB.
+
 ### Failed Quests
 - Teacher marks `quest_submissions.status = 'failed'` with required `teacher_feedback`.
 - Student's `quest_acceptances` row stays `active` (NOT failed). They can resubmit.
@@ -134,9 +148,9 @@ Missed reviews are tracked: 4 days in a row where the student has due cards and 
 
 ## Database Schema (already created)
 
-20 tables in `public` schema. **Do not run migrations to alter the schema without asking the user first.** Schema reference: see `docs/SCHEMA.md`.
+21 tables in `public` schema. **Do not run migrations to alter the schema without asking the user first.** Schema reference: see `docs/SCHEMA.md`.
 
-Key tables: `profiles`, `classes`, `lessons`, `lesson_unlocks`, `review_cards`, `card_quiz_questions`, `card_reviews`, `review_attempts`, `quests`, `coop_quest_instances`, `coop_member_drafts`, `coop_team_notes`, `quest_acceptances`, `quest_submissions`, `xp_ledger`, `notifications`, `push_tokens`, `teacher_notes`, `student_assessments`, `app_settings`.
+Key tables: `profiles` (incl. `streak_days` + `streak_last_day` from migration 050), `classes`, `lessons`, `lesson_unlocks`, `review_cards`, `card_quiz_questions`, `card_reviews`, `review_attempts`, `quests`, `coop_quest_instances`, `coop_member_drafts`, `coop_team_notes`, `quest_acceptances`, `quest_submissions`, `xp_ledger`, `notifications`, `push_tokens`, `teacher_notes`, `student_assessments`, `app_settings`, `ranks` (dynamic rank ladder, migration 049).
 
 **RLS is enabled on all tables via migration 008** (`supabase/migrations/008_rls_policies_and_assessments_split.sql`). Helper functions (`is_teacher`, `user_class_id`, `users_share_class`, `lookup_class_by_invite`, `is_username_available`), the `public_profiles` security-barrier view, and the `student_assessments` split are documented in `docs/SCHEMA.md`.
 
@@ -156,8 +170,20 @@ All major planned work is shipped. The app is in polish / maintenance mode.
 | 6 — Web Push | ✅ Shipped | See `docs/PUSH_SETUP.md` |
 | 7 — UI redesign + perf | ✅ Shipped | See `docs/PHASE_7_UI_AND_PERF.md` |
 | 8 — MDXEditor + coop drafts | ✅ Shipped | See `docs/PHASE_8_EDITOR.md` |
+| 9 — Gamification overhaul + perf hardening (2026-05-30) | ✅ Shipped | Six-pass arc; ranks dynamic (migration 049), streak system (050), DB perf hardening (051 + 052). Detail in commit log `cb92249..26163e4`. |
 
 `docs/PLAN.md` and the per-phase docs are kept as historical reference; they describe what was built and why. Day-to-day work today is feature polish, bug fixes, and small UX improvements rather than phased shipping.
+
+### Phase 9 — Gamification overhaul (six passes, 2026-05-29 → 2026-05-30)
+
+The "ranked-game dopamine, calm-academic shell" hybrid pivot. Restructured the student-facing surface around ladder identity + competitive tension; cleared the Phase 7 Stage 5 backlog on the way out.
+
+1. **Foundation primitives** — added shadcn `badge`, `sonner`, `tooltip`, `dropdown-menu`, `tabs`; built `StatusChip` / `SectionHeader` / `ConfirmButton` / `ToggleChipGroup`. Migrated 7 chip-span sites + 6 destructive confirm dialogs.
+2. **Identity + rank prominence** — `RankEmblem`, `RankHero` (student home centerpiece), `ClosestRival` ("60 XP behind X — 1 quest away"), `LeaderboardPodium` (top-3 with crown/medals), global/class scope toggle on leaderboard. Server helper: `getRankProgress()`.
+3. **The dopamine loop** — animated `+5 XP` Sonner toast on correct MCQ, theatrical rank-up modal driven by migration-048 notifications, confetti on quest pass via `canvas-confetti`, `RecentWins` feed on student home, opt-in sound preference (no audio assets yet, just the toggle infra).
+4. **Streak + daily loop** — migration 050 + trigger; `StreakWidget` persistent in sidebar + mobile header; `DailyReviewGoal` with five state-aware framings + 5-card daily goal. Backfill function recomputes historical streaks.
+5. **A11y + convenience polish** — mobile header sign-out as icon, toasts on every previously-silent mutation (sign-out / accept / enroll / submit / mark-read / settings saves), single empty state when both quest boards empty, skeleton loaders for `/student`, `/leaderboard`, `/teacher/analytics`, heatmap + sparkline `aria-label`s.
+6. **Performance** — migrations 051 + 052: 28 RLS policies rewritten with `(select auth.uid())`, 4 FK indexes added, 2 duplicate indexes dropped; MDXEditor wrapped in `next/dynamic` so its Lexical bundle no longer loads on pages that might-but-don't render an editor.
 
 ## Known Constraints
 

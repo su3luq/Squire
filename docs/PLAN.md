@@ -4,18 +4,19 @@ Full project plan as agreed between teacher and architect (Claude). This is the 
 
 ---
 
-## Current Status (2026-05-28)
+## Current Status (2026-05-30)
 
-All phases in §8 below are **shipped**. The app is in polish / maintenance mode. The phase write-ups remain as historical reference — they describe what was built and why. Per-phase deep dives:
+All phases in §8 below are **shipped**, plus a Phase 9 gamification overhaul + performance hardening track completed 2026-05-30 (six-pass arc, summary in `CLAUDE.md`). The app is in polish / maintenance mode. The phase write-ups remain as historical reference — they describe what was built and why. Per-phase deep dives:
 
 - `docs/PHASE-2-PLAN.md` — markdown content model (Lessons & Cards)
 - `docs/PHASE-4-PLAN.md` — solo quest loop
 - `docs/PHASE_7_UI_AND_PERF.md` — UI redesign + performance pass
 - `docs/PHASE_8_EDITOR.md` — MDXEditor migration + co-op per-member drafts
 
-Two notable deviations from the original plan:
+Three notable deviations from the original plan:
 1. **AI-likelihood classifier (Phase 5)** — deferred to v2. `quest_submissions.ai_likelihood_score` stays NULL.
 2. **Supabase Storage** — unusable on this project. Avatars are stored as base64 data URLs in `profiles.avatar_url`. See "Known Constraints" in `CLAUDE.md`. Migrations 041–047 trail the debugging.
+3. **Rank ladder is dynamic** — migration 049 moved the seven-tier hardcoded ladder into the `ranks` table, edited by teachers at `/teacher/settings/ranks`. The XP thresholds, tier count, gradient colors, and optional names are all configurable. Source of truth: the table + `compute_rank_from_xp()` + `src/lib/ranks-config.ts`.
 
 ---
 
@@ -54,16 +55,16 @@ No mandatory paid services. No native-app dev fees.
 
 ## 3. Data Model
 
-20 tables. See `docs/SCHEMA.md` for full column-by-column reference. Logical groupings:
+21 tables. See `docs/SCHEMA.md` for full column-by-column reference. Logical groupings:
 
-**Users & Classes:** `classes`, `profiles`, `teacher_notes`, `student_assessments`
+**Users & Classes:** `classes`, `profiles` (+ `streak_days` / `streak_last_day` from migration 050), `teacher_notes`, `student_assessments`
 **Curriculum:** `lessons`, `lesson_unlocks`, `review_cards`, `card_quiz_questions`, `card_reviews`
 **Quests:** `quests`, `coop_quest_instances`, `coop_member_drafts`, `coop_team_notes`, `quest_acceptances`, `quest_submissions`
 **Engagement:** `review_attempts`, `xp_ledger`
 **Comms:** `notifications`, `push_tokens`
-**Config:** `app_settings`
+**Config:** `app_settings`, `ranks` (dynamic rank ladder, migration 049)
 
-All tables have RLS enabled (foundation: migration 008).
+All tables have RLS enabled (foundation: migration 008; perf-hardened in migrations 051 + 052 — every policy now wraps `auth.uid()` in `(select auth.uid())` so Postgres caches the user id once per query instead of per row).
 
 ---
 
