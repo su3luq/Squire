@@ -1,157 +1,42 @@
 'use client';
 
-import { useCallback, useEffect, useRef } from 'react';
-import {
-  MDXEditor,
-  type MDXEditorMethods,
-  headingsPlugin,
-  listsPlugin,
-  quotePlugin,
-  thematicBreakPlugin,
-  linkPlugin,
-  linkDialogPlugin,
-  imagePlugin,
-  tablePlugin,
-  codeBlockPlugin,
-  markdownShortcutPlugin,
-  toolbarPlugin,
-  UndoRedo,
-  BoldItalicUnderlineToggles,
-  BlockTypeSelect,
-  CreateLink,
-  InsertImage,
-  InsertTable,
-  InsertThematicBreak,
-  ListsToggle,
-  Separator,
-} from '@mdxeditor/editor';
-import '@mdxeditor/editor/style.css';
+import dynamic from 'next/dynamic';
 import { cn } from '@/lib/utils';
 
-// Markdown editor with a live formatted preview as you type. Backed by
-// MDXEditor (Lexical). Markdown remains the source of truth — the editor
-// parses on mount and serializes on change. The renderer (react-markdown)
-// continues to own the read paths.
+// Thin dynamic-import wrapper around the real MDXEditor component.
+//
+// MDXEditor pulls Lexical + a stack of plugins (~hundreds of KB gzipped).
+// We don't want that in the initial bundle of any page that *might* show
+// an editor — only the pages that actually mount one.
+//
+// Splitting the wrapper from the implementation (mdx-editor-impl.tsx)
+// lets `next/dynamic` defer the heavy module until render. SSR is off
+// because MDXEditor relies on browser-only APIs.
 
 type Props = {
   value: string;
   onChange: (markdown: string) => void;
   editable?: boolean;
-  /** Extra classes on the outer wrapper. */
   className?: string;
 };
 
-export function MdxEditor({
-  value,
-  onChange,
-  editable = true,
-  className,
-}: Props) {
-  const ref = useRef<MDXEditorMethods>(null);
-
-  // MDXEditor fires onChange synchronously on every keystroke. Propagating
-  // that straight into a parent form's state causes the editor subtree to
-  // reconcile on every key, which is noticeable in dev mode. Debounce by
-  // ~150ms; flush immediately on blur so a "save" click never reads stale.
-  const onChangeRef = useRef(onChange);
-  useEffect(() => {
-    onChangeRef.current = onChange;
-  });
-  const latestMdRef = useRef(value);
-  const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-
-  useEffect(() => {
-    return () => {
-      if (debounceRef.current) clearTimeout(debounceRef.current);
-    };
-  }, []);
-
-  const handleChange = useCallback((md: string) => {
-    latestMdRef.current = md;
-    if (debounceRef.current) clearTimeout(debounceRef.current);
-    debounceRef.current = setTimeout(() => {
-      onChangeRef.current(latestMdRef.current);
-      debounceRef.current = null;
-    }, 150);
-  }, []);
-
-  const flush = useCallback(() => {
-    if (debounceRef.current) {
-      clearTimeout(debounceRef.current);
-      debounceRef.current = null;
-      onChangeRef.current(latestMdRef.current);
-    }
-  }, []);
-
-  return (
-    <div
-      onBlur={flush}
-      className={cn(
-        'rounded-md border border-input bg-card text-sm focus-within:border-ring focus-within:ring-1 focus-within:ring-ring',
-        // The shipped MDXEditor stylesheet uses its own design tokens. We
-        // pull them into our brand palette where it matters most.
-        '[--accentBase:var(--color-primary)] [--accentBgSubtle:color-mix(in_oklch,var(--color-primary)_10%,transparent)] [--accentLine:var(--color-border)] [--accentBorder:var(--color-border)] [--accentBorderHover:var(--color-border)] [--accentSolid:var(--color-primary)] [--accentSolidHover:var(--color-primary)] [--accentText:var(--color-primary)] [--accentTextContrast:var(--color-primary-foreground)]',
-        className,
-      )}
-    >
-      <MDXEditor
-        ref={ref}
-        markdown={value}
-        onChange={handleChange}
-        readOnly={!editable}
-        contentEditableClassName={cn(
-          'prose prose-sm max-w-none px-4 py-3',
-          'prose-headings:font-semibold prose-headings:tracking-tight',
-          'prose-p:leading-relaxed',
-          'prose-a:text-primary prose-a:no-underline hover:prose-a:underline',
-          'prose-code:rounded prose-code:bg-muted prose-code:px-1 prose-code:py-0.5 prose-code:font-mono prose-code:text-[0.875em] prose-code:before:content-none prose-code:after:content-none',
-          'prose-pre:bg-muted prose-pre:text-foreground',
-          'prose-blockquote:border-l-4 prose-blockquote:border-primary/30 prose-blockquote:bg-muted/40 prose-blockquote:py-1 prose-blockquote:px-3 prose-blockquote:not-italic prose-blockquote:text-foreground',
-          'prose-ul:my-3 prose-ol:my-3 prose-li:my-1',
-          'focus:outline-none',
+const MdxEditorInner = dynamic<Props>(
+  () => import('./mdx-editor-impl').then((m) => m.MdxEditor),
+  {
+    ssr: false,
+    loading: () => (
+      <div
+        className={cn(
+          'flex min-h-32 items-center justify-center rounded-md border border-input bg-card text-xs text-muted-foreground',
         )}
-        plugins={[
-          headingsPlugin({ allowedHeadingLevels: [1, 2, 3, 4] }),
-          listsPlugin(),
-          quotePlugin(),
-          thematicBreakPlugin(),
-          linkPlugin(),
-          linkDialogPlugin(),
-          imagePlugin(),
-          tablePlugin(),
-          codeBlockPlugin({ defaultCodeBlockLanguage: 'text' }),
-          markdownShortcutPlugin(),
-          toolbarPlugin({
-            toolbarContents: () => (
-              <>
-                <UndoRedo />
-                <Separator />
-                <BoldItalicUnderlineToggles />
-                <Separator />
-                <BlockTypeSelect />
-                <Separator />
-                <ListsToggle />
-                <Separator />
-                <CreateLink />
-                <InsertImage />
-                <InsertTable />
-                <InsertThematicBreak />
-              </>
-            ),
-          }),
-        ]}
-      />
-      <style jsx>{`
-        /* Toolbar styling kept — matches our brand palette and lets
-         * buttons wrap to a second row on narrow viewports. All
-         * editor-content sizing is left to MDXEditor's defaults. */
-        :global(.mdxeditor-toolbar) {
-          border-bottom: 1px solid var(--color-border);
-          background: var(--color-card);
-          flex-wrap: wrap;
-          gap: 4px;
-        }
-      `}</style>
-    </div>
-  );
+        aria-busy="true"
+      >
+        Loading editor…
+      </div>
+    ),
+  },
+);
+
+export function MdxEditor(props: Props) {
+  return <MdxEditorInner {...props} />;
 }
