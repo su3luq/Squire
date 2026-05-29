@@ -2,6 +2,7 @@
 
 import { useRouter } from 'next/navigation';
 import { LogOut } from 'lucide-react';
+import { toast } from 'sonner';
 import { signOut } from '@/lib/auth';
 import { Button } from '@/components/ui/button';
 
@@ -9,6 +10,7 @@ export function SignOutButton({ iconOnly = false }: { iconOnly?: boolean } = {})
   const router = useRouter();
   async function handleSignOut() {
     await signOut();
+    toast.success('Signed out');
     router.refresh();
   }
   if (iconOnly) {

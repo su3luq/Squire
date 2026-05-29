@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useTransition } from 'react';
+import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -25,8 +26,10 @@ export function EmailSettings({ currentEmail }: { currentEmail: string }) {
       const r = await updateEmail({ currentPassword, newEmail });
       if (r.error) {
         setError(r.error);
+        toast.error(r.error);
         return;
       }
+      toast.success('Confirmation links sent — check both inboxes');
       setMessage(
         'Confirmation links sent to both your current and new email addresses. The change takes effect once you confirm on your new address.',
       );

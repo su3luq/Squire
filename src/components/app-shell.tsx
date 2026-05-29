@@ -178,8 +178,11 @@ export function AppShell({
             RankedLearning
           </Link>
           <div className="flex items-center gap-1">
+            {streak && streak.status !== 'broken' && streak.status !== 'none' && (
+              <StreakWidget streak={streak} variant="sidebar-icon" />
+            )}
             <InboxButton count={unreadCount} />
-            <SignOutButton />
+            <SignOutButton iconOnly />
           </div>
         </header>
         <main className="px-4 py-6 pb-24 md:px-8 md:py-8 md:pb-8">

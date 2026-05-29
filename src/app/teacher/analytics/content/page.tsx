@@ -432,6 +432,8 @@ function Heatmap({
             return (
               <div
                 key={h}
+                role="img"
+                aria-label={`${label} ${h}:00 — ${cnt} ${cnt === 1 ? 'review' : 'reviews'}`}
                 title={`${label} ${h}:00 — ${cnt} reviews`}
                 className={cn('aspect-square rounded-sm', bg)}
               />

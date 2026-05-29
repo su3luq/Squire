@@ -2,6 +2,7 @@
 
 import { useState, useTransition } from 'react';
 import { useRouter } from 'next/navigation';
+import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
 import { MdxEditor } from '@/components/mdx-editor';
 import { countWords } from '@/lib/word-count';
@@ -44,8 +45,10 @@ export function SubmissionForm({
       });
       if (result.error) {
         setError(result.error);
+        toast.error(result.error);
         return;
       }
+      toast.success('Submitted — waiting on teacher review');
       router.refresh();
     });
   }

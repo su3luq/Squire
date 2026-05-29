@@ -591,6 +591,8 @@ function PulseMini({
         {buckets.map((v, i) => (
           <div
             key={i}
+            role="img"
+            aria-label={`${labels[i]} — ${v} ${label.toLowerCase()}`}
             title={`${labels[i]} — ${v}`}
             className="flex h-full items-end"
           >

@@ -1,6 +1,7 @@
 'use client';
 
 import { useTransition } from 'react';
+import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
 import { markAllNotificationsRead } from './actions';
 
@@ -10,6 +11,7 @@ export function MarkAllReadButton() {
   function handleClick() {
     startTransition(async () => {
       await markAllNotificationsRead();
+      toast.success('Inbox cleared');
     });
   }
 

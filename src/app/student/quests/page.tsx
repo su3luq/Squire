@@ -418,6 +418,16 @@ export default async function StudentQuestsPage({
           }
         />
 
+        {filter === 'all' &&
+        soloQuests.length === 0 &&
+        coopQuests.length === 0 ? (
+          <EmptyState
+            icon={Sword}
+            title="No quests available right now"
+            description="New quests appear here as your teacher publishes them. Check back later."
+          />
+        ) : (
+          <>
         {showSoloBoard && (
           <div className="mb-6">
             <SectionHeader
@@ -519,6 +529,8 @@ export default async function StudentQuestsPage({
               </ul>
             )}
           </div>
+        )}
+          </>
         )}
       </section>
 

@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useTransition } from 'react';
+import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -30,9 +31,11 @@ export function PasswordSettings() {
       const r = await updatePassword({ currentPassword, newPassword });
       if (r.error) {
         setError(r.error);
+        toast.error(r.error);
         return;
       }
-      setMessage('Password updated.');
+      toast.success('Password updated');
+      setMessage(null);
       setCurrentPassword('');
       setNewPassword('');
       setConfirmPassword('');
