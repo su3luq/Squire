@@ -12,6 +12,7 @@ import { AvatarSettings } from './avatar-settings';
 import { PasswordSettings } from './password-settings';
 import { EmailSettings } from './email-settings';
 import { SoundSettings } from './sound-settings';
+import { ThemeSettings } from './theme-settings';
 
 export const dynamic = 'force-dynamic';
 
@@ -68,6 +69,15 @@ export default async function SettingsPage() {
         </CardHeader>
         <CardContent>
           <EmailSettings currentEmail={profile.email ?? user.email ?? ''} />
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader>
+          <CardTitle className="text-base">Appearance</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <ThemeSettings />
         </CardContent>
       </Card>
 

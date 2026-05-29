@@ -49,74 +49,112 @@
   --radius-4xl: calc(var(--radius) * 2.6);
 }
 
+/*
+ * RankedLearning brand palette — warm bronze on cream / dark.
+ *
+ * Inspiration: anthropic.com's identity. Warm cream parchment shell,
+ * deep warm brown for text, a single warm-orange-bronze accent. The
+ * shell is restrained (academic-calm) so the accent reads as the
+ * brand mark wherever it appears. Dark mode inverts the shell while
+ * keeping the accent warm.
+ *
+ * All tokens use OKLCH so accent shifts between light and dark mode
+ * stay perceptually equal. The accent hue is constant (≈45°); only
+ * lightness changes mode-to-mode.
+ */
 :root {
-  --background: oklch(1 0 0);
-  --foreground: oklch(0.145 0 0);
-  --card: oklch(1 0 0);
-  --card-foreground: oklch(0.145 0 0);
-  --popover: oklch(1 0 0);
-  --popover-foreground: oklch(0.145 0 0);
-  /* Brand: forest green. Single accent across the app — restraint over decoration. */
-  --primary: oklch(0.52 0.13 152);
-  --primary-foreground: oklch(0.985 0 0);
-  --secondary: oklch(0.97 0 0);
-  --secondary-foreground: oklch(0.205 0 0);
-  --muted: oklch(0.97 0 0);
-  --muted-foreground: oklch(0.556 0 0);
-  --accent: oklch(0.97 0 0);
-  --accent-foreground: oklch(0.205 0 0);
-  --destructive: oklch(0.577 0.245 27.325);
-  --border: oklch(0.922 0 0);
-  --input: oklch(0.922 0 0);
-  --ring: oklch(0.65 0.12 152);
-  --chart-1: oklch(0.52 0.13 152);
-  --chart-2: oklch(0.65 0.1 152);
-  --chart-3: oklch(0.439 0 0);
-  --chart-4: oklch(0.371 0 0);
-  --chart-5: oklch(0.269 0 0);
+  /* Surfaces */
+  --background: oklch(0.975 0.008 75);
+  --foreground: oklch(0.23 0.012 35);
+  --card: oklch(0.99 0.005 75);
+  --card-foreground: oklch(0.23 0.012 35);
+  --popover: oklch(0.99 0.005 75);
+  --popover-foreground: oklch(0.23 0.012 35);
+
+  /* Bronze accent — warm orange-clay, closer to Claude's brand orange
+   * than the metallic-yellow that "bronze" usually evokes. */
+  --primary: oklch(0.62 0.13 45);
+  --primary-foreground: oklch(0.985 0.005 75);
+
+  /* Neutral warm surfaces */
+  --secondary: oklch(0.94 0.012 75);
+  --secondary-foreground: oklch(0.25 0.012 35);
+  --muted: oklch(0.94 0.012 75);
+  --muted-foreground: oklch(0.50 0.013 40);
+  --accent: oklch(0.94 0.012 75);
+  --accent-foreground: oklch(0.22 0.012 35);
+
+  /* Borders / inputs / focus ring */
+  --border: oklch(0.89 0.013 70);
+  --input: oklch(0.89 0.013 70);
+  --ring: oklch(0.62 0.13 45);
+
+  /* System tones (kept slightly warmer than pure red) */
+  --destructive: oklch(0.55 0.21 27);
+
+  /* Charts — accent-led with neutral warm backups so the brand is
+   * coherent in analytics views as well as in transactional UI. */
+  --chart-1: oklch(0.62 0.13 45);
+  --chart-2: oklch(0.72 0.09 45);
+  --chart-3: oklch(0.50 0.013 40);
+  --chart-4: oklch(0.40 0.013 40);
+  --chart-5: oklch(0.30 0.013 40);
+
   --radius: 0.5rem;
-  --sidebar: oklch(0.985 0 0);
-  --sidebar-foreground: oklch(0.145 0 0);
-  --sidebar-primary: oklch(0.52 0.13 152);
-  --sidebar-primary-foreground: oklch(0.985 0 0);
-  --sidebar-accent: oklch(0.97 0 0);
-  --sidebar-accent-foreground: oklch(0.205 0 0);
-  --sidebar-border: oklch(0.922 0 0);
-  --sidebar-ring: oklch(0.65 0.12 152);
+
+  /* Sidebar mirrors the main shell but a touch warmer / less stark
+   * so the rail reads as a distinct surface against the main pane. */
+  --sidebar: oklch(0.965 0.010 75);
+  --sidebar-foreground: oklch(0.23 0.012 35);
+  --sidebar-primary: oklch(0.62 0.13 45);
+  --sidebar-primary-foreground: oklch(0.985 0.005 75);
+  --sidebar-accent: oklch(0.94 0.012 75);
+  --sidebar-accent-foreground: oklch(0.22 0.012 35);
+  --sidebar-border: oklch(0.89 0.013 70);
+  --sidebar-ring: oklch(0.62 0.13 45);
 }
 
 .dark {
-  --background: oklch(0.145 0 0);
-  --foreground: oklch(0.985 0 0);
-  --card: oklch(0.205 0 0);
-  --card-foreground: oklch(0.985 0 0);
-  --popover: oklch(0.205 0 0);
-  --popover-foreground: oklch(0.985 0 0);
-  --primary: oklch(0.922 0 0);
-  --primary-foreground: oklch(0.205 0 0);
-  --secondary: oklch(0.269 0 0);
-  --secondary-foreground: oklch(0.985 0 0);
-  --muted: oklch(0.269 0 0);
-  --muted-foreground: oklch(0.708 0 0);
-  --accent: oklch(0.269 0 0);
-  --accent-foreground: oklch(0.985 0 0);
-  --destructive: oklch(0.704 0.191 22.216);
-  --border: oklch(1 0 0 / 10%);
-  --input: oklch(1 0 0 / 15%);
-  --ring: oklch(0.556 0 0);
-  --chart-1: oklch(0.87 0 0);
-  --chart-2: oklch(0.556 0 0);
-  --chart-3: oklch(0.439 0 0);
-  --chart-4: oklch(0.371 0 0);
-  --chart-5: oklch(0.269 0 0);
-  --sidebar: oklch(0.205 0 0);
-  --sidebar-foreground: oklch(0.985 0 0);
-  --sidebar-primary: oklch(0.488 0.243 264.376);
-  --sidebar-primary-foreground: oklch(0.985 0 0);
-  --sidebar-accent: oklch(0.269 0 0);
-  --sidebar-accent-foreground: oklch(0.985 0 0);
-  --sidebar-border: oklch(1 0 0 / 10%);
-  --sidebar-ring: oklch(0.556 0 0);
+  /* Surfaces — warm dark, never pure black. */
+  --background: oklch(0.20 0.012 35);
+  --foreground: oklch(0.95 0.008 75);
+  --card: oklch(0.24 0.012 35);
+  --card-foreground: oklch(0.95 0.008 75);
+  --popover: oklch(0.24 0.012 35);
+  --popover-foreground: oklch(0.95 0.008 75);
+
+  /* Accent — slightly brighter in dark so it punches against the
+   * warm-dark shell. Hue unchanged. */
+  --primary: oklch(0.68 0.13 45);
+  --primary-foreground: oklch(0.18 0.012 35);
+
+  --secondary: oklch(0.28 0.012 35);
+  --secondary-foreground: oklch(0.95 0.008 75);
+  --muted: oklch(0.28 0.012 35);
+  --muted-foreground: oklch(0.72 0.010 55);
+  --accent: oklch(0.28 0.012 35);
+  --accent-foreground: oklch(0.95 0.008 75);
+
+  --border: oklch(0.34 0.012 35);
+  --input: oklch(0.34 0.012 35);
+  --ring: oklch(0.68 0.13 45);
+
+  --destructive: oklch(0.65 0.20 27);
+
+  --chart-1: oklch(0.68 0.13 45);
+  --chart-2: oklch(0.78 0.09 45);
+  --chart-3: oklch(0.72 0.010 55);
+  --chart-4: oklch(0.55 0.010 55);
+  --chart-5: oklch(0.42 0.010 55);
+
+  --sidebar: oklch(0.22 0.012 35);
+  --sidebar-foreground: oklch(0.95 0.008 75);
+  --sidebar-primary: oklch(0.68 0.13 45);
+  --sidebar-primary-foreground: oklch(0.18 0.012 35);
+  --sidebar-accent: oklch(0.28 0.012 35);
+  --sidebar-accent-foreground: oklch(0.95 0.008 75);
+  --sidebar-border: oklch(0.34 0.012 35);
+  --sidebar-ring: oklch(0.68 0.13 45);
 }
 
 @layer base {
@@ -128,5 +166,18 @@
   }
   html {
     @apply font-sans;
+  }
+
+  /* Display-text tracking. Inter looks sharp body-size; large headings
+   * want a touch of negative tracking for editorial confidence. Applied
+   * globally so every <h1>/<h2>/<h3> inherits without per-page work. */
+  h1 {
+    letter-spacing: -0.02em;
+  }
+  h2 {
+    letter-spacing: -0.015em;
+  }
+  h3 {
+    letter-spacing: -0.01em;
   }
 }
