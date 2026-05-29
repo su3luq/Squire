@@ -489,6 +489,8 @@ export type Database = {
           quiet_hours_end_hour: number | null
           quiet_hours_start_hour: number | null
           role: Database["public"]["Enums"]["user_role"]
+          streak_days: number
+          streak_last_day: string | null
           xp_total: number
         }
         Insert: {
@@ -506,6 +508,8 @@ export type Database = {
           quiet_hours_end_hour?: number | null
           quiet_hours_start_hour?: number | null
           role: Database["public"]["Enums"]["user_role"]
+          streak_days?: number
+          streak_last_day?: string | null
           xp_total?: number
         }
         Update: {
@@ -523,6 +527,8 @@ export type Database = {
           quiet_hours_end_hour?: number | null
           quiet_hours_start_hour?: number | null
           role?: Database["public"]["Enums"]["user_role"]
+          streak_days?: number
+          streak_last_day?: string | null
           xp_total?: number
         }
         Relationships: [
@@ -1111,6 +1117,7 @@ export type Database = {
       is_my_coop_instance: { Args: { p_instance_id: string }; Returns: boolean }
       is_teacher: { Args: { uid?: string }; Returns: boolean }
       list_review_session: { Args: never; Returns: Json }
+      recompute_all_streaks: { Args: never; Returns: undefined }
       recompute_learning_velocity: { Args: never; Returns: Json }
       register_student: {
         Args: {

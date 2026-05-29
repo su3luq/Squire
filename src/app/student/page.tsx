@@ -2,11 +2,12 @@ import Link from 'next/link';
 import { createClient } from '@/lib/supabase/server';
 import { redirect } from 'next/navigation';
 import { ArrowRight, BookOpen, Target, Trophy } from 'lucide-react';
-import { ReviewLauncher } from '@/components/review-launcher';
 import { EnableNotificationsButton } from '@/components/enable-notifications-button';
 import { StatCard } from '@/components/stat-card';
 import { QuestStatusChip } from '@/components/status-chip';
 import { RankHero } from '@/components/rank-hero';
+import { DailyReviewGoal } from '@/components/daily-review-goal';
+import { computeEffectiveStreak, saigonDay } from '@/lib/streak';
 import {
   ClosestRival,
   type RivalRow,
@@ -27,7 +28,9 @@ export default async function StudentHome() {
 
   const { data: profile } = await supabase
     .from('profiles')
-    .select('full_name, current_rank, xp_total')
+    .select(
+      'full_name, current_rank, xp_total, streak_days, streak_last_day',
+    )
     .eq('id', user.id)
     .single();
 
@@ -35,6 +38,10 @@ export default async function StudentHome() {
 
   const nowIso = new Date().toISOString();
   const viewerXp = profile.xp_total ?? 0;
+  const today = saigonDay();
+  // Start of today in Saigon, expressed as UTC ISO. Saigon is UTC+7,
+  // so subtract 7h from local midnight to get the UTC instant.
+  const todayStartIso = new Date(`${today}T00:00:00+07:00`).toISOString();
   const [
     { count: dueCountRaw },
     { data: nextRow },
@@ -44,6 +51,7 @@ export default async function StudentHome() {
     { data: rivalAboveRow },
     { data: rivalBelowRow },
     { data: recentWins },
+    { count: reviewsTodayRaw },
   ] = await Promise.all([
     supabase
       .from('card_reviews')
@@ -102,12 +110,24 @@ export default async function StudentHome() {
       .gt('amount', 0)
       .order('created_at', { ascending: false })
       .limit(5),
+    // Review attempts today (Saigon-day) — drives the daily-goal progress.
+    supabase
+      .from('review_attempts')
+      .select('id', { count: 'exact', head: true })
+      .eq('student_id', user.id)
+      .gte('answered_at', todayStartIso),
   ]);
 
   const dueCount = dueCountRaw ?? 0;
   const nextDueAt = nextRow?.due_at ?? null;
   const activeQuests = activeQuestsRaw ?? 0;
   const leaderboardPosition = (aheadCount ?? 0) + 1;
+  const reviewsToday = reviewsTodayRaw ?? 0;
+  const streak = computeEffectiveStreak(
+    profile.streak_days ?? 0,
+    profile.streak_last_day ?? null,
+    today,
+  );
 
   const tier = profile.current_rank ?? 7;
   const xp = viewerXp;
@@ -192,21 +212,12 @@ export default async function StudentHome() {
         />
       </div>
 
-      <section className="rounded-lg border border-border bg-card p-5">
-        <div className="flex flex-col items-start justify-between gap-4 sm:flex-row sm:items-center">
-          <div>
-            <h2 className="text-base font-semibold">Today&apos;s review</h2>
-            <p className="mt-1 text-sm text-muted-foreground">
-              {dueCount > 0
-                ? `${dueCount} ${dueCount === 1 ? 'card is' : 'cards are'} due — keep your momentum.`
-                : nextDueAt
-                  ? 'Nothing due right now. Check back soon.'
-                  : 'No cards unlocked yet.'}
-            </p>
-          </div>
-          <ReviewLauncher dueCount={dueCount} nextDueAt={nextDueAt} />
-        </div>
-      </section>
+      <DailyReviewGoal
+        dueCount={dueCount}
+        reviewsToday={reviewsToday}
+        nextDueAt={nextDueAt}
+        streak={streak}
+      />
 
       <section className="rounded-lg border border-border bg-card">
         <div className="flex items-center justify-between border-b border-border p-5">

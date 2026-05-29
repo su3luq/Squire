@@ -4,6 +4,7 @@ import { AppShell } from '@/components/app-shell';
 import { CelebrationGate } from '@/components/celebration-gate';
 import { getStudentNav } from '@/components/nav-items';
 import { getRingConfigForTier } from '@/lib/ranks-config';
+import { computeEffectiveStreak } from '@/lib/streak';
 
 export default async function StudentLayout({
   children,
@@ -21,7 +22,9 @@ export default async function StudentLayout({
     await Promise.all([
       supabase
         .from('profiles')
-        .select('full_name, xp_total, current_rank, avatar_url')
+        .select(
+          'full_name, xp_total, current_rank, avatar_url, streak_days, streak_last_day',
+        )
         .eq('id', user.id)
         .single(),
       supabase
@@ -37,6 +40,10 @@ export default async function StudentLayout({
   if (!profile) redirect('/login');
 
   const userRingConfig = await getRingConfigForTier(profile.current_rank);
+  const streak = computeEffectiveStreak(
+    profile.streak_days ?? 0,
+    profile.streak_last_day ?? null,
+  );
 
   return (
     <AppShell
@@ -46,6 +53,7 @@ export default async function StudentLayout({
       avatarUrl={profile.avatar_url}
       userRank={profile.current_rank}
       userRingConfig={userRingConfig}
+      streak={streak}
       homeHref="/student"
       unreadCount={unreadNotifications ?? 0}
     >

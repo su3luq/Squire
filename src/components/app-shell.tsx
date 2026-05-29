@@ -8,8 +8,10 @@ import { BottomTabsNav } from './bottom-tabs-nav';
 import { SignOutButton } from './sign-out-button';
 import { InboxButton } from './inbox-button';
 import { Avatar } from './avatar';
+import { StreakWidget } from './streak-widget';
 import { cn } from '@/lib/utils';
 import type { NavItem } from './nav-items';
+import type { EffectiveStreak } from '@/lib/streak';
 
 interface AppShellProps {
   navItems: NavItem[];
@@ -18,6 +20,7 @@ interface AppShellProps {
   avatarUrl?: string | null;
   userRank?: number | null;
   userRingConfig?: { gradient: string; glow?: string | null } | null;
+  streak?: EffectiveStreak;
   homeHref: string;
   unreadCount: number;
   children: React.ReactNode;
@@ -32,6 +35,7 @@ export function AppShell({
   avatarUrl,
   userRank,
   userRingConfig,
+  streak,
   homeHref,
   unreadCount,
   children,
@@ -108,6 +112,9 @@ export function AppShell({
             >
               <Avatar url={avatarUrl} name={userName} size="sm" rank={userRank} ringConfig={userRingConfig} />
             </Link>
+            {streak && streak.status !== 'broken' && streak.status !== 'none' && (
+              <StreakWidget streak={streak} variant="sidebar-icon" />
+            )}
             <InboxButton count={unreadCount} />
             <SignOutButton iconOnly />
           </div>
@@ -130,6 +137,9 @@ export function AppShell({
                 ) : null}
               </div>
             </Link>
+            {streak && (
+              <StreakWidget streak={streak} variant="sidebar-full" />
+            )}
             <SignOutButton />
           </div>
         )}
