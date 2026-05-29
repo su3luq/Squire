@@ -1,931 +1,618 @@
 import Link from 'next/link';
+import { ArrowRight, AlertTriangle, Sword, BookOpen } from 'lucide-react';
 import { createClient } from '@/lib/supabase/server';
 import {
   Card,
   CardContent,
-  CardDescription,
   CardHeader,
   CardTitle,
 } from '@/components/ui/card';
-import { InsightsTabs } from '@/components/insights-tabs';
+import { StatCard } from '@/components/stat-card';
+import { buildHourlyBuckets, getStudentScope } from '@/lib/analytics-data';
+import { cn } from '@/lib/utils';
 
 export const dynamic = 'force-dynamic';
 
-const SAIGON_TZ = 'Asia/Ho_Chi_Minh';
+const ONE_WEEK_MS = 7 * 86_400_000;
+const SIX_HOURS_MS = 6 * 60 * 60 * 1000;
 
-function formatSaigon(iso: string | null): string {
-  if (!iso) return '—';
-  return new Intl.DateTimeFormat('en-US', {
-    dateStyle: 'medium',
-    timeStyle: 'short',
-    timeZone: SAIGON_TZ,
-  }).format(new Date(iso));
-}
-
-// "May 22" (Saigon)
-function formatSaigonShort(d: Date): string {
-  return new Intl.DateTimeFormat('en-US', {
-    month: 'short',
-    day: 'numeric',
-    timeZone: SAIGON_TZ,
-  }).format(d);
-}
-
-// Returns the Saigon-local Monday at 00:00 for the week containing the given Date
-function saigonWeekStart(d: Date): Date {
-  // Get the date components in Saigon TZ
-  const parts = new Intl.DateTimeFormat('en-US', {
-    timeZone: SAIGON_TZ,
-    year: 'numeric',
-    month: '2-digit',
-    day: '2-digit',
-    weekday: 'short',
-  }).formatToParts(d);
-  const year = Number(parts.find((p) => p.type === 'year')!.value);
-  const month = Number(parts.find((p) => p.type === 'month')!.value);
-  const day = Number(parts.find((p) => p.type === 'day')!.value);
-  const wd = parts.find((p) => p.type === 'weekday')!.value;
-  const dowMap: Record<string, number> = {
-    Mon: 0,
-    Tue: 1,
-    Wed: 2,
-    Thu: 3,
-    Fri: 4,
-    Sat: 5,
-    Sun: 6,
+function formatDelta(curr: number, prev: number): {
+  label: string;
+  trend: 'positive' | 'negative' | 'neutral';
+} {
+  if (prev === 0 && curr === 0) return { label: 'No data yet', trend: 'neutral' };
+  if (prev === 0) return { label: `+${curr.toLocaleString()} vs 0 last wk`, trend: 'positive' };
+  const delta = curr - prev;
+  const pct = (delta / prev) * 100;
+  const sign = delta > 0 ? '+' : '';
+  return {
+    label: `${sign}${pct.toFixed(0)}% vs last wk`,
+    trend: delta > 0 ? 'positive' : delta < 0 ? 'negative' : 'neutral',
   };
-  const offset = dowMap[wd] ?? 0;
-  // Build the Saigon-local-midnight of the start of the week as a UTC ISO
-  const utcMidnight = new Date(Date.UTC(year, month - 1, day) - offset * 86400000);
-  // Saigon is UTC+7 — subtract 7h so that Saigon-midnight maps to UTC instant
-  return new Date(utcMidnight.getTime() - 7 * 60 * 60 * 1000);
 }
 
-export default async function AnalyticsPage({
+export default async function PulsePage({
   searchParams,
 }: {
   searchParams: Promise<{ class?: string }>;
 }) {
   const { class: classFilter } = await searchParams;
   const supabase = await createClient();
+  const scope = await getStudentScope(classFilter);
 
-  const { data: classes } = await supabase
-    .from('classes')
-    .select('id, name')
-    .is('archived_at', null)
-    .order('name');
-
-  const classNameById = new Map<string, string>(
-    (classes ?? []).map((c) => [c.id, c.name])
-  );
-
-  // Load students (subset by class filter if set)
-  const studentsQuery = supabase
-    .from('profiles')
-    .select('id, full_name, class_id, xp_total, current_rank, learning_velocity')
-    .eq('role', 'student');
-  const { data: allStudents } = await (classFilter && classFilter !== 'all'
-    ? studentsQuery.eq('class_id', classFilter)
-    : studentsQuery);
-
-  const studentIds = (allStudents ?? []).map((s) => s.id);
-  const studentById = new Map<
-    string,
-    { id: string; full_name: string; class_id: string | null }
-  >(
-    (allStudents ?? []).map((s) => [
-      s.id,
-      { id: s.id, full_name: s.full_name, class_id: s.class_id },
-    ])
-  );
-
-  // -----------------------------------------------------------------
-  // Panel 1: Weekly XP — last 8 weeks
-  // -----------------------------------------------------------------
   // eslint-disable-next-line react-hooks/purity -- Server Component rendered per request.
-  const eightWeeksAgo = new Date(Date.now() - 8 * 7 * 24 * 60 * 60 * 1000);
+  const now = Date.now();
+  const oneWeekAgo = new Date(now - ONE_WEEK_MS).toISOString();
+  const twoWeeksAgo = new Date(now - 2 * ONE_WEEK_MS).toISOString();
+  const sixHoursAgo = new Date(now - SIX_HOURS_MS).toISOString();
+
+  const noStudents = scope.studentIds.length === 0;
+
+  // ----- Rollup deltas -----
   const xpQuery = supabase
     .from('xp_ledger')
-    .select('student_id, amount, created_at')
-    .gte('created_at', eightWeeksAgo.toISOString());
-  const { data: xpRows } =
-    studentIds.length > 0
-      ? await xpQuery.in('student_id', studentIds)
-      : { data: [] };
-
-  const currentWeekStart = saigonWeekStart(new Date());
-  // Build 8 weekly buckets (oldest → newest)
-  const weekBuckets: { start: Date; label: string; total: number }[] = [];
-  for (let i = 7; i >= 0; i--) {
-    const start = new Date(currentWeekStart.getTime() - i * 7 * 86400000);
-    weekBuckets.push({
-      start,
-      label: formatSaigonShort(start),
-      total: 0,
-    });
-  }
-  for (const row of xpRows ?? []) {
-    const ts = new Date(row.created_at).getTime();
-    for (let i = weekBuckets.length - 1; i >= 0; i--) {
-      if (ts >= weekBuckets[i].start.getTime()) {
-        weekBuckets[i].total += row.amount;
-        break;
-      }
-    }
-  }
-  const maxWeekly = Math.max(1, ...weekBuckets.map((b) => b.total));
-
-  // -----------------------------------------------------------------
-  // Panel 2: Completion rates per quest
-  // -----------------------------------------------------------------
-  const acceptanceQuery = supabase
-    .from('quest_acceptances')
-    .select(
-      'id, status, quest_id, student_id, instance_id, accepted_at, completed_at'
-    );
-  const { data: acceptances } =
-    studentIds.length > 0
-      ? await acceptanceQuery.in('student_id', studentIds)
-      : { data: [] };
-
-  const questIds = Array.from(
-    new Set((acceptances ?? []).map((a) => a.quest_id))
-  );
-  let questMetaById = new Map<
-    string,
-    { id: string; title: string; quest_type: string; xp_reward: number }
-  >();
-  if (questIds.length > 0) {
-    const { data: qrows } = await supabase
-      .from('quests')
-      .select('id, title, quest_type, xp_reward')
-      .in('id', questIds);
-    questMetaById = new Map(
-      (qrows ?? []).map((q) => [
-        q.id,
-        {
-          id: q.id,
-          title: q.title,
-          quest_type: q.quest_type,
-          xp_reward: q.xp_reward,
-        },
-      ])
-    );
-  }
-
-  const completionByQuest = new Map<
-    string,
-    { total: number; passed: number; pending: number }
-  >();
-  for (const a of acceptances ?? []) {
-    const cur = completionByQuest.get(a.quest_id) ?? {
-      total: 0,
-      passed: 0,
-      pending: 0,
-    };
-    cur.total += 1;
-    if (a.status === 'passed') cur.passed += 1;
-    if (
-      a.status === 'active' ||
-      a.status === 'enrolled' ||
-      a.status === 'submitted'
-    )
-      cur.pending += 1;
-    completionByQuest.set(a.quest_id, cur);
-  }
-  const completionRows = Array.from(completionByQuest.entries())
-    .map(([quest_id, { total, passed, pending }]) => ({
-      quest_id,
-      title: questMetaById.get(quest_id)?.title ?? '(unknown quest)',
-      type: questMetaById.get(quest_id)?.quest_type ?? '—',
-      total,
-      passed,
-      pending,
-      rate: total > 0 ? passed / total : 0,
-    }))
-    .sort((a, b) => b.total - a.total);
-
-  // -----------------------------------------------------------------
-  // Panel 3: Activity heatmap — review attempts by day of week × hour (last 30 days)
-  // -----------------------------------------------------------------
-  // eslint-disable-next-line react-hooks/purity -- Server Component rendered per request.
-  const thirtyDaysAgo = new Date(Date.now() - 30 * 86400000);
-  const attemptsQuery = supabase
+    .select('amount, created_at')
+    .gte('created_at', twoWeeksAgo);
+  const reviewsQuery = supabase
     .from('review_attempts')
     .select('answered_at')
-    .gte('answered_at', thirtyDaysAgo.toISOString());
-  const { data: attemptRows } =
-    studentIds.length > 0
-      ? await attemptsQuery.in('student_id', studentIds)
-      : { data: [] };
+    .gte('answered_at', twoWeeksAgo);
+  const pulseXpQuery = supabase
+    .from('xp_ledger')
+    .select('student_id, amount, reason, created_at')
+    .gte('created_at', sixHoursAgo);
+  const pulseReviewsQuery = supabase
+    .from('review_attempts')
+    .select('answered_at')
+    .gte('answered_at', sixHoursAgo);
+  const pulseSubmissionsQuery = supabase
+    .from('quest_submissions')
+    .select('submitted_at, status')
+    .gte('submitted_at', sixHoursAgo);
 
-  // 7 days × 24 hours grid. Day index: 0 = Monday in Saigon TZ.
-  const heatmap: number[][] = Array.from({ length: 7 }, () =>
-    Array(24).fill(0)
-  );
-  const dowMap: Record<string, number> = {
-    Mon: 0,
-    Tue: 1,
-    Wed: 2,
-    Thu: 3,
-    Fri: 4,
-    Sat: 5,
-    Sun: 6,
-  };
-  for (const row of attemptRows ?? []) {
-    const d = new Date(row.answered_at);
-    const parts = new Intl.DateTimeFormat('en-US', {
-      timeZone: SAIGON_TZ,
-      weekday: 'short',
-      hour: '2-digit',
-      hour12: false,
-    }).formatToParts(d);
-    const wd = parts.find((p) => p.type === 'weekday')!.value;
-    const hourStr = parts.find((p) => p.type === 'hour')!.value;
-    const hour = Number(hourStr) % 24; // some locales render 24 instead of 00
-    const dayIdx = dowMap[wd] ?? 0;
-    heatmap[dayIdx][hour] += 1;
+  const [
+    { data: xpRows },
+    { data: reviewRows },
+    { data: pulseXp },
+    { data: pulseReviews },
+    { data: pulseSubmissions },
+    { count: activeQuests },
+    { count: pendingReview },
+  ] = await Promise.all([
+    noStudents ? { data: [] } : xpQuery.in('student_id', scope.studentIds),
+    noStudents ? { data: [] } : reviewsQuery.in('student_id', scope.studentIds),
+    noStudents
+      ? { data: [] }
+      : pulseXpQuery.in('student_id', scope.studentIds),
+    noStudents
+      ? { data: [] }
+      : pulseReviewsQuery.in('student_id', scope.studentIds),
+    noStudents
+      ? { data: [] }
+      : pulseSubmissionsQuery.in('submitted_by', scope.studentIds),
+    supabase
+      .from('quests')
+      .select('id', { count: 'exact', head: true })
+      .is('closed_at', null),
+    supabase
+      .from('quest_submissions')
+      .select('id', { count: 'exact', head: true })
+      .eq('status', 'pending_review'),
+  ]);
+
+  let xpThisWeek = 0;
+  let xpLastWeek = 0;
+  for (const r of xpRows ?? []) {
+    if (r.created_at >= oneWeekAgo) xpThisWeek += r.amount;
+    else xpLastWeek += r.amount;
   }
-  const maxCell = Math.max(1, ...heatmap.flat());
-  const totalAttempts = heatmap.flat().reduce((a, b) => a + b, 0);
 
-  // -----------------------------------------------------------------
-  // Panel 4: Card retention — average FSRS stability per lesson
-  // -----------------------------------------------------------------
-  const reviewsQuery = supabase
+  let reviewsThisWeek = 0;
+  let reviewsLastWeek = 0;
+  for (const r of reviewRows ?? []) {
+    if (r.answered_at >= oneWeekAgo) reviewsThisWeek += 1;
+    else reviewsLastWeek += 1;
+  }
+
+  const totalStudents = scope.studentIds.length;
+  const avgVelocity =
+    totalStudents > 0
+      ? Array.from(scope.studentById.values()).reduce(
+          (sum, s) => sum + s.learning_velocity,
+          0,
+        ) / totalStudents
+      : 0;
+
+  // ----- Today's pulse buckets -----
+  const buckets = buildHourlyBuckets(now, 6);
+  function bucketFor(iso: string): number {
+    const ts = new Date(iso).getTime();
+    for (let i = buckets.length - 1; i >= 0; i--) {
+      if (ts >= buckets[i].start.getTime()) return i;
+    }
+    return -1;
+  }
+  for (const row of pulseReviews ?? []) {
+    const i = bucketFor(row.answered_at);
+    if (i >= 0) buckets[i].reviews += 1;
+  }
+  for (const row of pulseSubmissions ?? []) {
+    const i = bucketFor(row.submitted_at);
+    if (i >= 0) buckets[i].submissions += 1;
+  }
+  for (const row of pulseXp ?? []) {
+    const i = bucketFor(row.created_at);
+    if (i >= 0) buckets[i].xp += row.amount;
+  }
+  const pulseTotals = {
+    reviews: buckets.reduce((a, b) => a + b.reviews, 0),
+    submissions: buckets.reduce((a, b) => a + b.submissions, 0),
+    xp: buckets.reduce((a, b) => a + b.xp, 0),
+  };
+  const maxReviews = Math.max(1, ...buckets.map((b) => b.reviews));
+  const maxSubs = Math.max(1, ...buckets.map((b) => b.submissions));
+  const maxXp = Math.max(1, ...buckets.map((b) => b.xp));
+
+  // ----- Top 3 at-risk (low velocity) -----
+  const atRiskCandidates = Array.from(scope.studentById.values())
+    .filter((s) => s.learning_velocity < 0.3)
+    .sort((a, b) => a.learning_velocity - b.learning_velocity)
+    .slice(0, 3);
+
+  // ----- Top 3 quests needing attention -----
+  // Compute pass-rate per quest from non-active acceptances of in-scope
+  // students, plus stuck (≥3 pending) and dormant (no acceptances in 14d).
+  const acceptancesQuery = supabase
+    .from('quest_acceptances')
+    .select('id, quest_id, status, accepted_at, completed_at, student_id');
+  const { data: acceptances } = noStudents
+    ? { data: [] }
+    : await acceptancesQuery.in('student_id', scope.studentIds);
+
+  const questIds = Array.from(
+    new Set((acceptances ?? []).map((a) => a.quest_id)),
+  );
+  let quests: Array<{
+    id: string;
+    title: string;
+    quest_type: string;
+    created_at: string;
+  }> = [];
+  if (questIds.length > 0) {
+    const { data } = await supabase
+      .from('quests')
+      .select('id, title, quest_type, created_at')
+      .in('id', questIds);
+    quests = data ?? [];
+  }
+
+  type QuestAgg = {
+    total: number;
+    passed: number;
+    pending: number; // submitted, awaiting review
+    active: number;
+    lastAcceptedAt: string | null;
+  };
+  const agg = new Map<string, QuestAgg>();
+  for (const a of acceptances ?? []) {
+    const cur =
+      agg.get(a.quest_id) ?? {
+        total: 0,
+        passed: 0,
+        pending: 0,
+        active: 0,
+        lastAcceptedAt: null,
+      };
+    cur.total += 1;
+    if (a.status === 'passed') cur.passed += 1;
+    if (a.status === 'submitted') cur.pending += 1;
+    if (a.status === 'active' || a.status === 'enrolled') cur.active += 1;
+    if (!cur.lastAcceptedAt || a.accepted_at > cur.lastAcceptedAt)
+      cur.lastAcceptedAt = a.accepted_at;
+    agg.set(a.quest_id, cur);
+  }
+
+  const fourteenDaysAgo = new Date(now - 14 * 86_400_000).toISOString();
+  const sevenDaysAgo = new Date(now - 7 * 86_400_000).toISOString();
+
+  type QuestOutlier = {
+    id: string;
+    title: string;
+    reason: 'low_pass' | 'stuck' | 'dormant';
+    reasonLabel: string;
+    metric: string;
+  };
+  const outliers: QuestOutlier[] = [];
+  for (const q of quests) {
+    const a = agg.get(q.id);
+    if (!a) continue;
+    const decided = a.passed + a.pending;
+    const passRate = decided > 0 ? a.passed / decided : 0;
+    // Low pass: <50%, n≥5 decided
+    if (decided >= 5 && passRate < 0.5) {
+      outliers.push({
+        id: q.id,
+        title: q.title,
+        reason: 'low_pass',
+        reasonLabel: 'Low pass',
+        metric: `${Math.round(passRate * 100)}% pass · ${decided} decided`,
+      });
+      continue;
+    }
+    // Stuck: ≥3 pending, no acceptance in 7d
+    if (
+      a.pending >= 3 &&
+      a.lastAcceptedAt !== null &&
+      a.lastAcceptedAt < sevenDaysAgo
+    ) {
+      outliers.push({
+        id: q.id,
+        title: q.title,
+        reason: 'stuck',
+        reasonLabel: 'Stuck',
+        metric: `${a.pending} pending · no activity 7d+`,
+      });
+      continue;
+    }
+    // Dormant: no acceptances in 14d
+    if (
+      a.lastAcceptedAt === null ||
+      a.lastAcceptedAt < fourteenDaysAgo
+    ) {
+      outliers.push({
+        id: q.id,
+        title: q.title,
+        reason: 'dormant',
+        reasonLabel: 'Dormant',
+        metric: `Quiet 14d+ · ${a.total} lifetime accepts`,
+      });
+    }
+  }
+  const topQuests = outliers.slice(0, 3);
+
+  // ----- Bottom 3 retention lessons -----
+  const reviewsForRetentionQuery = supabase
     .from('card_reviews')
     .select('stability, review_count, card_id');
-  const { data: reviews } =
-    studentIds.length > 0
-      ? await reviewsQuery.in('student_id', studentIds)
-      : { data: [] };
+  const { data: cr } = noStudents
+    ? { data: [] }
+    : await reviewsForRetentionQuery.in('student_id', scope.studentIds);
 
-  const cardIds = Array.from(new Set((reviews ?? []).map((r) => r.card_id)));
-  let lessonByCardId = new Map<string, { lesson_id: string }>();
+  const cardIds = Array.from(new Set((cr ?? []).map((r) => r.card_id)));
+  let lessonByCardId = new Map<string, string>();
   if (cardIds.length > 0) {
-    const { data: cards } = await supabase
+    const { data } = await supabase
       .from('review_cards')
       .select('id, lesson_id')
       .in('id', cardIds);
-    lessonByCardId = new Map(
-      (cards ?? []).map((c) => [c.id, { lesson_id: c.lesson_id }])
-    );
+    lessonByCardId = new Map((data ?? []).map((c) => [c.id, c.lesson_id]));
   }
-  const lessonIds = Array.from(
-    new Set(Array.from(lessonByCardId.values()).map((v) => v.lesson_id))
-  );
+  const lessonIds = Array.from(new Set(lessonByCardId.values()));
   let lessonNameById = new Map<string, string>();
   if (lessonIds.length > 0) {
-    const { data: lessons } = await supabase
+    const { data } = await supabase
       .from('lessons')
       .select('id, title, lesson_number')
       .in('id', lessonIds);
     lessonNameById = new Map(
-      (lessons ?? []).map((l) => [
+      (data ?? []).map((l) => [
         l.id,
         `Lesson ${l.lesson_number} — ${l.title}`,
-      ])
+      ]),
     );
   }
-  const retentionByLesson = new Map<
+  const lessonAgg = new Map<
     string,
-    { sumStability: number; n: number; reviewCount: number }
+    { sumStability: number; n: number }
   >();
-  for (const r of reviews ?? []) {
-    if (r.review_count === 0) continue; // skip new/never-reviewed cards
-    const lessonId = lessonByCardId.get(r.card_id)?.lesson_id;
-    if (!lessonId) continue;
-    const cur = retentionByLesson.get(lessonId) ?? {
-      sumStability: 0,
-      n: 0,
-      reviewCount: 0,
-    };
+  for (const r of cr ?? []) {
+    if (r.review_count === 0) continue;
+    const lid = lessonByCardId.get(r.card_id);
+    if (!lid) continue;
+    const cur = lessonAgg.get(lid) ?? { sumStability: 0, n: 0 };
     cur.sumStability += Number(r.stability);
     cur.n += 1;
-    cur.reviewCount += r.review_count;
-    retentionByLesson.set(lessonId, cur);
+    lessonAgg.set(lid, cur);
   }
-  const retentionRows = Array.from(retentionByLesson.entries())
-    .map(([lessonId, { sumStability, n, reviewCount }]) => ({
-      lessonId,
-      label: lessonNameById.get(lessonId) ?? '(unknown lesson)',
-      avgStability: n > 0 ? sumStability / n : 0,
-      n,
-      reviewCount,
+  const retentionRows = Array.from(lessonAgg.entries())
+    .filter(([, v]) => v.n >= 5) // only lessons with enough signal
+    .map(([lid, v]) => ({
+      lessonId: lid,
+      label: lessonNameById.get(lid) ?? '(unknown lesson)',
+      avgStability: v.sumStability / v.n,
+      n: v.n,
     }))
-    .sort((a, b) => b.avgStability - a.avgStability);
-  const maxRetention = Math.max(1, ...retentionRows.map((r) => r.avgStability));
+    .sort((a, b) => a.avgStability - b.avgStability);
+  const bottomRetention = retentionRows.slice(0, 3);
 
-  // -----------------------------------------------------------------
-  // Panel 5: Live feed — recent activity (XP awards + submissions)
-  // -----------------------------------------------------------------
-  const xpFeedQuery = supabase
-    .from('xp_ledger')
-    .select('id, student_id, amount, reason, created_at')
-    .order('created_at', { ascending: false })
-    .limit(20);
-  const { data: xpFeed } =
-    studentIds.length > 0
-      ? await xpFeedQuery.in('student_id', studentIds)
-      : { data: [] };
-
-  const submissionFeedQuery = supabase
-    .from('quest_submissions')
-    .select('id, submitted_by, status, submitted_at, reviewed_at')
-    .order('submitted_at', { ascending: false })
-    .limit(20);
-  const { data: subFeed } =
-    studentIds.length > 0
-      ? await submissionFeedQuery.in('submitted_by', studentIds)
-      : { data: [] };
-
-  type FeedItem = {
-    key: string;
-    when: string;
-    kind: 'xp' | 'submission' | 'review';
-    studentId: string;
-    studentName: string;
-    classId: string | null;
-    detail: string; // what happened, minus the student name
-  };
-  const feedItems: FeedItem[] = [];
-  for (const row of xpFeed ?? []) {
-    const student = studentById.get(row.student_id);
-    feedItems.push({
-      key: `xp-${row.id}`,
-      when: row.created_at,
-      kind: 'xp',
-      studentId: row.student_id,
-      studentName: student?.full_name ?? '(student)',
-      classId: student?.class_id ?? null,
-      detail: `earned ${row.amount > 0 ? '+' : ''}${row.amount} XP (${row.reason})`,
-    });
-  }
-  for (const row of subFeed ?? []) {
-    const student = studentById.get(row.submitted_by);
-    feedItems.push({
-      key: `sub-${row.id}`,
-      when: row.submitted_at,
-      kind: 'submission',
-      studentId: row.submitted_by,
-      studentName: student?.full_name ?? '(student)',
-      classId: student?.class_id ?? null,
-      detail: 'submitted a quest',
-    });
-    if (row.reviewed_at && (row.status === 'passed' || row.status === 'failed')) {
-      feedItems.push({
-        key: `rev-${row.id}`,
-        when: row.reviewed_at,
-        kind: 'review',
-        studentId: row.submitted_by,
-        studentName: student?.full_name ?? '(student)',
-        classId: student?.class_id ?? null,
-        detail: `submission was ${row.status}`,
-      });
-    }
-  }
-  feedItems.sort((a, b) => (a.when < b.when ? 1 : -1));
-  const feed = feedItems.slice(0, 25);
-
-  // -----------------------------------------------------------------
-  // Panel 6: Students at risk
-  //   - Low velocity (< 0.3), bottom 10
-  //   - Repeat failers: ≥3 failed submissions on a single quest
-  //     (per-acceptance for solo, per-instance for coop — all team
-  //     members of a failing instance are flagged.)
-  // -----------------------------------------------------------------
-  const failedSubsQuery = supabase
-    .from('quest_submissions')
-    .select('acceptance_id, instance_id, submitted_by')
-    .eq('status', 'failed');
-  const { data: failedSubs } =
-    studentIds.length > 0
-      ? await failedSubsQuery.in('submitted_by', studentIds)
-      : { data: [] };
-
-  const failuresByGroup = new Map<string, number>();
-  for (const s of failedSubs ?? []) {
-    const key = s.acceptance_id
-      ? `a:${s.acceptance_id}`
-      : s.instance_id
-        ? `i:${s.instance_id}`
-        : null;
-    if (!key) continue;
-    failuresByGroup.set(key, (failuresByGroup.get(key) ?? 0) + 1);
-  }
-
-  type AtRiskEntry = {
-    studentId: string;
-    fullName: string;
-    classId: string | null;
-    velocity: number;
-    reasons: string[];
-  };
-  const atRiskByStudent = new Map<string, AtRiskEntry>();
-
-  function flagStudent(studentId: string, reason: string) {
-    const profile = studentById.get(studentId);
-    if (!profile) return;
-    const existing = atRiskByStudent.get(studentId);
-    if (existing) {
-      if (!existing.reasons.includes(reason)) existing.reasons.push(reason);
-      return;
-    }
-    const fullStudent = (allStudents ?? []).find((s) => s.id === studentId);
-    atRiskByStudent.set(studentId, {
-      studentId,
-      fullName: profile.full_name,
-      classId: profile.class_id,
-      velocity: Number(fullStudent?.learning_velocity ?? 0),
-      reasons: [reason],
-    });
-  }
-
-  // Low velocity
-  for (const s of allStudents ?? []) {
-    if (Number(s.learning_velocity ?? 0) < 0.3) {
-      flagStudent(s.id, `velocity ${Number(s.learning_velocity).toFixed(2)}`);
-    }
-  }
-  // Repeat-fail groups
-  for (const [key, count] of failuresByGroup.entries()) {
-    if (count < 3) continue;
-    if (key.startsWith('a:')) {
-      const accId = key.slice(2);
-      const acc = (acceptances ?? []).find((a) => a.id === accId);
-      if (acc) flagStudent(acc.student_id, `${count} fails on one quest`);
-    } else {
-      const instId = key.slice(2);
-      for (const acc of (acceptances ?? []).filter(
-        (a) => a.instance_id === instId
-      )) {
-        flagStudent(acc.student_id, `${count} team fails on one quest`);
-      }
-    }
-  }
-
-  const atRisk = Array.from(atRiskByStudent.values()).sort(
-    (a, b) => a.velocity - b.velocity
-  );
-
-  // -----------------------------------------------------------------
-  // Panel 7: Velocity distribution (5 buckets)
-  // -----------------------------------------------------------------
-  const velocityBuckets = [
-    { range: '0.0–0.2', count: 0 },
-    { range: '0.2–0.4', count: 0 },
-    { range: '0.4–0.6', count: 0 },
-    { range: '0.6–0.8', count: 0 },
-    { range: '0.8–1.0', count: 0 },
-  ];
-  for (const s of allStudents ?? []) {
-    const v = Math.max(0, Math.min(0.9999, Number(s.learning_velocity ?? 0)));
-    const idx = Math.floor(v * 5);
-    velocityBuckets[idx].count += 1;
-  }
-  const maxVelocityBucket = Math.max(1, ...velocityBuckets.map((b) => b.count));
-
-  // -----------------------------------------------------------------
-  // Top-of-page rollups
-  // -----------------------------------------------------------------
-  const totalStudents = (allStudents ?? []).length;
-  const totalXpThisPeriod = weekBuckets.reduce((a, b) => a + b.total, 0);
-  const avgVelocity =
-    totalStudents > 0
-      ? (allStudents ?? []).reduce(
-          (sum, s) => sum + Number(s.learning_velocity ?? 0),
-          0
-        ) / totalStudents
-      : 0;
+  // ----- Renders -----
+  const xpDelta = formatDelta(xpThisWeek, xpLastWeek);
+  const reviewDelta = formatDelta(reviewsThisWeek, reviewsLastWeek);
 
   return (
-    <div className="mx-auto max-w-5xl">
-      <header className="mb-2">
-        <h1 className="text-2xl font-semibold tracking-tight">Insights</h1>
-        <p className="mt-1 text-sm text-muted-foreground">
-          At-a-glance view of class engagement.
-        </p>
-      </header>
-      <InsightsTabs />
-
-      {/* Class filter */}
-      {classes && classes.length > 0 && (
-        <form method="get" className="mb-6 flex items-center gap-2 text-sm">
-          <label htmlFor="class" className="font-medium text-foreground">
-            Class:
-          </label>
-          <select
-            id="class"
-            name="class"
-            defaultValue={classFilter ?? 'all'}
-            className="rounded-md border border-input bg-card px-3 py-1.5 text-sm shadow-sm focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary"
-          >
-            <option value="all">All classes</option>
-            {classes.map((c) => (
-              <option key={c.id} value={c.id}>
-                {c.name}
-              </option>
-            ))}
-          </select>
-          <button
-            type="submit"
-            className="rounded-md border border-input bg-card px-3 py-1.5 text-xs font-medium text-foreground transition-colors hover:bg-muted"
-          >
-            Apply
-          </button>
-        </form>
-      )}
-
+    <div className="space-y-6">
       {/* Rollups */}
-      <div className="mb-6 grid grid-cols-2 gap-3 sm:grid-cols-4">
-        <RollupCard label="Students" value={totalStudents.toLocaleString()} />
-        <RollupCard
-          label="XP (8 wks)"
-          value={totalXpThisPeriod.toLocaleString()}
+      <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+        <StatCard
+          label="Students in scope"
+          value={totalStudents.toLocaleString()}
+          hint={
+            scope.classFilter ? 'One class' : 'All classes'
+          }
         />
-        <RollupCard label="Reviews (30 d)" value={totalAttempts.toLocaleString()} />
-        <RollupCard
+        <StatCard
+          label="XP this week"
+          value={xpThisWeek.toLocaleString()}
+          hint={xpDelta.label}
+          trend={xpDelta.trend}
+        />
+        <StatCard
+          label="Reviews this week"
+          value={reviewsThisWeek.toLocaleString()}
+          hint={reviewDelta.label}
+          trend={reviewDelta.trend}
+        />
+        <StatCard
           label="Avg velocity"
-          value={avgVelocity.toFixed(3)}
+          value={avgVelocity.toFixed(2)}
+          hint={`${activeQuests ?? 0} open quests · ${pendingReview ?? 0} to review`}
         />
       </div>
 
-      <div className="space-y-6">
-        {/* Panel 0: Students at risk */}
-        <Card>
-          <CardHeader>
-            <CardTitle>Students at risk</CardTitle>
-            <CardDescription>
-              Low velocity (&lt; 0.3) or ≥3 failed submissions on a single
-              quest. Coop team members are flagged together when their team
-              fails repeatedly.
-            </CardDescription>
+      {/* Today's pulse */}
+      <Card>
+        <CardHeader className="flex flex-col gap-1 sm:flex-row sm:items-end sm:justify-between">
+          <div>
+            <CardTitle className="text-base">Last 6 hours</CardTitle>
+            <p className="text-xs text-muted-foreground">
+              {pulseTotals.reviews} reviews · {pulseTotals.submissions}{' '}
+              submissions · {pulseTotals.xp >= 0 ? '+' : ''}
+              {pulseTotals.xp} XP
+            </p>
+          </div>
+          <span className="text-[10px] uppercase tracking-wide text-muted-foreground">
+            Saigon time
+          </span>
+        </CardHeader>
+        <CardContent>
+          <div className="grid gap-4 sm:grid-cols-3">
+            <PulseMini
+              label="Reviews"
+              colorClass="bg-primary"
+              buckets={buckets.map((b) => b.reviews)}
+              labels={buckets.map((b) => b.label)}
+              max={maxReviews}
+            />
+            <PulseMini
+              label="Submissions"
+              colorClass="bg-amber-400"
+              buckets={buckets.map((b) => b.submissions)}
+              labels={buckets.map((b) => b.label)}
+              max={maxSubs}
+            />
+            <PulseMini
+              label="XP"
+              colorClass="bg-emerald-500"
+              buckets={buckets.map((b) => b.xp)}
+              labels={buckets.map((b) => b.label)}
+              max={maxXp}
+            />
+          </div>
+        </CardContent>
+      </Card>
+
+      <div className="grid gap-4 md:grid-cols-3">
+        {/* At-risk shortcut */}
+        <Card className="flex flex-col">
+          <CardHeader className="pb-3">
+            <CardTitle className="flex items-center gap-2 text-sm">
+              <AlertTriangle className="h-4 w-4 text-amber-500" />
+              Students to check in on
+            </CardTitle>
           </CardHeader>
-          <CardContent>
-            {atRisk.length === 0 ? (
-              <p className="text-sm text-muted-foreground">
-                Nobody flagged. Either everyone&apos;s on track or there
-                isn&apos;t enough data yet.
+          <CardContent className="flex-1">
+            {atRiskCandidates.length === 0 ? (
+              <p className="text-xs text-muted-foreground">
+                Nobody flagged for low velocity.
               </p>
             ) : (
-              <ul className="divide-y divide-border rounded-md border border-border">
-                {atRisk.map((s) => {
-                  const link = s.classId
-                    ? `/teacher/classes/${s.classId}/students/${s.studentId}`
-                    : null;
-                  return (
-                    <li
-                      key={s.studentId}
-                      className="flex items-center justify-between px-3 py-2 text-sm"
-                    >
-                      <div className="min-w-0 flex-1">
-                        {link ? (
-                          <Link
-                            href={link}
-                            className="font-medium text-foreground hover:text-primary hover:underline"
-                          >
-                            {s.fullName}
-                          </Link>
-                        ) : (
-                          <span className="font-medium text-foreground">
-                            {s.fullName}
-                          </span>
-                        )}
-                        <span className="ml-2 text-xs text-muted-foreground">
-                          {s.classId
-                            ? (classNameById.get(s.classId) ?? 'Unknown')
-                            : 'Unassigned'}
-                        </span>
-                      </div>
-                      <div className="flex flex-wrap items-center justify-end gap-1">
-                        {s.reasons.map((r) => (
-                          <span
-                            key={r}
-                            className="rounded-full bg-destructive/10 px-2 py-0.5 text-xs font-medium text-destructive"
-                          >
-                            {r}
-                          </span>
-                        ))}
-                      </div>
-                    </li>
-                  );
-                })}
-              </ul>
-            )}
-          </CardContent>
-        </Card>
-
-        {/* Panel 0b: Velocity distribution */}
-        <Card>
-          <CardHeader>
-            <CardTitle>Velocity distribution</CardTitle>
-            <CardDescription>
-              How learning velocity is spread across students in the selected
-              scope. An average alone hides bimodal classes.
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            {totalStudents === 0 ? (
-              <p className="text-sm text-muted-foreground">No students in scope.</p>
-            ) : (
-              <ul className="space-y-2">
-                {velocityBuckets.map((b) => (
-                  <li key={b.range} className="text-xs">
-                    <div className="flex items-center gap-3">
-                      <span className="w-16 shrink-0 font-mono text-muted-foreground">
-                        {b.range}
-                      </span>
-                      <div className="flex-1">
-                        <div
-                          className="h-5 rounded-md bg-foreground/80"
-                          style={{
-                            width: `${Math.max(1, (b.count / maxVelocityBucket) * 100)}%`,
-                          }}
-                        />
-                      </div>
-                      <span className="w-20 text-right tabular-nums text-foreground">
-                        {b.count}{' '}
-                        {b.count === 1 ? 'student' : 'students'}
-                      </span>
-                    </div>
-                  </li>
-                ))}
-              </ul>
-            )}
-          </CardContent>
-        </Card>
-
-        {/* Panel 1: Weekly XP */}
-        <Card>
-          <CardHeader>
-            <CardTitle>Weekly XP</CardTitle>
-            <CardDescription>
-              Total XP earned per week (Saigon weeks, Monday–Sunday), last 8 weeks.
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            {weekBuckets.every((b) => b.total === 0) ? (
-              <p className="text-sm text-muted-foreground">No XP this period.</p>
-            ) : (
-              <ul className="space-y-2">
-                {weekBuckets.map((b) => (
-                  <li key={b.start.toISOString()} className="text-xs">
-                    <div className="flex items-center gap-3">
-                      <span className="w-16 shrink-0 font-mono text-muted-foreground">
-                        {b.label}
-                      </span>
-                      <div className="flex-1">
-                        <div
-                          className="h-5 rounded-md bg-primary"
-                          style={{
-                            width: `${Math.max(1, (b.total / maxWeekly) * 100)}%`,
-                          }}
-                        />
-                      </div>
-                      <span className="w-20 text-right tabular-nums text-foreground">
-                        {b.total.toLocaleString()} XP
-                      </span>
-                    </div>
-                  </li>
-                ))}
-              </ul>
-            )}
-          </CardContent>
-        </Card>
-
-        {/* Panel 2: Completion rates */}
-        <Card>
-          <CardHeader>
-            <CardTitle>Quest completion</CardTitle>
-            <CardDescription>
-              Passed / accepted, by quest. Sorted by acceptance volume.
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            {completionRows.length === 0 ? (
-              <p className="text-sm text-muted-foreground">
-                No quest activity yet.
-              </p>
-            ) : (
-              <ul className="space-y-2">
-                {completionRows.map((row) => (
+              <ul className="space-y-2 text-sm">
+                {atRiskCandidates.map((s) => (
                   <li
-                    key={row.quest_id}
-                    className="rounded-md border border-border p-3 text-sm"
+                    key={s.id}
+                    className="flex min-w-0 items-center justify-between gap-2"
                   >
-                    <div className="flex flex-wrap items-baseline justify-between gap-2">
-                      <span className="font-medium text-foreground">
-                        {row.title}
+                    {s.class_id ? (
+                      <Link
+                        href={`/teacher/classes/${s.class_id}/students/${s.id}`}
+                        className="min-w-0 truncate font-medium hover:text-primary hover:underline"
+                      >
+                        {s.full_name}
+                      </Link>
+                    ) : (
+                      <span className="min-w-0 truncate font-medium">
+                        {s.full_name}
                       </span>
-                      <span className="text-xs text-muted-foreground">
-                        {row.passed}/{row.total} passed
-                        {row.pending > 0 && ` · ${row.pending} in flight`}
+                    )}
+                    <span className="shrink-0 rounded-full bg-amber-100 px-2 py-0.5 text-[11px] font-medium text-amber-900">
+                      vel {s.learning_velocity.toFixed(2)}
+                    </span>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </CardContent>
+          <SubFooterLink
+            href={withClass('/teacher/analytics/at-risk', scope.classFilter)}
+          >
+            View full at-risk roster
+          </SubFooterLink>
+        </Card>
+
+        {/* Quests shortcut */}
+        <Card className="flex flex-col">
+          <CardHeader className="pb-3">
+            <CardTitle className="flex items-center gap-2 text-sm">
+              <Sword className="h-4 w-4 text-amber-500" />
+              Quests needing attention
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="flex-1">
+            {topQuests.length === 0 ? (
+              <p className="text-xs text-muted-foreground">
+                Quest board looks healthy.
+              </p>
+            ) : (
+              <ul className="space-y-2 text-sm">
+                {topQuests.map((q) => (
+                  <li key={q.id} className="min-w-0">
+                    <Link
+                      href={`/teacher/quests/${q.id}`}
+                      className="flex min-w-0 items-center justify-between gap-2"
+                    >
+                      <span className="min-w-0 truncate font-medium hover:text-primary hover:underline">
+                        {q.title}
                       </span>
-                    </div>
-                    <div className="mt-2 h-2 w-full overflow-hidden rounded-full bg-muted">
-                      <div
-                        className="h-full bg-primary"
-                        style={{ width: `${Math.round(row.rate * 100)}%` }}
-                      />
-                    </div>
-                    <p className="mt-1 text-xs text-muted-foreground">
-                      {Math.round(row.rate * 100)}% completion · {row.type}
+                      <span
+                        className={cn(
+                          'shrink-0 rounded-full px-2 py-0.5 text-[11px] font-medium',
+                          q.reason === 'low_pass'
+                            ? 'bg-destructive/10 text-destructive'
+                            : q.reason === 'stuck'
+                              ? 'bg-amber-100 text-amber-900'
+                              : 'bg-muted text-muted-foreground',
+                        )}
+                      >
+                        {q.reasonLabel}
+                      </span>
+                    </Link>
+                    <p className="truncate text-[11px] text-muted-foreground">
+                      {q.metric}
                     </p>
                   </li>
                 ))}
               </ul>
             )}
           </CardContent>
+          <SubFooterLink
+            href={withClass('/teacher/analytics/quests', scope.classFilter)}
+          >
+            Open quest board health
+          </SubFooterLink>
         </Card>
 
-        {/* Panel 3: Activity heatmap */}
-        <Card>
-          <CardHeader>
-            <CardTitle>Activity heatmap</CardTitle>
-            <CardDescription>
-              Review attempts by day-of-week × hour (Saigon), last 30 days.
-            </CardDescription>
+        {/* Content shortcut */}
+        <Card className="flex flex-col">
+          <CardHeader className="pb-3">
+            <CardTitle className="flex items-center gap-2 text-sm">
+              <BookOpen className="h-4 w-4 text-amber-500" />
+              Lessons fading fastest
+            </CardTitle>
           </CardHeader>
-          <CardContent>
-            {totalAttempts === 0 ? (
-              <p className="text-sm text-muted-foreground">No reviews this period.</p>
-            ) : (
-              <div className="overflow-x-auto">
-                <table className="text-xs">
-                  <thead>
-                    <tr>
-                      <th className="w-12"></th>
-                      {Array.from({ length: 24 }, (_, h) => (
-                        <th
-                          key={h}
-                          className="w-6 px-0.5 text-center font-normal text-muted-foreground/70"
-                        >
-                          {h % 6 === 0 ? h : ''}
-                        </th>
-                      ))}
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'].map(
-                      (label, dayIdx) => (
-                        <tr key={label}>
-                          <td className="pr-2 text-right text-muted-foreground">
-                            {label}
-                          </td>
-                          {heatmap[dayIdx].map((cnt, h) => {
-                            const intensity = cnt / maxCell;
-                            const bg =
-                              cnt === 0
-                                ? 'bg-muted/40'
-                                : intensity > 0.75
-                                  ? 'bg-primary'
-                                  : intensity > 0.5
-                                    ? 'bg-primary/70'
-                                    : intensity > 0.25
-                                      ? 'bg-primary/40'
-                                      : 'bg-primary/20';
-                            return (
-                              <td key={h} className="p-0.5">
-                                <div
-                                  className={`h-5 w-5 rounded ${bg}`}
-                                  title={`${label} ${h}:00 — ${cnt} reviews`}
-                                />
-                              </td>
-                            );
-                          })}
-                        </tr>
-                      )
-                    )}
-                  </tbody>
-                </table>
-                <p className="mt-3 text-xs text-muted-foreground">
-                  Darker = more reviews. Peak cell: {maxCell} reviews.
-                </p>
-              </div>
-            )}
-          </CardContent>
-        </Card>
-
-        {/* Panel 4: Card retention */}
-        <Card>
-          <CardHeader>
-            <CardTitle>Card retention</CardTitle>
-            <CardDescription>
-              Average FSRS stability per lesson. Higher = students remember
-              longer.
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            {retentionRows.length === 0 ? (
-              <p className="text-sm text-muted-foreground">
-                No reviewed cards yet.
+          <CardContent className="flex-1">
+            {bottomRetention.length === 0 ? (
+              <p className="text-xs text-muted-foreground">
+                Not enough review data for retention signal yet.
               </p>
             ) : (
-              <ul className="space-y-2">
-                {retentionRows.map((row) => (
-                  <li key={row.lessonId} className="text-xs">
-                    <div className="flex items-center gap-3">
-                      <span className="min-w-0 flex-1 truncate font-medium text-foreground">
-                        {row.label}
-                      </span>
-                      <span className="w-32 text-right tabular-nums text-muted-foreground">
-                        {row.avgStability.toFixed(2)}d · {row.n} cards
-                      </span>
-                    </div>
-                    <div className="mt-1 h-2 w-full overflow-hidden rounded-full bg-muted">
-                      <div
-                        className="h-full bg-primary"
-                        style={{
-                          width: `${Math.max(2, (row.avgStability / maxRetention) * 100)}%`,
-                        }}
-                      />
-                    </div>
+              <ul className="space-y-2 text-sm">
+                {bottomRetention.map((r) => (
+                  <li
+                    key={r.lessonId}
+                    className="flex min-w-0 items-center justify-between gap-2"
+                  >
+                    <span className="min-w-0 truncate font-medium">
+                      {r.label}
+                    </span>
+                    <span className="shrink-0 rounded-full bg-muted px-2 py-0.5 text-[11px] font-medium tabular-nums">
+                      {r.avgStability.toFixed(1)}d
+                    </span>
                   </li>
                 ))}
               </ul>
             )}
           </CardContent>
+          <SubFooterLink
+            href={withClass('/teacher/analytics/content', scope.classFilter)}
+          >
+            Dig into content health
+          </SubFooterLink>
         </Card>
-
-        {/* Panel 5: Live feed */}
-        <Card>
-          <CardHeader>
-            <CardTitle>Live feed</CardTitle>
-            <CardDescription>
-              Most recent XP awards, submissions, and reviews.
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            {feed.length === 0 ? (
-              <p className="text-sm text-muted-foreground">Nothing yet.</p>
-            ) : (
-              <ul className="space-y-1 text-sm">
-                {feed.map((item) => {
-                  const dot =
-                    item.kind === 'xp'
-                      ? 'bg-primary'
-                      : item.kind === 'submission'
-                        ? 'bg-amber-400'
-                        : 'bg-primary/70';
-                  const studentLink = item.classId
-                    ? `/teacher/classes/${item.classId}/students/${item.studentId}`
-                    : null;
-                  return (
-                    <li
-                      key={item.key}
-                      className="flex items-baseline gap-2 border-b border-border py-1.5 last:border-0"
-                    >
-                      <span
-                        className={`mt-1 inline-block h-2 w-2 shrink-0 rounded-full ${dot}`}
-                      />
-                      <span className="flex-1 text-foreground">
-                        {studentLink ? (
-                          <Link
-                            href={studentLink}
-                            className="font-medium text-foreground hover:text-primary hover:underline"
-                          >
-                            {item.studentName}
-                          </Link>
-                        ) : (
-                          <span className="font-medium text-foreground">
-                            {item.studentName}
-                          </span>
-                        )}{' '}
-                        {item.detail}
-                      </span>
-                      <span className="shrink-0 text-xs text-muted-foreground/70">
-                        {formatSaigon(item.when)}
-                      </span>
-                    </li>
-                  );
-                })}
-              </ul>
-            )}
-          </CardContent>
-        </Card>
-
-        {/* Footer note about RLS */}
-        <p className="text-xs text-muted-foreground/70">
-          Per-class filter scopes the rollups, charts, and feed. Pending coop
-          matchmaking is reflected in &quot;Quest completion&quot; via the
-          &quot;in flight&quot; count. Class:{' '}
-          {classFilter && classFilter !== 'all'
-            ? (classNameById.get(classFilter) ?? 'unknown')
-            : 'all'}
-          .
-        </p>
       </div>
     </div>
   );
 }
 
-function RollupCard({ label, value }: { label: string; value: string }) {
+function withClass(href: string, classFilter: string | null): string {
+  return classFilter ? `${href}?class=${encodeURIComponent(classFilter)}` : href;
+}
+
+function SubFooterLink({
+  href,
+  children,
+}: {
+  href: string;
+  children: React.ReactNode;
+}) {
   return (
-    <div className="rounded-lg border border-border bg-card p-4">
-      <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
-        {label}
-      </p>
-      <p className="mt-1.5 text-2xl font-semibold tabular-nums">{value}</p>
+    <Link
+      href={href}
+      className="group flex items-center justify-between border-t border-border px-6 py-3 text-xs font-medium text-muted-foreground transition-colors hover:bg-muted/40 hover:text-foreground"
+    >
+      <span>{children}</span>
+      <ArrowRight className="h-3.5 w-3.5 transition-transform group-hover:translate-x-0.5" />
+    </Link>
+  );
+}
+
+function PulseMini({
+  label,
+  colorClass,
+  buckets,
+  labels,
+  max,
+}: {
+  label: string;
+  colorClass: string;
+  buckets: number[];
+  labels: string[];
+  max: number;
+}) {
+  const total = buckets.reduce((a, b) => a + b, 0);
+  return (
+    <div>
+      <div className="mb-1.5 flex items-baseline justify-between gap-2">
+        <span className="text-xs font-medium text-muted-foreground">
+          {label}
+        </span>
+        <span className="text-xs font-semibold tabular-nums">{total}</span>
+      </div>
+      <div className="grid grid-cols-6 items-end gap-1" style={{ height: '48px' }}>
+        {buckets.map((v, i) => (
+          <div
+            key={i}
+            title={`${labels[i]} — ${v}`}
+            className="flex h-full items-end"
+          >
+            <div
+              className={cn(
+                'w-full rounded-sm',
+                v === 0 ? 'bg-muted' : colorClass,
+              )}
+              style={{
+                height: v === 0 ? '4px' : `${Math.max(8, (v / max) * 100)}%`,
+              }}
+            />
+          </div>
+        ))}
+      </div>
+      <div className="mt-1 grid grid-cols-6 gap-1 text-center text-[10px] text-muted-foreground/70">
+        {labels.map((l, i) => (
+          <span key={i} className="truncate">
+            {i === 0 || i === labels.length - 1 ? l : ''}
+          </span>
+        ))}
+      </div>
     </div>
   );
 }

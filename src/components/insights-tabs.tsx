@@ -5,8 +5,8 @@ import { usePathname } from 'next/navigation';
 import { cn } from '@/lib/utils';
 
 const TABS = [
-  { href: '/teacher/analytics', label: 'Performance' },
-  { href: '/leaderboard', label: 'Ranks' },
+  { href: '/teacher/analytics', label: 'Performance', match: 'prefix' as const },
+  { href: '/leaderboard', label: 'Ranks', match: 'exact' as const },
 ] as const;
 
 /**
@@ -23,7 +23,10 @@ export function InsightsTabs() {
     <nav className="mb-6 border-b border-border">
       <ul className="flex gap-1">
         {TABS.map((tab) => {
-          const active = pathname === tab.href;
+          const active =
+            tab.match === 'prefix'
+              ? pathname === tab.href || pathname.startsWith(`${tab.href}/`)
+              : pathname === tab.href;
           return (
             <li key={tab.href}>
               <Link
