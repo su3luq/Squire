@@ -11,6 +11,7 @@ import {
   ClosestRival,
   type RivalRow,
 } from '@/components/closest-rival';
+import { RecentWins } from '@/components/recent-wins';
 import { getRankProgress, getRanksMap } from '@/lib/ranks-config';
 
 export const dynamic = 'force-dynamic';
@@ -42,6 +43,7 @@ export default async function StudentHome() {
     { count: aheadCount },
     { data: rivalAboveRow },
     { data: rivalBelowRow },
+    { data: recentWins },
   ] = await Promise.all([
     supabase
       .from('card_reviews')
@@ -92,6 +94,14 @@ export default async function StudentHome() {
       .order('xp_total', { ascending: false })
       .limit(1)
       .maybeSingle(),
+    // Recent wins feed — last 5 XP awards from xp_ledger.
+    supabase
+      .from('xp_ledger')
+      .select('id, amount, reason, created_at')
+      .eq('student_id', user.id)
+      .gt('amount', 0)
+      .order('created_at', { ascending: false })
+      .limit(5),
   ]);
 
   const dueCount = dueCountRaw ?? 0;
@@ -152,6 +162,10 @@ export default async function StudentHome() {
           rivalAbove={rivalAbove}
           rivalBelow={rivalBelow}
         />
+      )}
+
+      {recentWins && recentWins.length > 0 && (
+        <RecentWins rows={recentWins} />
       )}
 
       <div className="grid gap-4 sm:grid-cols-3">

@@ -3,12 +3,13 @@
 import { useEffect, useState, useTransition } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
+import { toast } from 'sonner';
 import { createClient } from '@/lib/supabase/client';
 import { Button, buttonVariants } from '@/components/ui/button';
 import { Progress } from '@/components/ui/progress';
 import { Card, CardContent } from '@/components/ui/card';
 import { MarkdownRenderer } from '@/components/markdown-renderer';
-import { Check, X, Loader2 } from 'lucide-react';
+import { Check, Sparkles, X, Loader2 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { scheduleNext, type DbCardReview } from '@/lib/fsrs';
 import { NextReviewCountdown } from '@/components/next-review-countdown';
@@ -176,6 +177,13 @@ export function ReviewSession({ cards }: { cards: SessionCard[] }) {
         correct_choice: (result.correct_choice ?? choice) as Choice,
         xp_awarded: result.xp_awarded ?? 0,
       };
+
+      if (answer.is_correct && answer.xp_awarded > 0) {
+        toast.success(`+${answer.xp_awarded} XP`, {
+          icon: <Sparkles className="h-4 w-4" aria-hidden />,
+          duration: 1500,
+        });
+      }
 
       const newAnswers = [...currentProgress.answers, answer];
 

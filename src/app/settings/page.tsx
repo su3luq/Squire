@@ -11,6 +11,7 @@ import {
 import { AvatarSettings } from './avatar-settings';
 import { PasswordSettings } from './password-settings';
 import { EmailSettings } from './email-settings';
+import { SoundSettings } from './sound-settings';
 
 export const dynamic = 'force-dynamic';
 
@@ -69,6 +70,17 @@ export default async function SettingsPage() {
           <EmailSettings currentEmail={profile.email ?? user.email ?? ''} />
         </CardContent>
       </Card>
+
+      {isStudent && (
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-base">Sounds</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <SoundSettings />
+          </CardContent>
+        </Card>
+      )}
 
       {profile.role === 'teacher' && (
         <Card>

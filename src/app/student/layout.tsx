@@ -1,6 +1,7 @@
 import { redirect } from 'next/navigation';
 import { createClient } from '@/lib/supabase/server';
 import { AppShell } from '@/components/app-shell';
+import { CelebrationGate } from '@/components/celebration-gate';
 import { getStudentNav } from '@/components/nav-items';
 import { getRingConfigForTier } from '@/lib/ranks-config';
 
@@ -48,6 +49,7 @@ export default async function StudentLayout({
       homeHref="/student"
       unreadCount={unreadNotifications ?? 0}
     >
+      <CelebrationGate />
       {children}
     </AppShell>
   );
