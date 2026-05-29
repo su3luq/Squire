@@ -23,6 +23,17 @@ export default function TeacherSettingsHub() {
             names. Saved changes recompute every student&apos;s rank.
           </p>
         </Link>
+        <Link
+          href="/teacher/settings/brand"
+          className="group rounded-lg border border-border p-4 transition hover:border-primary hover:bg-muted/40"
+        >
+          <p className="text-sm font-semibold">Brand sandbox</p>
+          <p className="mt-1 text-xs text-muted-foreground">
+            Side-by-side preview of accent + mode candidates against real
+            app surfaces. Pick the variant you want before the theme
+            migration runs.
+          </p>
+        </Link>
       </div>
     </div>
   );
