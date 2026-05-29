@@ -6,8 +6,12 @@ import { ReviewLauncher } from '@/components/review-launcher';
 import { EnableNotificationsButton } from '@/components/enable-notifications-button';
 import { StatCard } from '@/components/stat-card';
 import { QuestStatusChip } from '@/components/status-chip';
-import { Progress } from '@/components/ui/progress';
-import { nextRankUp, rankProgress } from '@/lib/ranks';
+import { RankHero } from '@/components/rank-hero';
+import {
+  ClosestRival,
+  type RivalRow,
+} from '@/components/closest-rival';
+import { getRankProgress, getRanksMap } from '@/lib/ranks-config';
 
 export const dynamic = 'force-dynamic';
 
@@ -29,12 +33,15 @@ export default async function StudentHome() {
   if (!profile) redirect('/login');
 
   const nowIso = new Date().toISOString();
+  const viewerXp = profile.xp_total ?? 0;
   const [
     { count: dueCountRaw },
     { data: nextRow },
     { count: activeQuestsRaw },
     { data: acceptances },
     { count: aheadCount },
+    { data: rivalAboveRow },
+    { data: rivalBelowRow },
   ] = await Promise.all([
     supabase
       .from('card_reviews')
@@ -64,7 +71,27 @@ export default async function StudentHome() {
       .from('public_profiles')
       .select('id', { count: 'exact', head: true })
       .eq('role', 'student')
-      .gt('xp_total', profile.xp_total ?? 0),
+      .gt('xp_total', viewerXp),
+    // Closest student above the viewer (smallest XP higher than viewer's).
+    supabase
+      .from('public_profiles')
+      .select('id, full_name, avatar_url, xp_total, current_rank, class_id')
+      .eq('role', 'student')
+      .neq('id', user.id)
+      .gt('xp_total', viewerXp)
+      .order('xp_total', { ascending: true })
+      .limit(1)
+      .maybeSingle(),
+    // Closest student below the viewer (largest XP lower than viewer's).
+    supabase
+      .from('public_profiles')
+      .select('id, full_name, avatar_url, xp_total, current_rank, class_id')
+      .eq('role', 'student')
+      .neq('id', user.id)
+      .lt('xp_total', viewerXp)
+      .order('xp_total', { ascending: false })
+      .limit(1)
+      .maybeSingle(),
   ]);
 
   const dueCount = dueCountRaw ?? 0;
@@ -73,33 +100,59 @@ export default async function StudentHome() {
   const leaderboardPosition = (aheadCount ?? 0) + 1;
 
   const tier = profile.current_rank ?? 7;
-  const xp = profile.xp_total ?? 0;
-  const nextRank = nextRankUp(tier);
-  const progress = rankProgress(xp, tier);
-  const xpToNext = nextRank ? Math.max(0, nextRank.minXp - xp) : 0;
+  const xp = viewerXp;
+  const [rankProgressData, ranksMap] = await Promise.all([
+    getRankProgress(xp, tier),
+    getRanksMap(),
+  ]);
+
+  function toRivalRow(
+    row:
+      | {
+          id: string | null;
+          full_name: string | null;
+          avatar_url: string | null;
+          xp_total: number | null;
+          current_rank: number | null;
+          class_id: string | null;
+        }
+      | null,
+  ): RivalRow | null {
+    if (!row || !row.id) return null;
+    const t = row.current_rank ?? 7;
+    const r = ranksMap.get(t);
+    return {
+      id: row.id,
+      full_name: row.full_name ?? 'Unknown',
+      avatar_url: row.avatar_url ?? null,
+      xp_total: row.xp_total ?? 0,
+      current_rank: t,
+      class_id: row.class_id ?? null,
+      ringConfig: r?.gradient
+        ? { gradient: r.gradient.gradient, glow: r.gradient.glow ?? null }
+        : null,
+    };
+  }
+  const rivalAbove = toRivalRow(rivalAboveRow);
+  const rivalBelow = toRivalRow(rivalBelowRow);
 
   return (
     <div className="mx-auto max-w-4xl space-y-6">
-      <header>
-        <h1 className="text-2xl font-semibold tracking-tight">
-          Welcome back, {profile.full_name}
-        </h1>
-        <p className="mt-1 text-sm text-muted-foreground">
-          Rank {tier} · {xp.toLocaleString()} XP
-          {nextRank ? (
-            <>
-              {' '}
-              · {xpToNext.toLocaleString()} XP to Rank {nextRank.tier}
-            </>
-          ) : (
-            <> · Top rank reached</>
-          )}
-        </p>
-        <Progress
-          value={Math.round(progress * 100)}
-          className="mt-4 max-w-xl"
+      <RankHero
+        fullName={profile.full_name ?? 'Student'}
+        xp={xp}
+        tier={tier}
+        progress={rankProgressData}
+      />
+
+      {(rivalAbove || rivalBelow) && (
+        <ClosestRival
+          viewerXp={xp}
+          viewerPosition={leaderboardPosition}
+          rivalAbove={rivalAbove}
+          rivalBelow={rivalBelow}
         />
-      </header>
+      )}
 
       <div className="grid gap-4 sm:grid-cols-3">
         <StatCard
