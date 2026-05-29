@@ -12,7 +12,8 @@ import {
   getStudentScope,
   relativeDaysAgo,
 } from '@/lib/analytics-data';
-import { cn } from '@/lib/utils';
+import { StatusChip, type ChipTone } from '@/components/status-chip';
+import { ToggleChipGroup } from '@/components/toggle-chip-group';
 
 export const dynamic = 'force-dynamic';
 
@@ -107,7 +108,7 @@ export default async function AtRiskPage({
 
   type Flag = {
     label: string;
-    tone: 'destructive' | 'warn' | 'muted';
+    tone: Extract<ChipTone, 'danger' | 'warn' | 'muted'>;
     detail?: string;
   };
   type Entry = {
@@ -147,7 +148,7 @@ export default async function AtRiskPage({
       if (!entry) continue;
       entry.flags.push({
         label: 'Low velocity',
-        tone: 'destructive',
+        tone: 'danger',
         detail: s.learning_velocity.toFixed(2),
       });
     }
@@ -247,15 +248,15 @@ export default async function AtRiskPage({
       <CardContent>
         <div className="mb-3 flex flex-wrap items-center gap-2 text-xs">
           <span className="text-muted-foreground">Sort by:</span>
-          <SortChip current={sort} value="velocity" href={sortHref('velocity')}>
-            Velocity
-          </SortChip>
-          <SortChip current={sort} value="fails" href={sortHref('fails')}>
-            Fails
-          </SortChip>
-          <SortChip current={sort} value="name" href={sortHref('name')}>
-            Name
-          </SortChip>
+          <ToggleChipGroup
+            ariaLabel="Sort at-risk students"
+            current={sort}
+            options={[
+              { value: 'velocity', label: 'Velocity', href: sortHref('velocity') },
+              { value: 'fails', label: 'Fails', href: sortHref('fails') },
+              { value: 'name', label: 'Name', href: sortHref('name') },
+            ]}
+          />
           {classFilterQs && (
             <span className="ml-auto rounded-full bg-muted px-2 py-0.5 text-[11px] text-muted-foreground">
               {classMap.get(scope.classFilter ?? '') ?? 'class'}
@@ -305,20 +306,10 @@ export default async function AtRiskPage({
                   </div>
                   <div className="flex shrink-0 flex-wrap gap-1.5 sm:max-w-[55%] sm:justify-end">
                     {entry.flags.map((f, idx) => (
-                      <span
-                        key={`${f.label}-${idx}`}
-                        className={cn(
-                          'rounded-full px-2 py-0.5 text-[11px] font-medium',
-                          f.tone === 'destructive'
-                            ? 'bg-destructive/10 text-destructive'
-                            : f.tone === 'warn'
-                              ? 'bg-amber-100 text-amber-900'
-                              : 'bg-muted text-muted-foreground',
-                        )}
-                      >
+                      <StatusChip key={`${f.label}-${idx}`} tone={f.tone}>
                         {f.label}
                         {f.detail ? ` · ${f.detail}` : ''}
-                      </span>
+                      </StatusChip>
                     ))}
                   </div>
                 </li>
@@ -331,29 +322,3 @@ export default async function AtRiskPage({
   );
 }
 
-function SortChip({
-  current,
-  value,
-  href,
-  children,
-}: {
-  current: SortKey;
-  value: SortKey;
-  href: string;
-  children: React.ReactNode;
-}) {
-  const active = current === value;
-  return (
-    <Link
-      href={href}
-      className={cn(
-        'rounded-full px-2.5 py-1 font-medium transition-colors',
-        active
-          ? 'bg-foreground text-background'
-          : 'border border-border bg-card text-muted-foreground hover:bg-muted',
-      )}
-    >
-      {children}
-    </Link>
-  );
-}

@@ -1,25 +1,30 @@
 'use client';
 
-import Link from 'next/link';
 import { usePathname, useSearchParams } from 'next/navigation';
-import { cn } from '@/lib/utils';
+import {
+  ToggleChipGroup,
+  type ToggleChipOption,
+} from '@/components/toggle-chip-group';
 
 const SUB_TABS = [
-  { href: '/teacher/analytics', label: 'Pulse', match: 'exact' as const },
+  { value: 'pulse', href: '/teacher/analytics', label: 'Pulse', match: 'exact' },
   {
+    value: 'quests',
     href: '/teacher/analytics/quests',
     label: 'Quests',
-    match: 'prefix' as const,
+    match: 'prefix',
   },
   {
+    value: 'content',
     href: '/teacher/analytics/content',
     label: 'Content',
-    match: 'exact' as const,
+    match: 'exact',
   },
   {
+    value: 'at-risk',
     href: '/teacher/analytics/at-risk',
     label: 'At-risk',
-    match: 'exact' as const,
+    match: 'exact',
   },
 ] as const;
 
@@ -33,28 +38,25 @@ export function AnalyticsSubTabs() {
   const classParam = search.get('class');
   const queryString = classParam ? `?class=${encodeURIComponent(classParam)}` : '';
 
+  const current =
+    SUB_TABS.find((t) =>
+      t.match === 'prefix'
+        ? pathname === t.href || pathname.startsWith(`${t.href}/`)
+        : pathname === t.href,
+    )?.value ?? 'pulse';
+
+  const options: ToggleChipOption[] = SUB_TABS.map((t) => ({
+    value: t.value,
+    label: t.label,
+    href: `${t.href}${queryString}`,
+  }));
+
   return (
-    <nav className="-mx-1 mb-6 flex flex-wrap gap-1 overflow-x-auto pb-1">
-      {SUB_TABS.map((tab) => {
-        const active =
-          tab.match === 'prefix'
-            ? pathname === tab.href || pathname.startsWith(`${tab.href}/`)
-            : pathname === tab.href;
-        return (
-          <Link
-            key={tab.href}
-            href={`${tab.href}${queryString}`}
-            className={cn(
-              'inline-flex h-8 shrink-0 items-center rounded-full px-3.5 text-xs font-medium transition-colors',
-              active
-                ? 'bg-foreground text-background'
-                : 'border border-border bg-card text-muted-foreground hover:bg-muted hover:text-foreground',
-            )}
-          >
-            {tab.label}
-          </Link>
-        );
-      })}
-    </nav>
+    <ToggleChipGroup
+      ariaLabel="Insights sections"
+      current={current}
+      options={options}
+      className="mb-6"
+    />
   );
 }

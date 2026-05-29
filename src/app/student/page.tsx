@@ -5,9 +5,9 @@ import { ArrowRight, BookOpen, Target, Trophy } from 'lucide-react';
 import { ReviewLauncher } from '@/components/review-launcher';
 import { EnableNotificationsButton } from '@/components/enable-notifications-button';
 import { StatCard } from '@/components/stat-card';
+import { QuestStatusChip } from '@/components/status-chip';
 import { Progress } from '@/components/ui/progress';
 import { nextRankUp, rankProgress } from '@/lib/ranks';
-import { cn } from '@/lib/utils';
 
 export const dynamic = 'force-dynamic';
 
@@ -172,14 +172,10 @@ export default async function StudentHome() {
                         {a.quest_type ?? 'quest'}
                       </p>
                     </div>
-                    <span
-                      className={cn(
-                        'shrink-0 rounded-full px-2.5 py-0.5 text-xs font-medium capitalize',
-                        statusToneClasses(a.status),
-                      )}
-                    >
-                      {a.status}
-                    </span>
+                    <QuestStatusChip
+                      status={a.status ?? 'enrolled'}
+                      className="shrink-0"
+                    />
                   </Link>
                 </li>
               );
@@ -205,19 +201,3 @@ export default async function StudentHome() {
   );
 }
 
-function statusToneClasses(status: string | null): string {
-  switch (status) {
-    case 'active':
-      return 'bg-primary/10 text-primary';
-    case 'submitted':
-      return 'bg-amber-100 text-amber-900';
-    case 'enrolled':
-      return 'bg-muted text-muted-foreground';
-    case 'passed':
-      return 'bg-primary/15 text-primary';
-    case 'failed':
-      return 'bg-destructive/10 text-destructive';
-    default:
-      return 'bg-muted text-muted-foreground';
-  }
-}

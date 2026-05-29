@@ -4,10 +4,14 @@ import { ChevronDown, Scroll, Sparkles, Sword, Trophy, Users } from 'lucide-reac
 import { createClient } from '@/lib/supabase/server';
 import { PageHeader } from '@/components/page-header';
 import { EmptyState } from '@/components/empty-state';
-import { cn } from '@/lib/utils';
+import { SectionHeader } from '@/components/section-header';
+import { QuestStatusChip } from '@/components/status-chip';
+import {
+  ToggleChipGroup,
+  type ToggleChipOption,
+} from '@/components/toggle-chip-group';
 import { LiveCountdown } from './countdown';
 import { QuestActionButton } from './accept-button';
-import { QuestFilterChips } from './quest-filter-chips';
 
 export const dynamic = 'force-dynamic';
 
@@ -16,20 +20,6 @@ type MineBucket =
   | 'enrolled'
   | 'awaiting_review'
   | 'resubmit_needed';
-
-const BUCKET_TONE: Record<MineBucket, string> = {
-  in_progress: 'bg-primary/10 text-primary',
-  enrolled: 'bg-muted text-muted-foreground',
-  awaiting_review: 'bg-amber-100 text-amber-900',
-  resubmit_needed: 'bg-destructive/10 text-destructive',
-};
-
-const BUCKET_LABEL: Record<MineBucket, string> = {
-  in_progress: 'In progress',
-  enrolled: 'Enrolled',
-  awaiting_review: 'Awaiting review',
-  resubmit_needed: 'Resubmit needed',
-};
 
 const MINE_ORDER: MineBucket[] = [
   'resubmit_needed',
@@ -372,12 +362,7 @@ export default async function StudentQuestsPage({
 
       {mine.length > 0 && (
         <section>
-          <div className="mb-3 flex items-center gap-2">
-            <Scroll className="h-4 w-4 text-muted-foreground" />
-            <h2 className="text-sm font-semibold uppercase tracking-wide text-muted-foreground">
-              Your active quests
-            </h2>
-          </div>
+          <SectionHeader icon={Scroll} title="Your active quests" size="sm" />
           <ul className="divide-y divide-border overflow-hidden rounded-lg border border-border bg-card">
             {MINE_ORDER.flatMap((bucket) =>
               mine
@@ -402,14 +387,10 @@ export default async function StudentQuestsPage({
                               {item.questType} · +{item.xpReward} XP
                             </p>
                           </div>
-                          <span
-                            className={cn(
-                              'shrink-0 rounded-full px-2.5 py-0.5 text-xs font-medium',
-                              BUCKET_TONE[item.bucket]
-                            )}
-                          >
-                            {BUCKET_LABEL[item.bucket]}
-                          </span>
+                          <QuestStatusChip
+                            status={item.bucket}
+                            className="shrink-0"
+                          />
                         </div>
                       </Link>
                     </li>
@@ -422,24 +403,30 @@ export default async function StudentQuestsPage({
 
       {/* Available board */}
       <section>
-        <div className="mb-3 flex flex-wrap items-center justify-between gap-3">
-          <h2 className="text-sm font-semibold uppercase tracking-wide text-muted-foreground">
-            Available
-          </h2>
-          <QuestFilterChips
-            soloAvailable={soloQuests.length}
-            coopAvailable={coopQuests.length}
-          />
-        </div>
+        <SectionHeader
+          title="Available"
+          size="sm"
+          actions={
+            <ToggleChipGroup
+              ariaLabel="Filter quests by type"
+              current={filter}
+              options={availabilityChipOptions(
+                soloQuests.length,
+                coopQuests.length,
+              )}
+            />
+          }
+        />
 
         {showSoloBoard && (
           <div className="mb-6">
-            <div className="mb-2 flex items-center gap-2">
-              <Sword className="h-4 w-4 text-muted-foreground" />
-              <h3 className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-                Solo
-              </h3>
-            </div>
+            <SectionHeader
+              icon={Sword}
+              title="Solo"
+              size="xs"
+              level={3}
+              className="mb-2"
+            />
             {soloQuests.length === 0 ? (
               <EmptyState
                 icon={Sword}
@@ -485,12 +472,13 @@ export default async function StudentQuestsPage({
 
         {showCoopBoard && (
           <div>
-            <div className="mb-2 flex items-center gap-2">
-              <Users className="h-4 w-4 text-muted-foreground" />
-              <h3 className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-                Co-op
-              </h3>
-            </div>
+            <SectionHeader
+              icon={Users}
+              title="Co-op"
+              size="xs"
+              level={3}
+              className="mb-2"
+            />
             {coopQuests.length === 0 ? (
               <EmptyState
                 icon={Users}
@@ -584,8 +572,34 @@ export default async function StudentQuestsPage({
 function NewBadge() {
   return (
     <span className="inline-flex items-center gap-1 rounded-full bg-emerald-100 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide text-emerald-900">
-      <Sparkles className="h-2.5 w-2.5" />
+      <Sparkles className="h-2.5 w-2.5" aria-hidden />
       New
     </span>
   );
+}
+
+function availabilityChipOptions(
+  soloAvailable: number,
+  coopAvailable: number,
+): ToggleChipOption<FilterType>[] {
+  return [
+    {
+      value: 'all',
+      label: 'All',
+      count: soloAvailable + coopAvailable,
+      href: '/student/quests',
+    },
+    {
+      value: 'solo',
+      label: 'Solo',
+      count: soloAvailable,
+      href: '/student/quests?type=solo',
+    },
+    {
+      value: 'coop',
+      label: 'Co-op',
+      count: coopAvailable,
+      href: '/student/quests?type=coop',
+    },
+  ];
 }

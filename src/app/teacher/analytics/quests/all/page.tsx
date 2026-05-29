@@ -6,6 +6,7 @@ import {
   getStudentScope,
   relativeDaysAgo,
 } from '@/lib/analytics-data';
+import { ToggleChipGroup } from '@/components/toggle-chip-group';
 import { cn } from '@/lib/utils';
 
 export const dynamic = 'force-dynamic';
@@ -198,27 +199,55 @@ export default async function AllQuestsAnalyticsPage({
   return (
     <div className="space-y-4">
       {/* Filter row */}
-      <div className="flex flex-wrap items-center gap-2 text-xs">
-        <FilterChipGroup
-          label="Status"
-          options={[
-            { value: 'open', label: 'Open' },
-            { value: 'closed', label: 'Closed' },
-            { value: 'all', label: 'All' },
-          ]}
-          value={statusFilter}
-          buildHref={(v) => buildUrl({ status: v as QueryParams['status'], page: '1' })}
-        />
-        <FilterChipGroup
-          label="Type"
-          options={[
-            { value: 'all', label: 'All' },
-            { value: 'solo', label: 'Solo' },
-            { value: 'coop', label: 'Co-op' },
-          ]}
-          value={typeFilter}
-          buildHref={(v) => buildUrl({ type: v as QueryParams['type'], page: '1' })}
-        />
+      <div className="flex flex-wrap items-center gap-3 text-xs">
+        <div className="flex items-center gap-1.5">
+          <span className="text-muted-foreground">Status:</span>
+          <ToggleChipGroup
+            ariaLabel="Filter by quest status"
+            current={statusFilter}
+            options={[
+              {
+                value: 'open',
+                label: 'Open',
+                href: buildUrl({ status: 'open', page: '1' }),
+              },
+              {
+                value: 'closed',
+                label: 'Closed',
+                href: buildUrl({ status: 'closed', page: '1' }),
+              },
+              {
+                value: 'all',
+                label: 'All',
+                href: buildUrl({ status: 'all', page: '1' }),
+              },
+            ]}
+          />
+        </div>
+        <div className="flex items-center gap-1.5">
+          <span className="text-muted-foreground">Type:</span>
+          <ToggleChipGroup
+            ariaLabel="Filter by quest type"
+            current={typeFilter}
+            options={[
+              {
+                value: 'all',
+                label: 'All',
+                href: buildUrl({ type: 'all', page: '1' }),
+              },
+              {
+                value: 'solo',
+                label: 'Solo',
+                href: buildUrl({ type: 'solo', page: '1' }),
+              },
+              {
+                value: 'coop',
+                label: 'Co-op',
+                href: buildUrl({ type: 'coop', page: '1' }),
+              },
+            ]}
+          />
+        </div>
         <span className="ml-auto text-xs text-muted-foreground">
           {totalRows.toLocaleString()} quests · page {safePage}/{totalPages}
         </span>
@@ -348,39 +377,3 @@ export default async function AllQuestsAnalyticsPage({
   );
 }
 
-function FilterChipGroup({
-  label,
-  options,
-  value,
-  buildHref,
-}: {
-  label: string;
-  options: { value: string; label: string }[];
-  value: string;
-  buildHref: (v: string) => string;
-}) {
-  return (
-    <div className="flex items-center gap-1.5">
-      <span className="text-muted-foreground">{label}:</span>
-      <div className="flex gap-1">
-        {options.map((o) => {
-          const active = o.value === value;
-          return (
-            <Link
-              key={o.value}
-              href={buildHref(o.value)}
-              className={cn(
-                'rounded-full px-2.5 py-1 text-xs font-medium transition-colors',
-                active
-                  ? 'bg-foreground text-background'
-                  : 'border border-border bg-card text-muted-foreground hover:bg-muted',
-              )}
-            >
-              {o.label}
-            </Link>
-          );
-        })}
-      </div>
-    </div>
-  );
-}
