@@ -152,8 +152,9 @@
   --chart-4: oklch(0.55 0.003 270);
   --chart-5: oklch(0.42 0.003 270);
 
-  /* Sidebar pushed darker than background for clearer rail separation. */
-  --sidebar: oklch(0.135 0.003 270);
+  /* Sidebar matches the canvas — separation comes from the border
+   * and the rail's vertical orientation, not a darker surface. */
+  --sidebar: oklch(0.16 0.003 270);
   --sidebar-foreground: oklch(0.96 0.003 270);
   --sidebar-primary: oklch(0.68 0.13 45);
   --sidebar-primary-foreground: oklch(0.16 0.003 270);

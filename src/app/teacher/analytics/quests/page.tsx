@@ -347,7 +347,7 @@ export default async function QuestHealthPage({
       <Card>
         <CardHeader className="pb-3">
           <CardTitle className="flex items-center gap-2 text-base">
-            <Sword className="h-4 w-4 text-emerald-500" />
+            <Sword className="h-4 w-4 text-primary" />
             Quests humming
           </CardTitle>
           <p className="text-xs text-muted-foreground">
@@ -378,7 +378,7 @@ export default async function QuestHealthPage({
                         {Math.round(q.passRate * 100)}% pass
                       </span>
                     )}
-                    <span className="rounded-full bg-emerald-50 px-2 py-0.5 font-semibold tabular-nums text-emerald-900">
+                    <span className="rounded-full bg-primary/15 px-2 py-0.5 font-semibold tabular-nums text-primary">
                       +{q.weekly} this wk
                     </span>
                   </div>
@@ -426,9 +426,9 @@ function FunnelStat({
       className={cn(
         'rounded-lg border px-3 py-2.5',
         accent === 'good'
-          ? 'border-emerald-200 bg-emerald-50'
+          ? 'border-primary/30 bg-primary/10'
           : accent === 'warn'
-            ? 'border-amber-200 bg-amber-50'
+            ? 'border-amber-200 bg-amber-50 dark:border-amber-900/40 dark:bg-amber-950/40'
             : 'border-border bg-card',
       )}
     >
@@ -439,9 +439,9 @@ function FunnelStat({
         className={cn(
           'mt-0.5 text-xl font-semibold tabular-nums',
           accent === 'good'
-            ? 'text-emerald-900'
+            ? 'text-primary'
             : accent === 'warn'
-              ? 'text-amber-900'
+              ? 'text-amber-900 dark:text-amber-300'
               : 'text-foreground',
         )}
       >

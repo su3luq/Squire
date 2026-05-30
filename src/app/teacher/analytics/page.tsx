@@ -385,14 +385,14 @@ export default async function PulsePage({
             />
             <PulseMini
               label="Submissions"
-              colorClass="bg-amber-400"
+              colorClass="bg-primary/60"
               buckets={buckets.map((b) => b.submissions)}
               labels={buckets.map((b) => b.label)}
               max={maxSubs}
             />
             <PulseMini
               label="XP"
-              colorClass="bg-emerald-500"
+              colorClass="bg-primary/80"
               buckets={buckets.map((b) => b.xp)}
               labels={buckets.map((b) => b.label)}
               max={maxXp}

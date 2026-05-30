@@ -353,8 +353,8 @@ export default async function ContentHealthPage({
                 />
               </div>
               <div>
-                <p className="mb-2 flex items-center gap-2 text-xs font-semibold text-emerald-600">
-                  <span className="h-2 w-2 rounded-full bg-emerald-500" />
+                <p className="mb-2 flex items-center gap-2 text-xs font-semibold text-primary">
+                  <span className="h-2 w-2 rounded-full bg-primary" />
                   Sticking best
                 </p>
                 <RetentionList
