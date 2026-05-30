@@ -167,9 +167,11 @@
   --chart-4: oklch(0.50 0.015 65);
   --chart-5: oklch(0.37 0.012 65);
 
-  /* Sidebar drops to their root level — the recessed dark behind
-   * the main canvas. Creates clear z-depth between rail and content. */
-  --sidebar: oklch(0.100 0 0);
+  /* Sidebar reads as the same tonal level as the main canvas — the
+   * reference doesn't create a strong dark/light split between nav
+   * and content. Separation is carried by the 12%-alpha gold border
+   * + the rail's vertical orientation, not by a darker surface. */
+  --sidebar: oklch(0.170 0 0);
   --sidebar-foreground: oklch(0.944 0.009 75);
   --sidebar-primary: oklch(0.73 0.10 65);
   --sidebar-primary-foreground: oklch(0.15 0 0);
