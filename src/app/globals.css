@@ -117,45 +117,43 @@
 }
 
 .dark {
-  /* Deep warm-tinted base inspired by understand-anything.com's dark
-   * theme. Three core moves vs. a flat-neutral charcoal:
+  /* Near-black neutral base, matching understand-anything.com more
+   * faithfully. The warmth lives only in the text + accent + borders;
+   * the surfaces themselves are neutral. Layered lightness steps so
+   * depth still reads: bg(#0a) → card(#14) → muted(#1a) → sidebar(#08).
    *
-   *   1. Near-black base (lightness ~0.11) with a hint of warmth in
-   *      the hue (55° / warm brown axis). Reads as "theatre" rather
-   *      than "grey card."
-   *   2. Surfaces layered in small lightness steps so the eye picks
-   *      up depth: background → card → muted.
-   *   3. Borders carry a faint bronze tint (the brand mark bleeds
-   *      into the chrome). Implemented via oklch alpha so the tint
-   *      tracks any future primary shift automatically. */
+   * Border tint pulled back to 12% alpha (their --border-subtle
+   * value), not the 18% from the first attempt — at higher opacity
+   * every edge in the UI becomes a visible bronze line, which is the
+   * "too bronzy" effect to avoid. */
 
-  /* Surfaces — near-black with hint of warmth, layered upward. */
-  --background: oklch(0.11 0.004 55);
-  --foreground: oklch(0.94 0.011 75);
-  --card: oklch(0.16 0.004 55);
-  --card-foreground: oklch(0.94 0.011 75);
-  --popover: oklch(0.16 0.004 55);
-  --popover-foreground: oklch(0.94 0.011 75);
+  /* Surfaces — pure neutral near-black, no warm chroma. */
+  --background: oklch(0.105 0 0);
+  --foreground: oklch(0.944 0.009 75);
+  --card: oklch(0.158 0 0);
+  --card-foreground: oklch(0.944 0.009 75);
+  --popover: oklch(0.158 0 0);
+  --popover-foreground: oklch(0.944 0.009 75);
 
-  /* Bronze accent — unchanged hue/lightness from before; matches the
-   * brand mark across modes. */
+  /* Bronze accent — unchanged from previous attempt; the brand mark. */
   --primary: oklch(0.68 0.13 45);
-  --primary-foreground: oklch(0.13 0.004 55);
+  --primary-foreground: oklch(0.13 0 0);
 
-  --secondary: oklch(0.19 0.005 55);
-  --secondary-foreground: oklch(0.94 0.011 75);
-  --muted: oklch(0.19 0.005 55);
-  /* Warm-brown muted text (vs. cool grey) — pairs with the bronze
-   * accent and the cream foreground so secondary copy still feels
-   * connected to the brand instead of contrasting against it. */
+  --secondary: oklch(0.190 0 0);
+  --secondary-foreground: oklch(0.944 0.009 75);
+  --muted: oklch(0.190 0 0);
+  /* Warm-brown muted text — the warmth lives here, not in the surface
+   * behind it. Pairs with the cream foreground so secondary copy
+   * stays connected to the brand. */
   --muted-foreground: oklch(0.62 0.018 55);
-  --accent: oklch(0.19 0.005 55);
-  --accent-foreground: oklch(0.94 0.011 75);
+  --accent: oklch(0.190 0 0);
+  --accent-foreground: oklch(0.944 0.009 75);
 
-  /* Bronze-tinted edges — the most distinctive shift. Every border
-   * in the UI now carries the brand at low opacity. oklch with alpha
-   * means the tint tracks future primary changes automatically. */
-  --border: oklch(0.68 0.13 45 / 0.18);
+  /* Subtle bronze edge — 12% alpha (matching understand-anything's
+   * --color-border-subtle). At this opacity the tint reads as "warm
+   * hint" rather than "visible bronze line." Input bumps to 22% so
+   * form fields have a slightly stronger edge. */
+  --border: oklch(0.68 0.13 45 / 0.12);
   --input: oklch(0.68 0.13 45 / 0.22);
   --ring: oklch(0.68 0.13 45);
 
@@ -167,15 +165,15 @@
   --chart-4: oklch(0.48 0.015 55);
   --chart-5: oklch(0.35 0.012 55);
 
-  /* Sidebar pushed slightly darker than the main background so the
-   * rail reads as a recessed surface behind the content. */
-  --sidebar: oklch(0.085 0.004 55);
-  --sidebar-foreground: oklch(0.94 0.011 75);
+  /* Sidebar slightly darker than the main background so the rail
+   * reads as a recessed surface behind the content. */
+  --sidebar: oklch(0.080 0 0);
+  --sidebar-foreground: oklch(0.944 0.009 75);
   --sidebar-primary: oklch(0.68 0.13 45);
-  --sidebar-primary-foreground: oklch(0.13 0.004 55);
-  --sidebar-accent: oklch(0.19 0.005 55);
-  --sidebar-accent-foreground: oklch(0.94 0.011 75);
-  --sidebar-border: oklch(0.68 0.13 45 / 0.18);
+  --sidebar-primary-foreground: oklch(0.13 0 0);
+  --sidebar-accent: oklch(0.190 0 0);
+  --sidebar-accent-foreground: oklch(0.944 0.009 75);
+  --sidebar-border: oklch(0.68 0.13 45 / 0.12);
   --sidebar-ring: oklch(0.68 0.13 45);
 }
 
