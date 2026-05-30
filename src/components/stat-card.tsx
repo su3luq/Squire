@@ -29,7 +29,7 @@ export function StatCard({
         <p className="text-sm font-medium text-muted-foreground">{label}</p>
         {Icon ? <Icon className="h-4 w-4 shrink-0 text-muted-foreground" /> : null}
       </div>
-      <p className="mt-2 text-2xl font-semibold tracking-tight">{value}</p>
+      <p className="mt-2 text-2xl font-semibold tracking-tight tabular-nums">{value}</p>
       {hint ? (
         <p
           className={cn(
