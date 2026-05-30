@@ -157,7 +157,7 @@ export function DailyReviewGoal({
               {reviewsToday}/{DAILY_REVIEW_GOAL}
             </span>
             <Link
-              href="/student/review"
+              href="/student/cards?review=1"
               className="inline-flex items-center gap-1 font-medium text-primary hover:underline"
             >
               Review now <ArrowRight className="h-3 w-3" />

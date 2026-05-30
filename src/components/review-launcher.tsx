@@ -51,7 +51,10 @@ export function ReviewLauncher({
 
   if (isReady) {
     return (
-      <Link href="/student/review" className={buttonVariants()}>
+      <Link
+        href={dueCount > 0 ? '/student/cards?review=1' : '/student/cards'}
+        className={buttonVariants()}
+      >
         {dueCount > 0 ? `Review (${dueCount} due)` : 'Review'}
       </Link>
     );

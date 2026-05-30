@@ -16,7 +16,8 @@ export type NavIconKey =
   | 'student-review'
   | 'leaderboard'
   | 'my-quests'
-  | 'library';
+  | 'library'
+  | 'cards';
 
 export type NavItem = {
   href: string;
@@ -61,14 +62,20 @@ export function getTeacherNav(counts: TeacherCounts): NavItem[] {
 
 export function getStudentNav(counts: StudentCounts): NavItem[] {
   return [
-    { href: '/student/review', label: 'Review', icon: 'student-review', badge: counts.dueReviews },
+    // Review + Library merged into one library-led "Cards" destination.
+    {
+      href: '/student/cards',
+      label: 'Cards',
+      icon: 'cards',
+      badge: counts.dueReviews,
+      activePaths: ['/student/review', '/student/library'],
+    },
     {
       href: '/student/quests',
       label: 'Quests',
       icon: 'quests',
       activePaths: ['/student/my-quests'],
     },
-    { href: '/student/library', label: 'Library', icon: 'library' },
     { href: '/leaderboard', label: 'Ranks', icon: 'leaderboard' },
   ];
 }

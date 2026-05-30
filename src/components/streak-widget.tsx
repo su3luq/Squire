@@ -30,7 +30,7 @@ export function StreakWidget({
   if (variant === 'sidebar-icon') {
     return (
       <Link
-        href="/student/review"
+        href="/student/cards"
         title={
           alive
             ? `${streak.days}-day streak`
@@ -60,7 +60,7 @@ export function StreakWidget({
 
   return (
     <Link
-      href="/student/review"
+      href="/student/cards"
       className={cn(
         'group inline-flex items-center gap-2 rounded-full px-3 py-1 text-xs font-semibold transition-colors',
         variant === 'sidebar-full' && 'w-full justify-start',

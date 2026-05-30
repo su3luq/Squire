@@ -13,6 +13,7 @@ import {
   ListChecks,
   Brain,
   Gauge,
+  Layers,
   type LucideIcon,
 } from 'lucide-react';
 import type { NavIconKey } from './nav-items';
@@ -30,6 +31,7 @@ const ICON_REGISTRY: Record<NavIconKey, LucideIcon> = {
   leaderboard: Trophy,
   'my-quests': ListChecks,
   library: Library,
+  cards: Layers,
 };
 
 export function NavIcon({

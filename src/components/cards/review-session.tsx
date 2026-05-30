@@ -59,7 +59,15 @@ type CardProgress = {
 
 const CHOICES: Choice[] = ['a', 'b', 'c', 'd'];
 
-export function ReviewSession({ cards }: { cards: SessionCard[] }) {
+export function ReviewSession({
+  cards,
+  onExit,
+}: {
+  cards: SessionCard[];
+  /** When provided, the summary screen returns here (in-place merge on the
+   *  Cards page) instead of linking Home / refreshing the standalone page. */
+  onExit?: () => void;
+}) {
   const supabase = createClient();
   const router = useRouter();
   const [cardIndex, setCardIndex] = useState(0);
@@ -257,19 +265,31 @@ export function ReviewSession({ cards }: { cards: SessionCard[] }) {
             </p>
           ) : null}
           <div className="flex flex-wrap justify-center gap-2 pt-2">
-            <Link
-              href="/student"
-              className={buttonVariants({ variant: 'outline' })}
-            >
-              Home
-            </Link>
-            <button
-              type="button"
-              onClick={() => router.refresh()}
-              className={buttonVariants()}
-            >
-              Continue
-            </button>
+            {onExit ? (
+              <button
+                type="button"
+                onClick={onExit}
+                className={buttonVariants()}
+              >
+                Back to cards
+              </button>
+            ) : (
+              <>
+                <Link
+                  href="/student"
+                  className={buttonVariants({ variant: 'outline' })}
+                >
+                  Home
+                </Link>
+                <button
+                  type="button"
+                  onClick={() => router.refresh()}
+                  className={buttonVariants()}
+                >
+                  Continue
+                </button>
+              </>
+            )}
           </div>
         </CardContent>
       </Card>
