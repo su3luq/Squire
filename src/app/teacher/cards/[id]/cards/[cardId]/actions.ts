@@ -62,8 +62,8 @@ export async function updateCard(
     return { error: `Failed to save new questions: ${insertError.message}` };
   }
 
-  revalidatePath(`/teacher/lessons/${lessonId}`);
-  redirect(`/teacher/lessons/${lessonId}`);
+  revalidatePath(`/teacher/cards/${lessonId}`);
+  redirect(`/teacher/cards/${lessonId}`);
 }
 
 export async function deleteCard(
@@ -73,6 +73,6 @@ export async function deleteCard(
   const supabase = await createClient();
   const { error } = await supabase.from('review_cards').delete().eq('id', cardId);
   if (error) return { error: `Failed to delete card: ${error.message}` };
-  revalidatePath(`/teacher/lessons/${lessonId}`);
+  revalidatePath(`/teacher/cards/${lessonId}`);
   return { error: null };
 }

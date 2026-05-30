@@ -28,8 +28,8 @@ export async function quickStartLesson(): Promise<void> {
 
   if (error || !data) {
     // Fall back to the regular form so the user can resolve any error.
-    redirect('/teacher/lessons/new');
+    redirect('/teacher/cards/new');
   }
 
-  redirect(`/teacher/lessons/${data.id}/cards/new`);
+  redirect(`/teacher/cards/${data.id}/cards/new`);
 }

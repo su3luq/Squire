@@ -34,8 +34,8 @@ export async function updateLesson(
     return { error: `Failed to update lesson: ${error.message}`, success: false };
   }
 
-  revalidatePath(`/teacher/lessons/${lessonId}`);
-  revalidatePath('/teacher/lessons');
+  revalidatePath(`/teacher/cards/${lessonId}`);
+  revalidatePath('/teacher/cards');
   return { error: null, success: true };
 }
 
@@ -45,7 +45,7 @@ export async function deleteLesson(
   const supabase = await createClient();
   const { error } = await supabase.from('lessons').delete().eq('id', lessonId);
   if (error) return { error: `Failed to delete lesson: ${error.message}` };
-  revalidatePath('/teacher/lessons');
+  revalidatePath('/teacher/cards');
   return { error: null };
 }
 
@@ -88,8 +88,8 @@ export async function unlockLessonForClass(
 
   if (!result.ok) return { ok: false, error: result.error ?? 'Unlock failed.' };
 
-  revalidatePath(`/teacher/lessons/${lessonId}`);
-  revalidatePath('/teacher/lessons');
+  revalidatePath(`/teacher/cards/${lessonId}`);
+  revalidatePath('/teacher/cards');
   return {
     ok: true,
     cards_count: result.cards_count ?? 0,
@@ -116,7 +116,7 @@ export async function renameLesson(
 
   if (error) return { error: `Failed to rename lesson: ${error.message}` };
 
-  revalidatePath(`/teacher/lessons/${lessonId}`);
-  revalidatePath('/teacher/lessons');
+  revalidatePath(`/teacher/cards/${lessonId}`);
+  revalidatePath('/teacher/cards');
   return { error: null };
 }

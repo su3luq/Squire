@@ -31,5 +31,5 @@ export async function createLesson(
     return { error: `Failed to create lesson: ${error.message}` };
   }
 
-  redirect(`/teacher/lessons/${data.id}`);
+  redirect(`/teacher/cards/${data.id}`);
 }

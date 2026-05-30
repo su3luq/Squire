@@ -20,7 +20,7 @@ export function DeleteCardButton({
       description="The card, its quiz questions, and any student review state for it will be permanently removed. This cannot be undone."
       action={() => deleteCard(lessonId, cardId)}
       onSuccess={() => {
-        router.push(`/teacher/lessons/${lessonId}`);
+        router.push(`/teacher/cards/${lessonId}`);
         router.refresh();
       }}
     />

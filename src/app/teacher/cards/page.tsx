@@ -28,7 +28,7 @@ export default async function LessonsListPage() {
               </button>
             </form>
             <Link
-              href="/teacher/lessons/new"
+              href="/teacher/cards/new"
               className={buttonVariants({ variant: 'outline', size: 'sm' })}
             >
               <Plus className="h-4 w-4" />
@@ -51,7 +51,7 @@ export default async function LessonsListPage() {
             return (
               <li key={lesson.id}>
                 <Link
-                  href={`/teacher/lessons/${lesson.id}`}
+                  href={`/teacher/cards/${lesson.id}`}
                   className="block p-5 transition-colors hover:bg-muted/40"
                 >
                   <div className="flex items-start justify-between gap-4">

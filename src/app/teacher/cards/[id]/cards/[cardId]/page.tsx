@@ -59,7 +59,7 @@ export default async function EditCardPage({
   return (
     <main className="container mx-auto max-w-4xl p-6">
       <Link
-        href={`/teacher/lessons/${id}`}
+        href={`/teacher/cards/${id}`}
         className="mb-4 inline-block text-sm text-blue-600 hover:underline"
       >
         ← Lesson

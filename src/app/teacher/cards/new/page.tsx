@@ -21,7 +21,7 @@ export default async function NewLessonPage() {
   return (
     <main className="container mx-auto max-w-2xl p-6">
       <Link
-        href="/teacher/lessons"
+        href="/teacher/cards"
         className="mb-4 inline-block text-sm text-blue-600 hover:underline"
       >
         ← Lessons

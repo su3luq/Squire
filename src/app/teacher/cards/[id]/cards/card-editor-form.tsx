@@ -186,7 +186,7 @@ export function CardEditorForm({
 
       <div className="flex justify-end gap-3 border-t border-slate-200 pt-4">
         <Link
-          href={`/teacher/lessons/${lessonId}`}
+          href={`/teacher/cards/${lessonId}`}
           className={buttonVariants({ variant: 'outline' })}
         >
           Cancel

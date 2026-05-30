@@ -52,7 +52,7 @@ export function NewLessonForm({
 
       <div className="flex gap-3 pt-2">
         <Link
-          href="/teacher/lessons"
+          href="/teacher/cards"
           className={buttonVariants({ variant: 'outline', className: 'flex-1' })}
         >
           Cancel

@@ -66,5 +66,5 @@ export async function createCard(
     return { error: `Failed to save questions: ${questionsError.message}` };
   }
 
-  redirect(`/teacher/lessons/${lessonId}`);
+  redirect(`/teacher/cards/${lessonId}`);
 }

@@ -19,6 +19,16 @@ const nextConfig: NextConfig = {
         destination: '/student/cards/:cardId',
         permanent: true,
       },
+      {
+        source: '/teacher/lessons',
+        destination: '/teacher/cards',
+        permanent: true,
+      },
+      {
+        source: '/teacher/lessons/:path*',
+        destination: '/teacher/cards/:path*',
+        permanent: true,
+      },
     ];
   },
 };

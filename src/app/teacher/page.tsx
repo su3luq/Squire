@@ -118,8 +118,8 @@ export default async function TeacherHome() {
         </div>
         <div className="grid grid-cols-1 divide-y divide-border sm:grid-cols-2 sm:divide-x sm:divide-y-0">
           <TeacherQuickLink
-            href="/teacher/lessons"
-            label="Lessons"
+            href="/teacher/cards"
+            label="Cards"
             description="Author cards and unlock for classes"
           />
           <TeacherQuickLink

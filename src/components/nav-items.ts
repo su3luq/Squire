@@ -49,7 +49,7 @@ export function getTeacherNav(counts: TeacherCounts): NavItem[] {
   return [
     { href: '/teacher/review', label: 'Review', icon: 'review', badge: counts.pendingReviews },
     { href: '/teacher/quests', label: 'Quests', icon: 'quests' },
-    { href: '/teacher/lessons', label: 'Lessons', icon: 'lessons' },
+    { href: '/teacher/cards', label: 'Cards', icon: 'cards' },
     { href: '/teacher/classes', label: 'Classes', icon: 'classes' },
     {
       href: '/teacher/analytics',

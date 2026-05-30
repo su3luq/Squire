@@ -20,7 +20,7 @@ export function DeleteLessonButton({
       description={`This will permanently remove the lesson, all ${cardCount} ${cardCount === 1 ? 'card' : 'cards'}, and any review state for students. This cannot be undone.`}
       action={() => deleteLesson(lessonId)}
       onSuccess={() => {
-        router.push('/teacher/lessons');
+        router.push('/teacher/cards');
         router.refresh();
       }}
     />

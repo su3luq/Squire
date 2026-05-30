@@ -86,7 +86,7 @@ export default async function LessonDetailPage({
           <div className="flex items-center justify-between">
             <CardTitle className="text-base">Cards</CardTitle>
             <Link
-              href={`/teacher/lessons/${id}/cards/new`}
+              href={`/teacher/cards/${id}/cards/new`}
               className={buttonVariants({ size: 'sm' })}
             >
               <Plus className="h-4 w-4" />
@@ -105,7 +105,7 @@ export default async function LessonDetailPage({
               {cards.map((card) => (
                 <li key={card.id}>
                   <Link
-                    href={`/teacher/lessons/${id}/cards/${card.id}`}
+                    href={`/teacher/cards/${id}/cards/${card.id}`}
                     className="flex items-center justify-between gap-3 px-3 py-2 text-sm transition-colors hover:bg-muted/40"
                   >
                     <span className="truncate font-medium">{card.headline}</span>
