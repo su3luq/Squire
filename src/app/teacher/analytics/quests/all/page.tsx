@@ -7,6 +7,7 @@ import {
   relativeDaysAgo,
 } from '@/lib/analytics-data';
 import { ToggleChipGroup } from '@/components/toggle-chip-group';
+import { StatusChip } from '@/components/status-chip';
 import { cn } from '@/lib/utils';
 
 export const dynamic = 'force-dynamic';
@@ -295,9 +296,9 @@ export default async function AllQuestsAnalyticsPage({
                           {r.title}
                         </Link>
                         {r.closed_at && (
-                          <span className="ml-2 rounded-full bg-muted px-1.5 py-0.5 text-[10px] uppercase tracking-wide text-muted-foreground">
+                          <StatusChip tone="muted" className="ml-2 uppercase tracking-wide">
                             Closed
-                          </span>
+                          </StatusChip>
                         )}
                       </td>
                       <td className="px-3 py-2.5 text-xs capitalize text-muted-foreground">
@@ -308,9 +309,9 @@ export default async function AllQuestsAnalyticsPage({
                       </td>
                       <td className="px-3 py-2.5 text-right tabular-nums">
                         {r.pending > 0 ? (
-                          <span className="rounded-full bg-amber-100 px-1.5 py-0.5 text-xs font-medium text-amber-900 dark:bg-amber-950/50 dark:text-amber-300">
+                          <StatusChip tone="warn" className="tabular-nums">
                             {r.pending}
-                          </span>
+                          </StatusChip>
                         ) : (
                           <span className="text-muted-foreground/60">0</span>
                         )}

@@ -9,6 +9,7 @@ import {
 } from '@/components/ui/card';
 import { StatCard } from '@/components/stat-card';
 import { buildHourlyBuckets, getStudentScope } from '@/lib/analytics-data';
+import { StatusChip } from '@/components/status-chip';
 import { cn } from '@/lib/utils';
 
 export const dynamic = 'force-dynamic';
@@ -434,9 +435,9 @@ export default async function PulsePage({
                         {s.full_name}
                       </span>
                     )}
-                    <span className="shrink-0 rounded-full bg-amber-100 px-2 py-0.5 text-[11px] font-medium text-amber-900 dark:bg-amber-950/50 dark:text-amber-300">
+                    <StatusChip tone="warn" className="shrink-0 tabular-nums">
                       vel {s.learning_velocity.toFixed(2)}
-                    </span>
+                    </StatusChip>
                   </li>
                 ))}
               </ul>
@@ -473,18 +474,18 @@ export default async function PulsePage({
                       <span className="min-w-0 truncate font-medium hover:text-primary hover:underline">
                         {q.title}
                       </span>
-                      <span
-                        className={cn(
-                          'shrink-0 rounded-full px-2 py-0.5 text-[11px] font-medium',
+                      <StatusChip
+                        tone={
                           q.reason === 'low_pass'
-                            ? 'bg-destructive/10 text-destructive dark:bg-destructive/20'
+                            ? 'danger'
                             : q.reason === 'stuck'
-                              ? 'bg-amber-100 text-amber-900 dark:bg-amber-950/50 dark:text-amber-300'
-                              : 'bg-muted text-muted-foreground',
-                        )}
+                              ? 'warn'
+                              : 'muted'
+                        }
+                        className="shrink-0"
                       >
                         {q.reasonLabel}
-                      </span>
+                      </StatusChip>
                     </Link>
                     <p className="truncate text-[11px] text-muted-foreground">
                       {q.metric}
@@ -524,9 +525,9 @@ export default async function PulsePage({
                     <span className="min-w-0 truncate font-medium">
                       {r.label}
                     </span>
-                    <span className="shrink-0 rounded-full bg-muted px-2 py-0.5 text-[11px] font-medium tabular-nums">
+                    <StatusChip tone="muted" className="shrink-0 tabular-nums">
                       {r.avgStability.toFixed(1)}d
-                    </span>
+                    </StatusChip>
                   </li>
                 ))}
               </ul>

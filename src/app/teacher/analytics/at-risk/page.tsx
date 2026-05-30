@@ -258,9 +258,9 @@ export default async function AtRiskPage({
             ]}
           />
           {classFilterQs && (
-            <span className="ml-auto rounded-full bg-muted px-2 py-0.5 text-[11px] text-muted-foreground">
+            <StatusChip tone="muted" className="ml-auto">
               {classMap.get(scope.classFilter ?? '') ?? 'class'}
-            </span>
+            </StatusChip>
           )}
         </div>
 

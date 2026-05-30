@@ -8,6 +8,7 @@ import {
   CardTitle,
 } from '@/components/ui/card';
 import { getStudentScope, relativeDaysAgo } from '@/lib/analytics-data';
+import { StatusChip } from '@/components/status-chip';
 import { cn } from '@/lib/utils';
 
 export const dynamic = 'force-dynamic';
@@ -378,9 +379,9 @@ export default async function QuestHealthPage({
                         {Math.round(q.passRate * 100)}% pass
                       </span>
                     )}
-                    <span className="rounded-full bg-primary/15 px-2 py-0.5 font-semibold tabular-nums text-primary">
+                    <StatusChip tone="good" className="tabular-nums">
                       +{q.weekly} this wk
-                    </span>
+                    </StatusChip>
                   </div>
                 </li>
               ))}
