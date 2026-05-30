@@ -1029,6 +1029,22 @@ export type Database = {
       }
     }
     Views: {
+      card_recall_stats: {
+        Row: {
+          attempts: number | null
+          card_id: string | null
+          correct: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "review_attempts_card_id_fkey"
+            columns: ["card_id"]
+            isOneToOne: false
+            referencedRelation: "review_cards"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       lesson_card_counts: {
         Row: {
           card_count: number | null
