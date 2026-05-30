@@ -4,6 +4,7 @@ import { useState } from 'react';
 import type { CSSProperties } from 'react';
 import { ChevronDown } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { StatusChip } from '@/components/status-chip';
 import { CardChip } from './card-chip';
 import type { LessonData } from './types';
 
@@ -87,9 +88,9 @@ function LessonFolder({
       <p className="mt-2 flex items-center gap-2 text-xs text-muted-foreground">
         <span className="tabular-nums">{lesson.cards.length} cards</span>
         {lesson.dueCount > 0 && (
-          <span className="rounded-full bg-primary/15 px-2 py-0.5 text-[10px] font-bold text-primary">
+          <StatusChip tone="good">
             <span className="tabular-nums">{lesson.dueCount}</span> due
-          </span>
+          </StatusChip>
         )}
       </p>
     </button>

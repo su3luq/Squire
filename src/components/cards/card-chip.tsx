@@ -1,5 +1,6 @@
-import Link from 'next/link';
 import { cn } from '@/lib/utils';
+import { StatusChip } from '@/components/status-chip';
+import { GridTile } from '@/components/ui/grid-tile';
 import type { CardChipData } from './types';
 
 // A single readable card tile. Links to the reader (intercepting modal on
@@ -14,24 +15,20 @@ export function CardChip({
   className?: string;
 }) {
   return (
-    <Link
+    <GridTile
       href={`/student/cards/${card.id}`}
       scroll={false}
-      className={cn(
-        'group relative flex min-h-[3.75rem] flex-col justify-between rounded-lg border bg-card p-3 transition-colors hover:bg-muted/40',
-        card.due ? 'border-primary/60' : 'border-border',
-        className,
-      )}
+      className={cn('group relative', className)}
     >
       {card.due && (
-        <span className="absolute right-2.5 top-2.5 rounded-full bg-primary/15 px-2 py-0.5 text-[9px] font-bold uppercase tracking-wide text-primary">
-          Due
+        <span className="absolute right-2.5 top-2.5">
+          <StatusChip tone="good">Due</StatusChip>
         </span>
       )}
-      <p className="pr-10 text-sm font-medium leading-snug">{card.headline}</p>
+      <p className="pr-10 text-sm font-medium leading-snug line-clamp-2">{card.headline}</p>
       <p className="mt-1 text-xs text-muted-foreground group-hover:text-primary">
         Tap to read →
       </p>
-    </Link>
+    </GridTile>
   );
 }
