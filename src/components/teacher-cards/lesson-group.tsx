@@ -4,6 +4,7 @@ import { useState } from 'react';
 import Link from 'next/link';
 import { ChevronRight, Plus } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { GridTile } from '@/components/ui/grid-tile';
 import { CardTile } from './card-tile';
 import { NeedsChip, UnlockChip, RecallChip } from './status-bits';
 import type { LessonRow } from './types';
@@ -29,9 +30,9 @@ export function LessonGroup({ lesson, defaultOpen }: { lesson: LessonRow; defaul
       {open && (
         <div className="grid grid-cols-1 gap-2 p-4 pt-0 sm:grid-cols-2 lg:grid-cols-3">
           {lesson.cards.map((c) => <CardTile key={c.id} lessonId={lesson.id} card={c} />)}
-          <Link href={`/teacher/cards/${lesson.id}/cards/new`} className="flex min-h-[4.5rem] items-center justify-center gap-2 rounded-lg border border-dashed border-border text-xs font-semibold text-muted-foreground transition-colors hover:border-primary/40 hover:text-foreground">
+          <GridTile href={`/teacher/cards/${lesson.id}/cards/new`} add aria-label={`Add a card to ${lesson.title}`}>
             <Plus className="h-4 w-4" /> Add card
-          </Link>
+          </GridTile>
         </div>
       )}
     </div>
