@@ -25,9 +25,9 @@ export function ThemeSettings() {
       <div className="min-w-0 flex-1">
         <p className="text-sm font-medium">Appearance</p>
         <p className="mt-1 text-xs text-muted-foreground">
-          Light shell is warm cream; dark shell is neutral charcoal.
-          The bronze accent is the same in both. System mirrors your
-          OS preference.
+          Light shell is warm cream; dark shell is deep near-black with
+          a bronze-tinted edge. The accent stays the same in both.
+          System mirrors your OS preference.
         </p>
       </div>
       <div className="shrink-0">
