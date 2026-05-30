@@ -115,45 +115,49 @@
 }
 
 .dark {
-  /* Surfaces — warm dark, never pure black. */
-  --background: oklch(0.20 0.012 35);
-  --foreground: oklch(0.95 0.008 75);
-  --card: oklch(0.24 0.012 35);
-  --card-foreground: oklch(0.95 0.008 75);
-  --popover: oklch(0.24 0.012 35);
-  --popover-foreground: oklch(0.95 0.008 75);
+  /* Surfaces — neutral charcoal, not warm brown. Per the Claude
+   * reference: dark mode keeps the shell quiet and lets the accent
+   * be the only warm thing on screen. Chroma is pushed near zero
+   * so the grays don't take on a brown cast; the tiny non-zero
+   * chroma value avoids the slight "flatness" of perfect 0. */
+  --background: oklch(0.16 0.003 270);
+  --foreground: oklch(0.96 0.003 270);
+  --card: oklch(0.20 0.003 270);
+  --card-foreground: oklch(0.96 0.003 270);
+  --popover: oklch(0.20 0.003 270);
+  --popover-foreground: oklch(0.96 0.003 270);
 
-  /* Accent — slightly brighter in dark so it punches against the
-   * warm-dark shell. Hue unchanged. */
+  /* Accent — brighter in dark so it punches against neutral charcoal.
+   * Hue unchanged from light; it's the constant brand mark. */
   --primary: oklch(0.68 0.13 45);
-  --primary-foreground: oklch(0.18 0.012 35);
+  --primary-foreground: oklch(0.16 0.003 270);
 
-  --secondary: oklch(0.28 0.012 35);
-  --secondary-foreground: oklch(0.95 0.008 75);
-  --muted: oklch(0.28 0.012 35);
-  --muted-foreground: oklch(0.72 0.010 55);
-  --accent: oklch(0.28 0.012 35);
-  --accent-foreground: oklch(0.95 0.008 75);
+  --secondary: oklch(0.24 0.003 270);
+  --secondary-foreground: oklch(0.96 0.003 270);
+  --muted: oklch(0.24 0.003 270);
+  --muted-foreground: oklch(0.68 0.003 270);
+  --accent: oklch(0.24 0.003 270);
+  --accent-foreground: oklch(0.96 0.003 270);
 
-  --border: oklch(0.34 0.012 35);
-  --input: oklch(0.34 0.012 35);
+  --border: oklch(0.28 0.003 270);
+  --input: oklch(0.28 0.003 270);
   --ring: oklch(0.68 0.13 45);
 
   --destructive: oklch(0.65 0.20 27);
 
   --chart-1: oklch(0.68 0.13 45);
   --chart-2: oklch(0.78 0.09 45);
-  --chart-3: oklch(0.72 0.010 55);
-  --chart-4: oklch(0.55 0.010 55);
-  --chart-5: oklch(0.42 0.010 55);
+  --chart-3: oklch(0.72 0.003 270);
+  --chart-4: oklch(0.55 0.003 270);
+  --chart-5: oklch(0.42 0.003 270);
 
-  --sidebar: oklch(0.22 0.012 35);
-  --sidebar-foreground: oklch(0.95 0.008 75);
+  --sidebar: oklch(0.18 0.003 270);
+  --sidebar-foreground: oklch(0.96 0.003 270);
   --sidebar-primary: oklch(0.68 0.13 45);
-  --sidebar-primary-foreground: oklch(0.18 0.012 35);
-  --sidebar-accent: oklch(0.28 0.012 35);
-  --sidebar-accent-foreground: oklch(0.95 0.008 75);
-  --sidebar-border: oklch(0.34 0.012 35);
+  --sidebar-primary-foreground: oklch(0.16 0.003 270);
+  --sidebar-accent: oklch(0.24 0.003 270);
+  --sidebar-accent-foreground: oklch(0.96 0.003 270);
+  --sidebar-border: oklch(0.28 0.003 270);
   --sidebar-ring: oklch(0.68 0.13 45);
 }
 
