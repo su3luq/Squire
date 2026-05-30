@@ -8,6 +8,7 @@ import {
 } from '@/components/ui/card';
 import { MarkdownRenderer } from '@/components/markdown-renderer';
 import { PageHeader } from '@/components/page-header';
+import { StatusChip } from '@/components/status-chip';
 import { SubmissionForm } from '../submission-form';
 import { TeamWorkspace, type DraftMember } from './team-workspace';
 import {
@@ -175,13 +176,9 @@ export default async function MyQuestWorkspacePage({
       <PageHeader title={quest.title} />
 
       <div className="flex flex-wrap items-center gap-2 text-xs">
-        <span className="rounded-full bg-muted px-2.5 py-0.5 font-medium capitalize text-muted-foreground">
-          {isCoop ? 'co-op' : 'solo'}
-        </span>
+        <StatusChip tone="muted" capitalize>{isCoop ? 'co-op' : 'solo'}</StatusChip>
         {isCoop && instance?.team_number != null && (
-          <span className="rounded-full bg-muted px-2.5 py-0.5 font-medium text-muted-foreground">
-            Team {instance.team_number}
-          </span>
+          <StatusChip tone="muted">Team {instance.team_number}</StatusChip>
         )}
         <span className="text-muted-foreground">+{quest.xp_reward} XP</span>
         {quest.word_limit_min != null && quest.word_limit_min > 0 && (
@@ -233,9 +230,7 @@ export default async function MyQuestWorkspacePage({
         <Card>
           <CardContent className="space-y-3 pt-6">
             <div className="flex items-center gap-2">
-              <span className="rounded-full bg-primary/10 px-2.5 py-0.5 text-xs font-medium uppercase tracking-wide text-primary">
-                Passed
-              </span>
+              <StatusChip tone="good">Passed</StatusChip>
               <p className="text-sm font-medium">
                 +{quest.xp_reward} XP earned
               </p>
@@ -269,9 +264,7 @@ export default async function MyQuestWorkspacePage({
         <Card>
           <CardContent className="space-y-3 pt-6">
             <div className="flex items-center gap-2">
-              <span className="rounded-full bg-amber-100 px-2.5 py-0.5 text-xs font-medium uppercase tracking-wide text-amber-900">
-                Awaiting review
-              </span>
+              <StatusChip tone="warn">Awaiting review</StatusChip>
             </div>
             <p className="text-xs text-muted-foreground">
               Submitted {formatSaigon(pendingSubmission.submitted_at)}
@@ -294,9 +287,7 @@ export default async function MyQuestWorkspacePage({
         <Card>
           <CardContent className="space-y-3 pt-6">
             <div className="flex items-center gap-2">
-              <span className="rounded-full bg-destructive/10 px-2.5 py-0.5 text-xs font-medium uppercase tracking-wide text-destructive">
-                Needs revision
-              </span>
+              <StatusChip tone="danger">Needs revision</StatusChip>
             </div>
             {lastFailed.teacher_feedback && (
               <div className="rounded-md border border-border bg-muted/40 p-4">

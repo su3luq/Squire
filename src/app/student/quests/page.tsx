@@ -6,7 +6,7 @@ import { cn } from '@/lib/utils';
 import { PageHeader } from '@/components/page-header';
 import { EmptyState } from '@/components/empty-state';
 import { SectionHeader } from '@/components/section-header';
-import { QuestStatusChip } from '@/components/status-chip';
+import { QuestStatusChip, StatusChip } from '@/components/status-chip';
 import {
   ToggleChipGroup,
   type ToggleChipOption,
@@ -301,11 +301,7 @@ export default async function StudentQuestsPage({
       );
     }
     if (own?.status === 'enrolled') {
-      return (
-        <span className="rounded-full bg-primary/10 px-2.5 py-0.5 text-xs font-medium text-primary">
-          Enrolled
-        </span>
-      );
+      return <StatusChip tone="good">Enrolled</StatusChip>;
     }
     if (hasActiveOrEnrolledCoopElsewhere) {
       return (
@@ -554,9 +550,9 @@ export default async function StudentQuestsPage({
                 <span className="text-sm font-semibold">
                   Completed
                 </span>
-                <span className="rounded-full bg-muted px-2 py-0.5 text-xs font-medium tabular-nums text-muted-foreground">
+                <StatusChip tone="muted" className="tabular-nums">
                   {completed.length}
-                </span>
+                </StatusChip>
                 <span className="text-xs text-muted-foreground">
                   · {completedXp.toLocaleString()} XP earned
                 </span>
@@ -577,9 +573,9 @@ export default async function StudentQuestsPage({
                   </Link>
                   <div className="flex shrink-0 items-center gap-2 text-xs text-muted-foreground">
                     <span className="capitalize">{c.questType}</span>
-                    <span className="rounded-full bg-emerald-50 px-2 py-0.5 font-medium tabular-nums text-emerald-900">
+                    <StatusChip tone="good" className="tabular-nums">
                       +{c.xpReward}
-                    </span>
+                    </StatusChip>
                   </div>
                 </li>
               ))}
@@ -593,10 +589,10 @@ export default async function StudentQuestsPage({
 
 function NewBadge() {
   return (
-    <span className="inline-flex items-center gap-1 rounded-full bg-emerald-100 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide text-emerald-900 dark:bg-emerald-950/50 dark:text-emerald-300">
+    <StatusChip tone="good">
       <Sparkles className="h-2.5 w-2.5" aria-hidden />
       New
-    </span>
+    </StatusChip>
   );
 }
 

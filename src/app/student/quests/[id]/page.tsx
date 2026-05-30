@@ -9,6 +9,7 @@ import {
 } from '@/components/ui/card';
 import { MarkdownRenderer } from '@/components/markdown-renderer';
 import { PageHeader } from '@/components/page-header';
+import { StatusChip } from '@/components/status-chip';
 import { LiveCountdown } from '../countdown';
 import { QuestActionButton } from '../accept-button';
 
@@ -136,9 +137,7 @@ export default async function StudentQuestDetailPage({
     } else if (ownAcceptance?.status === 'enrolled') {
       action = (
         <div className="flex flex-col items-start gap-2">
-          <span className="rounded-full bg-primary/10 px-2.5 py-0.5 text-xs font-medium text-primary">
-            You&apos;re enrolled
-          </span>
+          <StatusChip tone="good">You&apos;re enrolled</StatusChip>
           <p className="text-xs text-muted-foreground">
             Enrollments are final. You&apos;ll be matched into a team at the
             deadline.
@@ -156,9 +155,7 @@ export default async function StudentQuestDetailPage({
 
       <div className="space-y-2">
         <div className="flex flex-wrap items-center gap-2 text-xs">
-          <span className="rounded-full bg-muted px-2.5 py-0.5 font-medium capitalize text-muted-foreground">
-            {quest.quest_type}
-          </span>
+          <StatusChip tone="muted" capitalize>{quest.quest_type}</StatusChip>
           <span className="text-muted-foreground">+{quest.xp_reward} XP</span>
           {quest.word_limit_min != null && quest.word_limit_min > 0 && (
             <>
