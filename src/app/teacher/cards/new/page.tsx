@@ -1,5 +1,6 @@
 import { createClient } from '@/lib/supabase/server';
 import Link from 'next/link';
+import { ArrowLeft } from 'lucide-react';
 import { Card, CardContent } from '@/components/ui/card';
 import { saigonShortDate } from '@/lib/saigon-date';
 import { NewLessonForm } from './new-lesson-form';
@@ -19,14 +20,14 @@ export default async function NewLessonPage() {
   const defaultTitle = `Untitled lesson — ${saigonShortDate()}`;
 
   return (
-    <main className="container mx-auto max-w-2xl p-6">
+    <div className="mx-auto max-w-2xl space-y-4">
       <Link
         href="/teacher/cards"
-        className="mb-4 inline-block text-sm text-blue-600 hover:underline"
+        className="inline-flex items-center gap-1 text-sm text-muted-foreground transition-colors hover:text-foreground"
       >
-        ← Lessons
+        <ArrowLeft className="h-4 w-4" /> Cards
       </Link>
-      <h1 className="mb-6 text-3xl font-bold">New lesson</h1>
+      <h1 className="text-2xl font-semibold tracking-tight">New lesson</h1>
 
       <Card>
         <CardContent className="pt-6">
@@ -36,6 +37,6 @@ export default async function NewLessonPage() {
           />
         </CardContent>
       </Card>
-    </main>
+    </div>
   );
 }

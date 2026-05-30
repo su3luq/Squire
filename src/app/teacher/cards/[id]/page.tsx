@@ -1,8 +1,7 @@
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
-import { Plus } from 'lucide-react';
+import { ArrowLeft } from 'lucide-react';
 import { createClient } from '@/lib/supabase/server';
-import { buttonVariants } from '@/components/ui/button';
 import {
   Card,
   CardContent,
@@ -32,18 +31,11 @@ export default async function LessonDetailPage({
 
   const { data: counts } = await supabase
     .from('lesson_card_counts')
-    .select('card_count, question_count')
+    .select('card_count')
     .eq('lesson_id', id)
     .maybeSingle();
 
   const cardCount = counts?.card_count ?? 0;
-  const questionCount = counts?.question_count ?? 0;
-
-  const { data: cards } = await supabase
-    .from('review_cards')
-    .select('id, headline, position')
-    .eq('lesson_id', id)
-    .order('position');
 
   const { data: classes } = await supabase
     .from('classes')
@@ -76,49 +68,17 @@ export default async function LessonDetailPage({
 
   return (
     <div className="mx-auto max-w-3xl space-y-6">
+      <Link
+        href="/teacher/cards"
+        className="inline-flex items-center gap-1 text-sm text-muted-foreground transition-colors hover:text-foreground"
+      >
+        <ArrowLeft className="h-4 w-4" /> Cards
+      </Link>
+
       <PageHeader
         title={lesson.title}
         subtitle={`Lesson ${lesson.lesson_number}`}
       />
-
-      <Card>
-        <CardHeader>
-          <div className="flex items-center justify-between">
-            <CardTitle className="text-base">Cards</CardTitle>
-            <Link
-              href={`/teacher/cards/${id}/cards/new`}
-              className={buttonVariants({ size: 'sm' })}
-            >
-              <Plus className="h-4 w-4" />
-              Add card
-            </Link>
-          </div>
-        </CardHeader>
-        <CardContent>
-          <p className="text-sm text-muted-foreground">
-            {cardCount} {cardCount === 1 ? 'card' : 'cards'} · {questionCount}{' '}
-            quiz {questionCount === 1 ? 'question' : 'questions'}
-          </p>
-
-          {cards && cards.length > 0 && (
-            <ul className="mt-4 divide-y divide-border rounded-md border border-border">
-              {cards.map((card) => (
-                <li key={card.id}>
-                  <Link
-                    href={`/teacher/cards/${id}/cards/${card.id}`}
-                    className="flex items-center justify-between gap-3 px-3 py-2 text-sm transition-colors hover:bg-muted/40"
-                  >
-                    <span className="truncate font-medium">{card.headline}</span>
-                    <span className="shrink-0 text-xs text-muted-foreground">
-                      Edit →
-                    </span>
-                  </Link>
-                </li>
-              ))}
-            </ul>
-          )}
-        </CardContent>
-      </Card>
 
       <Card>
         <CardHeader>

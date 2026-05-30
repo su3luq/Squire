@@ -30,7 +30,7 @@ export function NewLessonForm({
           autoFocus
           disabled={isPending}
         />
-        <p className="text-xs text-slate-500">You can rename this any time.</p>
+        <p className="text-xs text-muted-foreground">You can rename this any time.</p>
       </div>
 
       <div className="space-y-2">
@@ -45,10 +45,10 @@ export function NewLessonForm({
           required
           disabled={isPending}
         />
-        <p className="text-xs text-slate-500">Must be unique across all lessons.</p>
+        <p className="text-xs text-muted-foreground">Must be unique across all lessons.</p>
       </div>
 
-      {state.error && <p className="text-sm text-red-600">{state.error}</p>}
+      {state.error && <p className="text-sm text-destructive">{state.error}</p>}
 
       <div className="flex gap-3 pt-2">
         <Link

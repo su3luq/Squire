@@ -43,8 +43,8 @@ export function EditLessonForm({ lesson }: { lesson: Lesson }) {
           disabled={isPending}
         />
       </div>
-      {state.error && <p className="text-sm text-red-600">{state.error}</p>}
-      {state.success && <p className="text-sm text-green-600">Saved.</p>}
+      {state.error && <p className="text-sm text-destructive">{state.error}</p>}
+      {state.success && <p className="text-sm text-primary">Saved.</p>}
       <Button type="submit" disabled={isPending}>
         {isPending ? 'Saving...' : 'Save'}
       </Button>

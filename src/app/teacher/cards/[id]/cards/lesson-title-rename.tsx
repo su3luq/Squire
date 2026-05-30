@@ -63,9 +63,9 @@ export function LessonTitleRename({
             }
           }}
           disabled={isPending}
-          className="w-full rounded-md border border-blue-400 bg-white px-2 py-1 text-2xl font-bold text-slate-900 outline-none focus:ring-2 focus:ring-blue-300"
+          className="w-full rounded-md border border-input bg-background px-2 py-1 text-2xl font-bold text-foreground outline-none focus:ring-2 focus:ring-ring"
         />
-        {error && <p className="text-xs text-red-600">{error}</p>}
+        {error && <p className="text-xs text-destructive">{error}</p>}
       </div>
     );
   }
@@ -75,12 +75,12 @@ export function LessonTitleRename({
       <button
         type="button"
         onClick={() => setEditing(true)}
-        className="-mx-2 cursor-text rounded-md px-2 py-1 text-left text-2xl font-bold text-slate-900 transition-colors hover:bg-slate-100"
+        className="-mx-2 cursor-text rounded-md px-2 py-1 text-left text-2xl font-bold text-foreground transition-colors hover:bg-muted"
         title="Click to rename"
       >
         {displayed}
       </button>
-      {error && <p className="text-xs text-red-600">{error}</p>}
+      {error && <p className="text-xs text-destructive">{error}</p>}
     </div>
   );
 }
