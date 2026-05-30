@@ -31,9 +31,9 @@ export function CopyMarkdownButton({
       type="button"
       onClick={handleCopy}
       className={cn(
-        'inline-flex items-center gap-1.5 rounded-md border border-slate-200 bg-white px-2.5 py-1 text-xs font-medium text-slate-700 transition-colors hover:bg-slate-50',
-        copied && 'border-green-300 text-green-700',
-        error && 'border-red-300 text-red-700',
+        'inline-flex items-center gap-1.5 rounded-md border border-border bg-card px-2.5 py-1 text-xs font-medium text-foreground transition-colors hover:bg-muted',
+        copied && 'border-primary/40 text-primary',
+        error && 'border-destructive/40 text-destructive',
         className
       )}
       aria-live="polite"

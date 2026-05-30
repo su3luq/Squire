@@ -22,9 +22,14 @@ export type ChipTone =
   | 'muted'
   | 'info';
 
+// Tone palette pinned to theme tokens. The bronze brand doubles as the
+// "good/positive" signal — emerald was clashing with the warm shell and
+// reading as a separate competing accent. Warn / danger keep their
+// semantic hues (amber / red) because they need to *break* away from
+// brand to communicate risk.
 const TONE_CLASSES: Record<ChipTone, string> = {
   primary: 'bg-primary/10 text-primary dark:bg-primary/15 dark:text-primary',
-  good: 'bg-emerald-100 text-emerald-900 dark:bg-emerald-950/50 dark:text-emerald-300',
+  good: 'bg-primary/15 text-primary',
   warn: 'bg-amber-100 text-amber-900 dark:bg-amber-950/50 dark:text-amber-300',
   danger: 'bg-destructive/10 text-destructive dark:bg-destructive/20 dark:text-destructive',
   muted: 'bg-muted text-muted-foreground',

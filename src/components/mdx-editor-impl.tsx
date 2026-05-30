@@ -159,6 +159,40 @@ export function MdxEditor({
           flex-wrap: wrap;
           gap: 4px;
         }
+        /* Toolbar buttons: pin to theme tokens so the bold/italic/list
+         * icons and their hover surfaces inherit the bronze brand
+         * instead of MDXEditor's default slate palette. Selectors
+         * cover the various button + select shapes the toolbar emits. */
+        :global(.mdxeditor-toolbar button),
+        :global(.mdxeditor-toolbar [role='button']),
+        :global(.mdxeditor-toolbar select) {
+          color: var(--color-foreground);
+          background: transparent;
+        }
+        :global(.mdxeditor-toolbar button:hover),
+        :global(.mdxeditor-toolbar [role='button']:hover) {
+          background: var(--color-muted);
+          color: var(--color-foreground);
+        }
+        :global(.mdxeditor-toolbar button[data-state='on']),
+        :global(.mdxeditor-toolbar button[aria-pressed='true']) {
+          background: color-mix(in oklch, var(--color-primary) 15%, transparent);
+          color: var(--color-primary);
+        }
+        :global(.mdxeditor-toolbar svg) {
+          color: currentColor;
+          fill: currentColor;
+        }
+        :global(.mdxeditor-toolbar select),
+        :global(.mdxeditor-toolbar [role='combobox']) {
+          border: 1px solid var(--color-border);
+          background: var(--color-card);
+          color: var(--color-foreground);
+        }
+        /* Separator lines between button groups should follow border. */
+        :global(.mdxeditor-toolbar [data-orientation='vertical']) {
+          background: var(--color-border);
+        }
       `}</style>
     </div>
   );

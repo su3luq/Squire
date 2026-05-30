@@ -62,7 +62,7 @@ export function RecentWins({ rows, className }: RecentWinsProps) {
                   {formatRelative(r.created_at)}
                 </p>
               </div>
-              <span className="shrink-0 rounded-full bg-emerald-100 px-2.5 py-0.5 text-xs font-semibold tabular-nums text-emerald-900 dark:bg-emerald-950/50 dark:text-emerald-300">
+              <span className="shrink-0 rounded-full bg-primary/15 px-2.5 py-0.5 text-xs font-semibold tabular-nums text-primary">
                 +{r.amount}
               </span>
             </li>

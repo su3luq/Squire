@@ -40,7 +40,7 @@ export default function RootLayout({
       </head>
       <body className="antialiased">
         <TooltipProvider delay={200}>{children}</TooltipProvider>
-        <Toaster position="top-center" richColors closeButton />
+        <Toaster position="top-center" closeButton />
       </body>
     </html>
   );

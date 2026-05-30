@@ -179,9 +179,17 @@ export function ReviewSession({ cards }: { cards: SessionCard[] }) {
       };
 
       if (answer.is_correct && answer.xp_awarded > 0) {
-        toast.success(`+${answer.xp_awarded} XP`, {
+        toast(`+${answer.xp_awarded} XP`, {
           icon: <Sparkles className="h-4 w-4" aria-hidden />,
           duration: 1500,
+          // Bronze celebratory styling — overrides Sonner default to
+          // tint the toast with the brand accent. Keeps the win feeling
+          // distinct from the neutral popover-toned notification toasts.
+          style: {
+            background: 'var(--primary)',
+            color: 'var(--primary-foreground)',
+            borderColor: 'transparent',
+          },
         });
       }
 

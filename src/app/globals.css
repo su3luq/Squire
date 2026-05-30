@@ -187,4 +187,20 @@
   h3 {
     letter-spacing: -0.01em;
   }
+
+  /* Chrome / Safari autofill forces a hardcoded yellow-ish background
+   * and a black text color on filled inputs, which blows up the dark
+   * theme. There's no API to disable it — only a workaround using a
+   * very long inset box-shadow to repaint over the autofill layer.
+   * Animation hack at the bottom delays the autofill style enough for
+   * the override to land. */
+  input:-webkit-autofill,
+  input:-webkit-autofill:hover,
+  input:-webkit-autofill:focus,
+  input:-webkit-autofill:active {
+    -webkit-text-fill-color: var(--foreground);
+    -webkit-box-shadow: 0 0 0 1000px var(--card) inset;
+    caret-color: var(--foreground);
+    transition: background-color 9999s ease-in-out 0s;
+  }
 }
