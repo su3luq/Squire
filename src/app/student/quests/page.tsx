@@ -2,6 +2,7 @@ import Link from 'next/link';
 import { redirect } from 'next/navigation';
 import { ChevronDown, Scroll, Sparkles, Sword, Trophy, Users } from 'lucide-react';
 import { createClient } from '@/lib/supabase/server';
+import { cn } from '@/lib/utils';
 import { PageHeader } from '@/components/page-header';
 import { EmptyState } from '@/components/empty-state';
 import { SectionHeader } from '@/components/section-header';
@@ -363,7 +364,7 @@ export default async function StudentQuestsPage({
       {mine.length > 0 && (
         <section>
           <SectionHeader icon={Scroll} title="Your active quests" size="sm" />
-          <ul className="divide-y divide-border overflow-hidden rounded-lg border border-border bg-card">
+          <ul className="space-y-2">
             {MINE_ORDER.flatMap((bucket) =>
               mine
                 .filter((m) => m.bucket === bucket)
@@ -372,11 +373,20 @@ export default async function StudentQuestsPage({
                     item.bucket === 'enrolled'
                       ? `/student/quests/${item.questId}`
                       : `/student/my-quests/${item.questId}`;
+                  // In-progress = actively being worked on right now, so it
+                  // gets the rotating "comet" edge light to signal it's live.
+                  const isUndergoing = item.bucket === 'in_progress';
                   return (
-                    <li key={item.acceptanceId}>
+                    <li
+                      key={item.acceptanceId}
+                      className={cn(
+                        'rounded-lg',
+                        isUndergoing && 'rl-active-edge',
+                      )}
+                    >
                       <Link
                         href={href}
-                        className="block p-5 transition-colors hover:bg-muted/40"
+                        className="block rounded-lg border border-border bg-card p-5 transition-colors hover:bg-muted/40"
                       >
                         <div className="flex items-start justify-between gap-4">
                           <div className="min-w-0 flex-1">

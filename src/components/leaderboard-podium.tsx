@@ -1,3 +1,4 @@
+import type { CSSProperties } from 'react';
 import Link from 'next/link';
 import { Crown, Medal } from 'lucide-react';
 import { Avatar } from '@/components/avatar';
@@ -37,6 +38,17 @@ const PLACE_ICON_COLOR = {
   2: 'text-slate-500 dark:text-slate-400',
   3: 'text-orange-600 dark:text-orange-400',
 } as const;
+
+// Soft metal-tinted halo bloomed behind each avatar. Gold/silver/bronze.
+const PLACE_GLOW = {
+  1: 'bg-amber-400/50',
+  2: 'bg-slate-300/45',
+  3: 'bg-orange-400/45',
+} as const;
+
+// Gold arc color for the 1st-place rotating edge light, fed to the
+// --rl-edge-color custom property the .rl-active-edge effect reads.
+const CHAMPION_EDGE = { '--rl-edge-color': 'oklch(0.84 0.16 86)' } as CSSProperties;
 
 /**
  * Top-3 podium displayed above the leaderboard list. 1st in the center
@@ -108,9 +120,13 @@ function PodiumTile({
 }) {
   const inner = (
     <div
+      style={emphasised ? CHAMPION_EDGE : undefined}
       className={cn(
         'relative flex flex-col items-center gap-2 overflow-hidden rounded-2xl border border-border bg-card p-4 text-center transition-colors',
         emphasised ? 'sm:pt-6 sm:pb-5' : 'sm:pt-4',
+        // 1st place: rotating gold edge light + a periodic shine sweep +
+        // a soft resting gold glow so the champion tile clearly leads.
+        emphasised && 'rl-active-edge rl-shine shadow-lg shadow-amber-500/10',
         isViewer && 'ring-2 ring-primary/40',
       )}
     >
@@ -128,20 +144,31 @@ function PodiumTile({
         )}
       >
         {place === 1 ? (
-          <Crown className="h-3.5 w-3.5" aria-hidden />
+          <Crown className="h-3.5 w-3.5 rl-crown-bob" aria-hidden />
         ) : (
           <Medal className="h-3.5 w-3.5" aria-hidden />
         )}
         #{place}
       </span>
       <div className="relative">
-        <Avatar
-          url={row.avatar_url}
-          name={row.full_name}
-          size={emphasised ? 'lg' : 'md'}
-          rank={row.current_rank}
-          ringConfig={row.ringConfig}
+        <span
+          aria-hidden
+          className={cn(
+            'pointer-events-none absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 rounded-full blur-2xl',
+            emphasised ? 'h-20 w-20' : 'h-12 w-12',
+            PLACE_GLOW[place],
+            emphasised && 'rl-glow-pulse',
+          )}
         />
+        <div className="relative">
+          <Avatar
+            url={row.avatar_url}
+            name={row.full_name}
+            size={emphasised ? 'lg' : 'md'}
+            rank={row.current_rank}
+            ringConfig={row.ringConfig}
+          />
+        </div>
       </div>
       <p
         className={cn(

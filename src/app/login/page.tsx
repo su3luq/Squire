@@ -8,6 +8,7 @@ import { signInWithEmail } from '@/lib/auth';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { Wordmark } from '@/components/wordmark';
 
 export default function LoginPage() {
   const router = useRouter();
@@ -37,7 +38,7 @@ export default function LoginPage() {
     <main className="flex min-h-screen items-center justify-center bg-muted/40 p-4">
       <div className="w-full max-w-sm space-y-5">
         <div className="text-center">
-          <p className="text-lg font-semibold tracking-tight">RankedLearning</p>
+          <Wordmark className="text-lg font-semibold tracking-tight" />
         </div>
 
         <div className="rounded-lg border border-border bg-card p-6 shadow-sm">

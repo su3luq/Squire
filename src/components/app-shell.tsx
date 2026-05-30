@@ -9,6 +9,7 @@ import { SignOutButton } from './sign-out-button';
 import { InboxButton } from './inbox-button';
 import { Avatar } from './avatar';
 import { StreakWidget } from './streak-widget';
+import { Wordmark } from './wordmark';
 import { cn } from '@/lib/utils';
 import type { NavItem } from './nav-items';
 import type { EffectiveStreak } from '@/lib/streak';
@@ -86,18 +87,15 @@ export function AppShell({
               className="text-sm font-semibold tracking-tight"
               title="RankedLearning home"
             >
-              RL
+              <Wordmark short />
             </Link>
           ) : (
-            <>
-              <Link
-                href={homeHref}
-                className="text-base font-semibold tracking-tight"
-              >
-                RankedLearning
-              </Link>
-              <InboxButton count={unreadCount} />
-            </>
+            <Link
+              href={homeHref}
+              className="text-base font-semibold tracking-tight"
+            >
+              <Wordmark />
+            </Link>
           )}
         </div>
 
@@ -122,21 +120,24 @@ export function AppShell({
 
         {!collapsed && (
           <div className="space-y-3 border-t border-border p-4">
-            <Link
-              href="/settings"
-              className="flex items-center gap-3 rounded-md transition-colors hover:bg-muted/60"
-              title="Settings"
-            >
-              <Avatar url={avatarUrl} name={userName} size="sm" rank={userRank} ringConfig={userRingConfig} />
-              <div className="min-w-0 flex-1 text-sm">
-                <p className="truncate font-medium">{userName}</p>
-                {userMeta ? (
-                  <p className="truncate text-xs text-muted-foreground">
-                    {userMeta}
-                  </p>
-                ) : null}
-              </div>
-            </Link>
+            <div className="flex items-center gap-2">
+              <Link
+                href="/settings"
+                className="flex min-w-0 flex-1 items-center gap-3 rounded-md transition-colors hover:bg-muted/60"
+                title="Settings"
+              >
+                <Avatar url={avatarUrl} name={userName} size="sm" rank={userRank} ringConfig={userRingConfig} />
+                <div className="min-w-0 flex-1 text-sm">
+                  <p className="truncate font-medium">{userName}</p>
+                  {userMeta ? (
+                    <p className="truncate text-xs text-muted-foreground">
+                      {userMeta}
+                    </p>
+                  ) : null}
+                </div>
+              </Link>
+              <InboxButton count={unreadCount} />
+            </div>
             {streak && (
               <StreakWidget streak={streak} variant="sidebar-full" />
             )}
@@ -175,7 +176,7 @@ export function AppShell({
             href={homeHref}
             className="text-base font-semibold tracking-tight"
           >
-            RankedLearning
+            <Wordmark />
           </Link>
           <div className="flex items-center gap-1">
             {streak && streak.status !== 'broken' && streak.status !== 'none' && (
