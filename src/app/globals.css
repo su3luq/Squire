@@ -63,6 +63,13 @@
  * lightness changes mode-to-mode.
  */
 :root {
+  /* Tell the browser this theme is light so native widgets — autofill
+   * background, form-control text, scrollbars, date pickers — are painted
+   * in light mode. Without this Chrome/WebKit default every native widget
+   * to light regardless of our CSS, which is why autofilled inputs ignore
+   * the theme. The `.dark` block flips this to `dark`. */
+  color-scheme: light;
+
   /* Surfaces */
   --background: oklch(0.975 0.008 75);
   --foreground: oklch(0.23 0.012 35);
@@ -122,6 +129,8 @@
    * borders), so the bronze accent is the only saturated thing on
    * screen. Chroma is pushed near zero on neutrals; the tiny non-zero
    * value avoids the flatness of perfect 0. */
+  color-scheme: dark;
+
   --background: oklch(0.16 0.003 270);
   --foreground: oklch(0.96 0.003 270);
   --card: oklch(0.20 0.003 270);
