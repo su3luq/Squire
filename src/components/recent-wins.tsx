@@ -1,5 +1,6 @@
 import { BookOpen, Sword, Sparkles, Users } from 'lucide-react';
 import type { LucideIcon } from 'lucide-react';
+import { StatusChip } from '@/components/status-chip';
 import { cn } from '@/lib/utils';
 
 export type WinRow = {
@@ -62,9 +63,9 @@ export function RecentWins({ rows, className }: RecentWinsProps) {
                   {formatRelative(r.created_at)}
                 </p>
               </div>
-              <span className="shrink-0 rounded-full bg-primary/15 px-2.5 py-0.5 text-xs font-semibold tabular-nums text-primary">
-                +{r.amount}
-              </span>
+              <StatusChip tone="good" className="shrink-0 tabular-nums">
+                +<span className="tabular-nums">{r.amount}</span>
+              </StatusChip>
             </li>
           );
         })}
