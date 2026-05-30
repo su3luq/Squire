@@ -33,7 +33,7 @@ const TONE_CLASSES: Record<ChipTone, string> = {
   warn: 'bg-amber-100 text-amber-900 dark:bg-amber-950/50 dark:text-amber-300',
   danger: 'bg-destructive/10 text-destructive dark:bg-destructive/20 dark:text-destructive',
   muted: 'bg-muted text-muted-foreground',
-  info: 'bg-slate-100 text-slate-900 dark:bg-slate-800 dark:text-slate-200',
+  info: 'bg-muted text-foreground',
 };
 
 export function StatusChip({
