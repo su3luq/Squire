@@ -23,12 +23,12 @@ export type ChipTone =
   | 'info';
 
 const TONE_CLASSES: Record<ChipTone, string> = {
-  primary: 'bg-primary/10 text-primary',
-  good: 'bg-emerald-100 text-emerald-900',
-  warn: 'bg-amber-100 text-amber-900',
-  danger: 'bg-destructive/10 text-destructive',
+  primary: 'bg-primary/10 text-primary dark:bg-primary/15 dark:text-primary',
+  good: 'bg-emerald-100 text-emerald-900 dark:bg-emerald-950/50 dark:text-emerald-300',
+  warn: 'bg-amber-100 text-amber-900 dark:bg-amber-950/50 dark:text-amber-300',
+  danger: 'bg-destructive/10 text-destructive dark:bg-destructive/20 dark:text-destructive',
   muted: 'bg-muted text-muted-foreground',
-  info: 'bg-slate-100 text-slate-900',
+  info: 'bg-slate-100 text-slate-900 dark:bg-slate-800 dark:text-slate-200',
 };
 
 export function StatusChip({

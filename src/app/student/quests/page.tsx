@@ -583,7 +583,7 @@ export default async function StudentQuestsPage({
 
 function NewBadge() {
   return (
-    <span className="inline-flex items-center gap-1 rounded-full bg-emerald-100 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide text-emerald-900">
+    <span className="inline-flex items-center gap-1 rounded-full bg-emerald-100 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide text-emerald-900 dark:bg-emerald-950/50 dark:text-emerald-300">
       <Sparkles className="h-2.5 w-2.5" aria-hidden />
       New
     </span>

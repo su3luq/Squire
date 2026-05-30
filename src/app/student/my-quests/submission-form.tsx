@@ -70,7 +70,7 @@ export function SubmissionForm({
       />
 
       <div className="flex flex-wrap items-center justify-between gap-3 text-sm">
-        <p className={targetMet ? 'text-slate-600' : 'text-amber-700'}>
+        <p className={targetMet ? 'text-muted-foreground' : 'text-amber-700 dark:text-amber-400'}>
           {words} word{words === 1 ? '' : 's'}
           {wordTarget != null && wordTarget > 0 && (
             <span> · target: {wordTarget}</span>
@@ -98,7 +98,7 @@ export function SubmissionForm({
         </div>
       </div>
 
-      {error && <p className="text-sm text-red-600">{error}</p>}
+      {error && <p className="text-sm text-destructive">{error}</p>}
     </div>
   );
 }

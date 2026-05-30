@@ -434,7 +434,7 @@ export default async function PulsePage({
                         {s.full_name}
                       </span>
                     )}
-                    <span className="shrink-0 rounded-full bg-amber-100 px-2 py-0.5 text-[11px] font-medium text-amber-900">
+                    <span className="shrink-0 rounded-full bg-amber-100 px-2 py-0.5 text-[11px] font-medium text-amber-900 dark:bg-amber-950/50 dark:text-amber-300">
                       vel {s.learning_velocity.toFixed(2)}
                     </span>
                   </li>
@@ -477,9 +477,9 @@ export default async function PulsePage({
                         className={cn(
                           'shrink-0 rounded-full px-2 py-0.5 text-[11px] font-medium',
                           q.reason === 'low_pass'
-                            ? 'bg-destructive/10 text-destructive'
+                            ? 'bg-destructive/10 text-destructive dark:bg-destructive/20'
                             : q.reason === 'stuck'
-                              ? 'bg-amber-100 text-amber-900'
+                              ? 'bg-amber-100 text-amber-900 dark:bg-amber-950/50 dark:text-amber-300'
                               : 'bg-muted text-muted-foreground',
                         )}
                       >

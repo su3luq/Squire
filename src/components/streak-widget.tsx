@@ -40,8 +40,10 @@ export function StreakWidget({
         }
         className={cn(
           'inline-flex h-9 w-9 items-center justify-center rounded-full transition-colors',
-          alive && 'bg-amber-100 text-amber-700 hover:bg-amber-200',
-          danger && 'bg-orange-100 text-orange-700 hover:bg-orange-200',
+          alive &&
+            'bg-amber-100 text-amber-700 hover:bg-amber-200 dark:bg-amber-950/60 dark:text-amber-300 dark:hover:bg-amber-900/60',
+          danger &&
+            'bg-orange-100 text-orange-700 hover:bg-orange-200 dark:bg-orange-950/60 dark:text-orange-300 dark:hover:bg-orange-900/60',
           hidden && 'bg-muted text-muted-foreground hover:bg-muted/70',
           className,
         )}
@@ -62,8 +64,10 @@ export function StreakWidget({
       className={cn(
         'group inline-flex items-center gap-2 rounded-full px-3 py-1 text-xs font-semibold transition-colors',
         variant === 'sidebar-full' && 'w-full justify-start',
-        alive && 'bg-amber-100 text-amber-900 hover:bg-amber-200',
-        danger && 'bg-orange-100 text-orange-900 hover:bg-orange-200',
+        alive &&
+          'bg-amber-100 text-amber-900 hover:bg-amber-200 dark:bg-amber-950/60 dark:text-amber-300 dark:hover:bg-amber-900/60',
+        danger &&
+          'bg-orange-100 text-orange-900 hover:bg-orange-200 dark:bg-orange-950/60 dark:text-orange-300 dark:hover:bg-orange-900/60',
         hidden && 'bg-muted text-muted-foreground hover:bg-muted/70',
         className,
       )}
@@ -78,8 +82,8 @@ export function StreakWidget({
       <Flame
         className={cn(
           'h-4 w-4 shrink-0',
-          alive && 'fill-amber-500 text-amber-600',
-          danger && 'fill-orange-400 text-orange-600',
+          alive && 'fill-amber-500 text-amber-600 dark:fill-amber-400 dark:text-amber-300',
+          danger && 'fill-orange-400 text-orange-600 dark:fill-orange-400 dark:text-orange-300',
         )}
         aria-hidden
       />

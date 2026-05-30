@@ -72,8 +72,10 @@
   --popover-foreground: oklch(0.23 0.012 35);
 
   /* Bronze accent — warm orange-clay, closer to Claude's brand orange
-   * than the metallic-yellow that "bronze" usually evokes. */
-  --primary: oklch(0.62 0.13 45);
+   * than the metallic-yellow that "bronze" usually evokes. Slightly
+   * darker + more chroma than the original draft so the buttons read
+   * confident, not pastel. */
+  --primary: oklch(0.58 0.14 45);
   --primary-foreground: oklch(0.985 0.005 75);
 
   /* Neutral warm surfaces */
@@ -87,14 +89,14 @@
   /* Borders / inputs / focus ring */
   --border: oklch(0.89 0.013 70);
   --input: oklch(0.89 0.013 70);
-  --ring: oklch(0.62 0.13 45);
+  --ring: oklch(0.58 0.14 45);
 
   /* System tones (kept slightly warmer than pure red) */
   --destructive: oklch(0.55 0.21 27);
 
   /* Charts — accent-led with neutral warm backups so the brand is
    * coherent in analytics views as well as in transactional UI. */
-  --chart-1: oklch(0.62 0.13 45);
+  --chart-1: oklch(0.58 0.14 45);
   --chart-2: oklch(0.72 0.09 45);
   --chart-3: oklch(0.50 0.013 40);
   --chart-4: oklch(0.40 0.013 40);
@@ -106,12 +108,12 @@
    * so the rail reads as a distinct surface against the main pane. */
   --sidebar: oklch(0.965 0.010 75);
   --sidebar-foreground: oklch(0.23 0.012 35);
-  --sidebar-primary: oklch(0.62 0.13 45);
+  --sidebar-primary: oklch(0.58 0.14 45);
   --sidebar-primary-foreground: oklch(0.985 0.005 75);
   --sidebar-accent: oklch(0.94 0.012 75);
   --sidebar-accent-foreground: oklch(0.22 0.012 35);
   --sidebar-border: oklch(0.89 0.013 70);
-  --sidebar-ring: oklch(0.62 0.13 45);
+  --sidebar-ring: oklch(0.58 0.14 45);
 }
 
 .dark {
@@ -151,7 +153,8 @@
   --chart-4: oklch(0.55 0.003 270);
   --chart-5: oklch(0.42 0.003 270);
 
-  --sidebar: oklch(0.18 0.003 270);
+  /* Sidebar pushed darker than background for clearer rail separation. */
+  --sidebar: oklch(0.135 0.003 270);
   --sidebar-foreground: oklch(0.96 0.003 270);
   --sidebar-primary: oklch(0.68 0.13 45);
   --sidebar-primary-foreground: oklch(0.16 0.003 270);

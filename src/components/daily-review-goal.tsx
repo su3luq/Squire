@@ -129,8 +129,10 @@ export function DailyReviewGoal({
           <span
             className={cn(
               'mt-0.5 inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-full',
-              tone === 'good' && 'bg-emerald-100 text-emerald-700',
-              tone === 'urgent' && 'bg-amber-100 text-amber-700',
+              tone === 'good' &&
+                'bg-emerald-100 text-emerald-700 dark:bg-emerald-950/60 dark:text-emerald-300',
+              tone === 'urgent' &&
+                'bg-amber-100 text-amber-700 dark:bg-amber-950/60 dark:text-amber-300',
               tone === 'neutral' && 'bg-muted text-muted-foreground',
             )}
             aria-hidden

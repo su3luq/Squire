@@ -62,7 +62,7 @@ export function RecentWins({ rows, className }: RecentWinsProps) {
                   {formatRelative(r.created_at)}
                 </p>
               </div>
-              <span className="shrink-0 rounded-full bg-emerald-50 px-2.5 py-0.5 text-xs font-semibold tabular-nums text-emerald-900">
+              <span className="shrink-0 rounded-full bg-emerald-100 px-2.5 py-0.5 text-xs font-semibold tabular-nums text-emerald-900 dark:bg-emerald-950/50 dark:text-emerald-300">
                 +{r.amount}
               </span>
             </li>
@@ -81,16 +81,16 @@ const ICONS: Record<WinKind, LucideIcon> = {
 };
 
 const TONE_BG: Record<WinKind, string> = {
-  review: 'bg-primary/10',
-  solo: 'bg-amber-100',
-  coop: 'bg-violet-100',
+  review: 'bg-primary/10 dark:bg-primary/15',
+  solo: 'bg-amber-100 dark:bg-amber-950/50',
+  coop: 'bg-violet-100 dark:bg-violet-950/50',
   other: 'bg-muted',
 };
 
 const TONE_FG: Record<WinKind, string> = {
   review: 'text-primary',
-  solo: 'text-amber-700',
-  coop: 'text-violet-700',
+  solo: 'text-amber-700 dark:text-amber-300',
+  coop: 'text-violet-700 dark:text-violet-300',
   other: 'text-muted-foreground',
 };
 
