@@ -46,7 +46,7 @@ export function CardStatus({ questionCount, recall }: { questionCount: number; r
     <div className="flex items-center justify-between">
       <span className={cn('inline-flex items-center gap-1.5 text-[9.5px] font-bold uppercase tracking-wide', live ? 'text-emerald-600 dark:text-emerald-400' : 'text-amber-600 dark:text-amber-400')}>
         {live ? (
-          <><span className="h-1.5 w-1.5 rounded-full bg-emerald-500" /> Live · <span className="tabular-nums">{questionCount}</span> Q</>
+          <><span className="h-1.5 w-1.5 rounded-full bg-emerald-500 dark:bg-emerald-400" /> Live · <span className="tabular-nums">{questionCount}</span> Q</>
         ) : (
           <><AlertTriangle className="h-3 w-3" /> Needs a question</>
         )}

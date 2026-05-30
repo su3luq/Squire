@@ -22,7 +22,7 @@ export function LessonGroup({ lesson, defaultOpen }: { lesson: LessonRow; defaul
         <RecallChip recall={lesson.recall} />
         <NeedsChip count={lesson.needsCount} />
         <Link href={`/teacher/cards/${lesson.id}`} title="Manage / unlock"><UnlockChip count={lesson.unlockCount} /></Link>
-        <Link href={`/teacher/cards/${lesson.id}/cards/new`} className="ml-auto inline-flex items-center gap-1.5 rounded-lg border border-border px-3 py-1.5 text-xs font-semibold transition-colors hover:bg-muted">
+        <Link href={`/teacher/cards/${lesson.id}/cards/new`} aria-label={`Add a card to ${lesson.title}`} className="ml-auto inline-flex items-center gap-1.5 rounded-lg border border-border px-3 py-1.5 text-xs font-semibold transition-colors hover:bg-muted">
           <Plus className="h-3.5 w-3.5" /> Add card
         </Link>
       </div>
