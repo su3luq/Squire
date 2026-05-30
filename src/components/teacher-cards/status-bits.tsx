@@ -2,10 +2,14 @@ import { AlertTriangle } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import type { RecallStat } from '@/lib/recall';
 
+// All header tags share one height/shape so their tops + bottoms line up
+// (not just their centers) — keeps the lesson-header chip row clean.
+const CHIP = 'inline-flex h-5 shrink-0 items-center gap-1 rounded-full px-2.5 text-[10px] font-bold leading-none';
+
 export function NeedsChip({ count }: { count: number }) {
   if (count <= 0) return null;
   return (
-    <span className="inline-flex items-center gap-1 rounded-full bg-amber-100 px-2 py-0.5 text-[10px] font-bold text-amber-700 dark:bg-amber-950/50 dark:text-amber-300">
+    <span className={cn(CHIP, 'bg-amber-100 text-amber-700 dark:bg-amber-950/50 dark:text-amber-300')}>
       <AlertTriangle className="h-3 w-3" aria-hidden />
       <span className="tabular-nums">{count}</span> needs a question
     </span>
@@ -14,11 +18,11 @@ export function NeedsChip({ count }: { count: number }) {
 
 export function UnlockChip({ count }: { count: number }) {
   return count > 0 ? (
-    <span className="rounded-full bg-primary/15 px-2 py-0.5 text-[10px] font-bold text-primary">
+    <span className={cn(CHIP, 'bg-primary/15 text-primary')}>
       Unlocked ×<span className="tabular-nums">{count}</span>
     </span>
   ) : (
-    <span className="rounded-full bg-muted px-2 py-0.5 text-[10px] font-bold text-muted-foreground">
+    <span className={cn(CHIP, 'bg-muted text-muted-foreground')}>
       Draft · not unlocked
     </span>
   );
@@ -33,7 +37,7 @@ const RECALL_TONE: Record<RecallStat['tier'], string> = {
 
 export function RecallChip({ recall }: { recall: RecallStat }) {
   return (
-    <span className={cn('inline-flex items-center gap-1.5 rounded-full px-2 py-0.5 text-[10px] font-bold', RECALL_TONE[recall.tier])}>
+    <span className={cn(CHIP, 'gap-1.5', RECALL_TONE[recall.tier])}>
       <span className="font-semibold opacity-80">Recall</span>
       <span className="tabular-nums">{recall.pct === null ? '—' : `${recall.pct}%`}</span>
     </span>
