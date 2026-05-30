@@ -4,9 +4,13 @@ Full project plan as agreed between teacher and architect (Claude). This is the 
 
 ---
 
-## Current Status (2026-05-30)
+## Current Status (2026-05-31)
 
-All phases in §8 below are **shipped**, plus a Phase 9 gamification overhaul + performance hardening track completed 2026-05-30 (six-pass arc, summary in `CLAUDE.md`). The app is in polish / maintenance mode. The phase write-ups remain as historical reference — they describe what was built and why. Per-phase deep dives:
+All phases in §8 below are **shipped**, plus:
+- A Phase 9 gamification overhaul + performance hardening track (six-pass arc, 2026-05-30, summary in `CLAUDE.md`).
+- A Phase 10 brand + theme track (2026-05-31): bronze brand mark, warm-cream light shell, neutral-charcoal dark shell, tri-state appearance toggle on `/settings` with pre-paint FOUC guard. Every chrome surface migrated from hardcoded slate/blue/emerald to theme tokens.
+
+The app is in polish / maintenance mode. The phase write-ups remain as historical reference — they describe what was built and why. Per-phase deep dives:
 
 - `docs/PHASE-2-PLAN.md` — markdown content model (Lessons & Cards)
 - `docs/PHASE-4-PLAN.md` — solo quest loop

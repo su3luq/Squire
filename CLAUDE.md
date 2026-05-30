@@ -21,12 +21,14 @@ RankedLearning is a gamified learning platform for a single teacher (the develop
 | Language | TypeScript everywhere |
 | Styling | Tailwind CSS v4 (CSS-first config via `@theme` in `src/app/globals.css`, no `tailwind.config.ts`) |
 | UI primitives | shadcn/ui (in `src/components/ui/`) — base-nova style. Installed: alert, alert-dialog, badge, button, card, dropdown-menu, form, input, label, progress, sonner, tabs, textarea, tooltip |
-| Toasts | `sonner` mounted at `src/app/layout.tsx`. Tooltip provider mounts there too. |
+| Toasts | `sonner` mounted at `src/app/layout.tsx` (no `richColors` — toasts inherit theme tokens; +XP toast in review-session uses inline bronze styling). Tooltip provider mounts there too. |
+| Theme switching | Light / Dark / System tri-state. Pre-paint script in `src/app/layout.tsx` reads localStorage (`rl-theme`) + OS preference and sets `.dark` on `<html>` before React mounts so there's no FOUC. Toggle on `/settings` Appearance section uses `src/lib/use-theme.ts`. |
+| Typography | Inter (via `next/font/google`). Display tracking tightened globally on `h1`/`h2`/`h3` (`-0.02em` / `-0.015em` / `-0.01em`) in `globals.css`. |
 | Forms | react-hook-form + zod |
 | Backend | Supabase (Postgres + Auth + Realtime + Edge Functions) — three client patterns: browser / server / middleware. Storage is NOT used; see "Known constraints" below. |
 | Push notifications | Web Push API + Service Worker (shipped) |
 | SRS algorithm | FSRS-4.5 via `ts-fsrs` package |
-| Rich text editor | MDXEditor (Lexical-based, markdown round-trip) on all five authoring surfaces. Dynamic-imported via `src/components/mdx-editor.tsx` wrapper → `mdx-editor-impl.tsx` to keep the Lexical bundle off the initial payload. |
+| Rich text editor | MDXEditor (Lexical-based, markdown round-trip) on all five authoring surfaces. Dynamic-imported via `src/components/mdx-editor.tsx` wrapper → `mdx-editor-impl.tsx` to keep the Lexical bundle off the initial payload. Wired to the theme: `--accent*` and `--base*` MDXEditor tokens point at our shadcn variables so the editor surfaces shift with light/dark. |
 | Celebration effects | `canvas-confetti` for quest-pass bursts; `src/components/celebration-gate.tsx` polls unread `rank_up` + `submission_passed` notifications on student app load. |
 | AI-likelihood detection | Deferred to v2 — `quest_submissions.ai_likelihood_score` stays NULL |
 
@@ -55,6 +57,7 @@ RankedLearning is a gamified learning platform for a single teacher (the develop
 16. **Review-XP must always be awarded via the `submit_mcq_answer` SECURITY DEFINER function.** Never insert into `review_attempts` or `xp_ledger` directly from client code. The function is the audit + validation chokepoint: it verifies card visibility, computes correctness against the teacher-only `correct_choice`, inserts the attempt row, and writes the +5 XP ledger atomically. See migration 015.
 17. **The rank ladder is dynamic.** Tiers, XP thresholds, gradients, and optional names live in the `ranks` table (migration 049) and are edited by teachers at `/teacher/settings/ranks`. The `compute_rank_from_xp()` function reads the table; `src/lib/ranks-config.ts` mirrors it on the client via `getRanksMap()` + `getRankProgress()`. The legacy hardcoded ladder in `src/lib/ranks.ts` is kept for fallback only — prefer the dynamic helpers for new code.
 18. **Streak bookkeeping is trigger-driven.** `profiles.streak_days` + `streak_last_day` are updated by the `trg_update_review_streak` trigger on `review_attempts` INSERT (migration 050). The trigger does the day-boundary math in Saigon time. Never write to these columns directly from app code. The display layer in `src/lib/streak.ts` reconciles the cached value against today/yesterday so a stale streak can't lie between visits.
+19. **All colors go through theme tokens. Never hardcode `slate-*` / `blue-*` / `emerald-*` etc. for shell surfaces.** Use `text-foreground`, `text-muted-foreground`, `bg-card`, `bg-muted`, `border-border`, `text-primary` etc. — they shift correctly when `.dark` flips. Semantic chips (`StatusChip` tones, the streak amber flame, the destructive red, the `NEW` emerald badge) may use color literals **only when paired with a `dark:` variant** (e.g. `bg-amber-100 text-amber-900 dark:bg-amber-950/50 dark:text-amber-300`). When in doubt, use a theme token. The brand mark is the bronze accent (`--primary` = `oklch(0.68 0.13 45)`, ≈ `#cc7e51`) — anything that wants to convey "positive / brand / win" should use `bg-primary/15 text-primary`, not emerald.
 
 ---
 
@@ -146,6 +149,24 @@ Missed reviews are tracked: 4 days in a row where the student has due cards and 
 
 ---
 
+## Brand & Theme
+
+**Brand mark:** bronze accent at `oklch(0.68 0.13 45)` (≈ `#cc7e51`). Constant across light + dark; only the shell shifts.
+
+**Light mode** (Claude-website inspired): warm cream parchment shell at `oklch(0.985 0.008 75)`, warm dark foreground at `oklch(0.19 0.012 35)`. Sidebar a touch warmer than the main canvas.
+
+**Dark mode**: neutral charcoal shell at `oklch(0.16 0.003 270)` — quiet Claude-style canvas where the bronze accent is the only saturated thing on screen. No warm tint on surfaces or borders (an earlier "warm-dark" / "dark-gold" experiment was rolled back). Sidebar matches canvas; separation comes from the border alone.
+
+**Token source of truth:** `src/app/globals.css` — `:root` for light, `.dark` for dark. Tailwind classes (`bg-background`, `text-foreground`, `bg-card`, `border-border`, etc.) read these CSS variables; the `.dark` class on `<html>` flips them.
+
+**Typography:** Inter (via `next/font/google`). Display tracking on `h1`/`h2`/`h3` is tightened globally (`-0.02em` / `-0.015em` / `-0.01em`) for editorial confidence.
+
+**Theme toggle:** `/settings` → Appearance. Tri-state (Light / Dark / System) backed by `useTheme` in `src/lib/use-theme.ts` (localStorage key `rl-theme`). A pre-paint inline script in `src/app/layout.tsx` sets `.dark` on `<html>` before React mounts so there's no FOUC on hard refresh.
+
+**Brand sandbox** at `/teacher/settings/brand` renders six variants (3 accents × 2 modes) so you can A/B compare without touching globals. Kept as a reference for future palette experiments.
+
+---
+
 ## Database Schema (already created)
 
 21 tables in `public` schema. **Do not run migrations to alter the schema without asking the user first.** Schema reference: see `docs/SCHEMA.md`.
@@ -171,6 +192,7 @@ All major planned work is shipped. The app is in polish / maintenance mode.
 | 7 — UI redesign + perf | ✅ Shipped | See `docs/PHASE_7_UI_AND_PERF.md` |
 | 8 — MDXEditor + coop drafts | ✅ Shipped | See `docs/PHASE_8_EDITOR.md` |
 | 9 — Gamification overhaul + perf hardening (2026-05-30) | ✅ Shipped | Six-pass arc; ranks dynamic (migration 049), streak system (050), DB perf hardening (051 + 052). Detail in commit log `cb92249..26163e4`. |
+| 10 — Brand + theme (2026-05-31) | ✅ Shipped | Bronze accent identity, warm-cream light shell + neutral-charcoal dark shell, tri-state appearance toggle, pre-paint FOUC guard. Every chrome surface migrated from hardcoded slate/blue/emerald to theme tokens. See `## Brand & Theme` below. |
 
 `docs/PLAN.md` and the per-phase docs are kept as historical reference; they describe what was built and why. Day-to-day work today is feature polish, bug fixes, and small UX improvements rather than phased shipping.
 
