@@ -117,64 +117,49 @@
 }
 
 .dark {
-  /* Neutral charcoal dark with subtle bronze edge — the original
-   * Claude-style clean shell, refined with three lessons from the
-   * understand-anything experiment:
-   *
-   *   1. Surfaces layered in clearer lightness steps so depth reads:
-   *      background (0.165) → card (0.205) → muted (0.245). Previously
-   *      the gaps were too small to read as elevation.
-   *   2. Borders carry a faint bronze hint at 8% alpha. Just enough
-   *      to signal "branded chrome" without crossing into "visible
-   *      bronze line" — the over-commitment from the warm-dark pass.
-   *   3. Sidebar at same tonal level as canvas; separation comes from
-   *      the gold-tinted border alone, not a darker surface. Reads
-   *      as one continuous dark plane with content layered on top.
-   *
-   * Returning to: bronze accent (not tan-gold), cool-neutral muted
-   * text (not warm brown), pure-neutral surfaces (no warm chroma). */
-
-  /* Surfaces — layered neutral charcoal, gentle steps. */
-  --background: oklch(0.165 0.003 270);
+  /* Neutral charcoal dark with the bronze brand accent. Pre-UA shell:
+   * the shell stays quiet (no warm chroma anywhere on surfaces or
+   * borders), so the bronze accent is the only saturated thing on
+   * screen. Chroma is pushed near zero on neutrals; the tiny non-zero
+   * value avoids the flatness of perfect 0. */
+  --background: oklch(0.16 0.003 270);
   --foreground: oklch(0.96 0.003 270);
-  --card: oklch(0.205 0.003 270);
+  --card: oklch(0.20 0.003 270);
   --card-foreground: oklch(0.96 0.003 270);
-  --popover: oklch(0.205 0.003 270);
+  --popover: oklch(0.20 0.003 270);
   --popover-foreground: oklch(0.96 0.003 270);
 
-  /* Bronze accent — original brand mark, matches light mode. */
+  /* Bronze accent — the constant brand mark across light + dark. */
   --primary: oklch(0.68 0.13 45);
-  --primary-foreground: oklch(0.165 0.003 270);
+  --primary-foreground: oklch(0.16 0.003 270);
 
-  --secondary: oklch(0.245 0.003 270);
+  --secondary: oklch(0.24 0.003 270);
   --secondary-foreground: oklch(0.96 0.003 270);
-  --muted: oklch(0.245 0.003 270);
-  --muted-foreground: oklch(0.68 0.005 270);
-  --accent: oklch(0.245 0.003 270);
+  --muted: oklch(0.24 0.003 270);
+  --muted-foreground: oklch(0.68 0.003 270);
+  --accent: oklch(0.24 0.003 270);
   --accent-foreground: oklch(0.96 0.003 270);
 
-  /* Subtle bronze edge — 8% alpha keeps it a hint, not a line.
-   * Input bumps to 18% so form fields read as definite. */
-  --border: oklch(0.68 0.13 45 / 0.08);
-  --input: oklch(0.68 0.13 45 / 0.18);
+  --border: oklch(0.28 0.003 270);
+  --input: oklch(0.28 0.003 270);
   --ring: oklch(0.68 0.13 45);
 
   --destructive: oklch(0.65 0.20 27);
 
   --chart-1: oklch(0.68 0.13 45);
   --chart-2: oklch(0.78 0.09 45);
-  --chart-3: oklch(0.72 0.005 270);
-  --chart-4: oklch(0.55 0.005 270);
-  --chart-5: oklch(0.42 0.005 270);
+  --chart-3: oklch(0.72 0.003 270);
+  --chart-4: oklch(0.55 0.003 270);
+  --chart-5: oklch(0.42 0.003 270);
 
-  /* Sidebar at same level as background — separation via border alone. */
-  --sidebar: oklch(0.165 0.003 270);
+  /* Sidebar pushed darker than background for clearer rail separation. */
+  --sidebar: oklch(0.135 0.003 270);
   --sidebar-foreground: oklch(0.96 0.003 270);
   --sidebar-primary: oklch(0.68 0.13 45);
-  --sidebar-primary-foreground: oklch(0.165 0.003 270);
-  --sidebar-accent: oklch(0.245 0.003 270);
+  --sidebar-primary-foreground: oklch(0.16 0.003 270);
+  --sidebar-accent: oklch(0.24 0.003 270);
   --sidebar-accent-foreground: oklch(0.96 0.003 270);
-  --sidebar-border: oklch(0.68 0.13 45 / 0.08);
+  --sidebar-border: oklch(0.28 0.003 270);
   --sidebar-ring: oklch(0.68 0.13 45);
 }
 
