@@ -35,7 +35,6 @@ export default async function CardsPage({
     { data: lessonsRaw },
     { data: reviews },
     { count: reviewsTodayRaw },
-    { data: nextRow },
     { data: profile },
   ] = await Promise.all([
     // Single source of "due" — powers the hero count, the session, and the
@@ -45,19 +44,14 @@ export default async function CardsPage({
       .from('lessons')
       .select('id, title, lesson_number, review_cards(id, headline, position)')
       .order('lesson_number', { ascending: true }),
+    // All the student's review rows — drives per-lesson mastery, and we
+    // derive the soonest upcoming due time from the same set (no extra query).
     supabase.from('card_reviews').select('card_id, state, due_at'),
     supabase
       .from('review_attempts')
       .select('id', { count: 'exact', head: true })
       .eq('student_id', user.id)
       .gte('answered_at', todayStartIso),
-    supabase
-      .from('card_reviews')
-      .select('due_at')
-      .gt('due_at', nowIso)
-      .order('due_at', { ascending: true })
-      .limit(1)
-      .maybeSingle(),
     supabase
       .from('profiles')
       .select('streak_days, streak_last_day')
@@ -73,7 +67,14 @@ export default async function CardsPage({
   const dueIds = new Set(sessionCards.map((c) => c.card_id));
 
   const stateByCard = new Map<string, string>();
-  for (const r of reviews ?? []) stateByCard.set(r.card_id, r.state);
+  let nextDueAt: string | null = null;
+  for (const r of reviews ?? []) {
+    stateByCard.set(r.card_id, r.state);
+    // Soonest future due time, for the "all caught up — next in N" hint.
+    if (r.due_at > nowIso && (nextDueAt === null || r.due_at < nextDueAt)) {
+      nextDueAt = r.due_at;
+    }
+  }
 
   const lessons: LessonData[] = (lessonsRaw ?? [])
     .map((l) => {
@@ -131,7 +132,7 @@ export default async function CardsPage({
           dueCount: sessionCards.length,
           reviewsToday: reviewsTodayRaw ?? 0,
           dailyGoal: DAILY_REVIEW_GOAL,
-          nextDueAt: nextRow?.due_at ?? null,
+          nextDueAt,
           streakDays: streak.days,
           streakStatus: streak.status,
         }}

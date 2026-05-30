@@ -1,14 +1,30 @@
 'use client';
 
 import { useMemo, useState } from 'react';
+import dynamic from 'next/dynamic';
 import { useRouter } from 'next/navigation';
-import { ArrowLeft, Search } from 'lucide-react';
+import { ArrowLeft, Loader2, Search } from 'lucide-react';
 import { ReviewHero } from './review-hero';
-import { ReviewSession, type SessionCard } from './review-session';
+import type { SessionCard } from './review-session';
 import { ContinueStrip } from './continue-strip';
 import { LessonGrid } from './lesson-grid';
 import { CardChip } from './card-chip';
 import type { HeroData, LessonData } from './types';
+
+// The MCQ session drags in ts-fsrs + react-markdown — code a browsing
+// student never touches until they start a review. Load it only on demand
+// so it stays out of the Cards page's initial client bundle.
+const ReviewSession = dynamic(
+  () => import('./review-session').then((m) => m.ReviewSession),
+  {
+    ssr: false,
+    loading: () => (
+      <div className="flex justify-center py-16 text-muted-foreground">
+        <Loader2 className="h-5 w-5 animate-spin" aria-label="Loading review" />
+      </div>
+    ),
+  },
+);
 
 // Orchestrates the merged Cards page: a browse view (hero + continue strip
 // + lesson browser) that takes over in place with the review session, then

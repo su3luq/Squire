@@ -17,7 +17,8 @@ const jetbrainsMono = JetBrains_Mono({
   subsets: ['latin'],
   display: 'swap',
   variable: '--font-mono',
-  weight: ['500', '600', '700'],
+  // Variable font (no fixed weight list) — one file covers every numeric
+  // weight the app uses (400 body … 800 hero) so no number falls back.
 });
 
 export const metadata: Metadata = {
