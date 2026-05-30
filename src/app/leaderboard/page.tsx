@@ -5,6 +5,7 @@ import { Card, CardContent } from '@/components/ui/card';
 import { cn } from '@/lib/utils';
 import { Avatar } from '@/components/avatar';
 import { InsightsTabs } from '@/components/insights-tabs';
+import { StatusChip } from '@/components/status-chip';
 import { ToggleChipGroup } from '@/components/toggle-chip-group';
 import {
   LeaderboardPodium,
@@ -281,15 +282,15 @@ function LeaderboardRow({
             {row.full_name}
           </p>
           {isCurrentUser ? (
-            <span className="shrink-0 rounded bg-primary/10 px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-primary">
+            <StatusChip tone="good" className="shrink-0 uppercase tracking-wide">
               you
-            </span>
+            </StatusChip>
           ) : null}
         </div>
         <div className="mt-0.5 flex items-center gap-1.5">
-          <span className="inline-flex items-center rounded-full bg-muted px-2 py-0.5 text-[11px] font-semibold tabular-nums text-foreground/80">
-            Rank {row.current_rank}
-          </span>
+          <StatusChip tone="muted">
+            Rank <span className="tabular-nums">{row.current_rank}</span>
+          </StatusChip>
         </div>
       </div>
       <span className="shrink-0 text-sm font-semibold tabular-nums text-foreground">

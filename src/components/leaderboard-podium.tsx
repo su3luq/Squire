@@ -2,6 +2,7 @@ import type { CSSProperties } from 'react';
 import Link from 'next/link';
 import { Crown, Medal } from 'lucide-react';
 import { Avatar } from '@/components/avatar';
+import { StatusChip } from '@/components/status-chip';
 import { cn } from '@/lib/utils';
 import type { RingConfig } from '@/lib/ranks-config';
 
@@ -185,9 +186,9 @@ function PodiumTile({
         XP
       </p>
       {isViewer && (
-        <span className="relative rounded-full bg-primary/10 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-primary">
+        <StatusChip tone="good" className="relative uppercase tracking-wide">
           you
-        </span>
+        </StatusChip>
       )}
     </div>
   );
