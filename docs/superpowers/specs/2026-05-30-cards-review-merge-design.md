@@ -198,9 +198,11 @@ FSRS scheduling and `ts-fsrs` writeback, `submit_mcq_answer` (XP chokepoint), `x
 
 ---
 
-## 11. Open items to confirm during planning
+## 11. Decisions (resolved during implementation)
 
-- Final nav icon for **Cards** (proposed `Layers`).
-- Exact mastery-% definition for the lesson ring (proposed `state='review' / total`; alternative: any review_count > 0).
-- Whether the session payload is loaded with the page or lazily on Start (proposed: with the page; optimize later).
-- Lesson-folder inline-expand vs. a dedicated lesson route (proposed: inline-expand, one open at a time).
+- Nav icon for **Cards**: Lucide `Layers`. ✓
+- Lesson mastery %: `state='review' / total` (cards graduated to FSRS review). Kept — 0% on a fresh lesson is the correct semantics. ✓
+- Session payload: loaded with the page (single `list_review_session` RPC), handed to the client view. ✓
+- Lesson-folder interaction: inline-expand, one open at a time (no extra route). ✓
+
+Shipped in commit `67b94bd`.

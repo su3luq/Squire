@@ -23,7 +23,7 @@ RankedLearning is a gamified learning platform for a single teacher (the develop
 | UI primitives | shadcn/ui (in `src/components/ui/`) — base-nova style. Installed: alert, alert-dialog, badge, button, card, dropdown-menu, form, input, label, progress, sonner, tabs, textarea, tooltip |
 | Toasts | `sonner` mounted at `src/app/layout.tsx` (no `richColors` — toasts inherit theme tokens; +XP toast in review-session uses inline bronze styling). Tooltip provider mounts there too. |
 | Theme switching | Light / Dark / System tri-state. Pre-paint script in `src/app/layout.tsx` reads localStorage (`rl-theme`) + OS preference and sets `.dark` on `<html>` before React mounts so there's no FOUC. Toggle on `/settings` Appearance section uses `src/lib/use-theme.ts`. |
-| Typography | Inter (via `next/font/google`). Display tracking tightened globally on `h1`/`h2`/`h3` (`-0.02em` / `-0.015em` / `-0.01em`) in `globals.css`. |
+| Typography | Inter for text + **JetBrains Mono for all numbers** (both via `next/font/google`). The `tabular-nums` utility is routed through the mono face in `globals.css`, so every numeric/stat display app-wide gets the tabular HUD look. Display tracking tightened globally on `h1`/`h2`/`h3` (`-0.02em` / `-0.015em` / `-0.01em`). |
 | Forms | react-hook-form + zod |
 | Backend | Supabase (Postgres + Auth + Realtime + Edge Functions) — three client patterns: browser / server / middleware. Storage is NOT used; see "Known constraints" below. |
 | Push notifications | Web Push API + Service Worker (shipped) |
@@ -122,7 +122,9 @@ For each student, look at review attempts in the trailing **14 days**. Weight ea
 - **The instance-spawn logic needs a Postgres advisory lock or row-level lock to avoid race conditions** when two students hit "accept" simultaneously on the last slot.
 
 ### Review (FSRS-driven)
-Review is driven by FSRS scheduling. Cards become reviewable when their `card_reviews.due_at` is past. The student opens `/student/review` and answers MCQs from due cards. There is **no fixed session length, no daily reset, and no 06:00 cron**. The system is event-driven by FSRS due dates.
+Review is driven by FSRS scheduling. Cards become reviewable when their `card_reviews.due_at` is past. The student opens **`/student/cards`** and starts review from the hero; the MCQ session takes over the page in place and answers MCQs from due cards. There is **no fixed session length, no daily reset, and no 06:00 cron**. The system is event-driven by FSRS due dates.
+
+**Review + Library are merged into one library-led "Cards" page** (`/student/cards`, 2026-05-31). It pairs the gamified review hero (animated daily-goal ring + Zap CTA, in-place session takeover) with the full card browser (lesson-folder grid + a "Continue" strip for the current lesson + search). Due cards are flagged in the grid; reading is always available, MCQs only when due ("Review now" / "Next review in N"). Single source of "due" is the `list_review_session` RPC (powers the hero count, the session, and the grid flags). The old `/student/review` and `/student/library` routes 308-redirect here. Code: `src/app/student/cards/*` + `src/components/cards/*` (the session component lives at `src/components/cards/review-session.tsx`). Design: `docs/superpowers/specs/2026-05-30-cards-review-merge-design.md`.
 
 Per MCQ:
 - Correct → +5 XP awarded immediately via `xp_ledger`; the answer counts toward the card's "all correct" tally
@@ -159,7 +161,7 @@ Missed reviews are tracked: 4 days in a row where the student has due cards and 
 
 **Token source of truth:** `src/app/globals.css` — `:root` for light, `.dark` for dark. Tailwind classes (`bg-background`, `text-foreground`, `bg-card`, `border-border`, etc.) read these CSS variables; the `.dark` class on `<html>` flips them.
 
-**Typography:** Inter (via `next/font/google`). Display tracking on `h1`/`h2`/`h3` is tightened globally (`-0.02em` / `-0.015em` / `-0.01em`) for editorial confidence.
+**Typography:** Inter for text (via `next/font/google`), with **JetBrains Mono for numbers** — the `tabular-nums` utility is routed through the mono face in `globals.css` so XP / ranks / counts / timers read as tabular stats everywhere. Display tracking on `h1`/`h2`/`h3` is tightened globally (`-0.02em` / `-0.015em` / `-0.01em`) for editorial confidence.
 
 **Theme toggle:** `/settings` → Appearance. Tri-state (Light / Dark / System) backed by `useTheme` in `src/lib/use-theme.ts` (localStorage key `rl-theme`). A pre-paint inline script in `src/app/layout.tsx` sets `.dark` on `<html>` before React mounts so there's no FOUC on hard refresh.
 
@@ -193,6 +195,7 @@ All major planned work is shipped. The app is in polish / maintenance mode.
 | 8 — MDXEditor + coop drafts | ✅ Shipped | See `docs/PHASE_8_EDITOR.md` |
 | 9 — Gamification overhaul + perf hardening (2026-05-30) | ✅ Shipped | Six-pass arc; ranks dynamic (migration 049), streak system (050), DB perf hardening (051 + 052). Detail in commit log `cb92249..26163e4`. |
 | 10 — Brand + theme (2026-05-31) | ✅ Shipped | Bronze accent identity, warm-cream light shell + neutral-charcoal dark shell, tri-state appearance toggle, pre-paint FOUC guard. Every chrome surface migrated from hardcoded slate/blue/emerald to theme tokens. See `## Brand & Theme` below. |
+| 11 — Cards page (Review + Library merge, 2026-05-31) | ✅ Shipped | One library-led `/student/cards`: gamified review hero (animated goal ring + Zap CTA, in-place session takeover) + lesson-folder browser + read↔recall reader. JetBrains Mono numbers app-wide; `color-scheme` set for theme-correct autofill. Old `/student/review` + `/student/library` redirect in. See `### Review (FSRS-driven)` above + `docs/superpowers/specs/2026-05-30-cards-review-merge-design.md`. |
 
 `docs/PLAN.md` and the per-phase docs are kept as historical reference; they describe what was built and why. Day-to-day work today is feature polish, bug fixes, and small UX improvements rather than phased shipping.
 
