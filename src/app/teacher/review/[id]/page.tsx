@@ -8,6 +8,7 @@ import {
 } from '@/components/ui/card';
 import { MarkdownRenderer } from '@/components/markdown-renderer';
 import { PageHeader } from '@/components/page-header';
+import { StatusChip, QuestStatusChip } from '@/components/status-chip';
 import { ReviewForm } from './review-form';
 
 export const dynamic = 'force-dynamic';
@@ -151,18 +152,14 @@ export default async function ReviewSubmissionPage({
 
       <div className="space-y-2">
         <div className="flex flex-wrap items-center gap-2 text-xs">
-          <span className="rounded-full bg-muted px-2.5 py-0.5 font-medium capitalize text-muted-foreground">
-            {isCoop ? 'co-op' : 'solo'}
-          </span>
+          <StatusChip tone="muted">{isCoop ? 'co-op' : 'solo'}</StatusChip>
           {className && (
-            <span className="rounded-full bg-muted px-2.5 py-0.5 font-medium text-muted-foreground">
-              {className}
-            </span>
+            <StatusChip tone="muted">{className}</StatusChip>
           )}
           {attempt > 1 && (
-            <span className="rounded-full bg-amber-100 px-2.5 py-0.5 font-medium text-amber-900">
-              Attempt {attempt}
-            </span>
+            <StatusChip tone="warn">
+              Attempt <span className="tabular-nums">{attempt}</span>
+            </StatusChip>
           )}
           <span className="text-muted-foreground">
             +{quest?.xp_reward ?? 0} XP
@@ -249,15 +246,7 @@ export default async function ReviewSubmissionPage({
           <CardContent className="space-y-3 text-sm">
             <p className="flex items-center gap-2">
               <span>Decision:</span>
-              <span
-                className={`rounded-full px-2.5 py-0.5 text-xs font-medium capitalize ${
-                  submission.status === 'passed'
-                    ? 'bg-primary/10 text-primary'
-                    : 'bg-destructive/10 text-destructive'
-                }`}
-              >
-                {submission.status}
-              </span>
+              <QuestStatusChip status={submission.status} />
               {submission.reviewed_at && (
                 <span className="text-xs text-muted-foreground">
                   · {formatSaigon(submission.reviewed_at)}

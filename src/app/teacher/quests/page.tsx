@@ -4,6 +4,7 @@ import { createClient } from '@/lib/supabase/server';
 import { buttonVariants } from '@/components/ui/button';
 import { PageHeader } from '@/components/page-header';
 import { EmptyState } from '@/components/empty-state';
+import { StatusChip } from '@/components/status-chip';
 import { formatLongCountdown } from './indicator';
 
 export default async function QuestsListPage() {
@@ -140,9 +141,7 @@ export default async function QuestsListPage() {
                     <div className="min-w-0 flex-1">
                       <p className="truncate text-sm font-medium">{q.title}</p>
                       <div className="mt-1 flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
-                        <span className="rounded-full bg-muted px-2 py-0.5 font-medium capitalize">
-                          {q.quest_type}
-                        </span>
+                        <StatusChip tone="muted" capitalize>{q.quest_type}</StatusChip>
                         <span>+{q.xp_reward} XP</span>
                         <span>·</span>
                         {indicator}
@@ -150,19 +149,13 @@ export default async function QuestsListPage() {
                     </div>
                     <div className="flex shrink-0 flex-col items-end gap-1">
                       {isClosed && (
-                        <span className="rounded-full bg-muted px-2 py-0.5 text-xs text-muted-foreground">
-                          Closed
-                        </span>
+                        <StatusChip tone="muted">Closed</StatusChip>
                       )}
                       {!isClosed && isExpired && q.quest_type === 'solo' && (
-                        <span className="rounded-full bg-amber-100 px-2 py-0.5 text-xs text-amber-900">
-                          Expired
-                        </span>
+                        <StatusChip tone="warn">Expired</StatusChip>
                       )}
                       {pendingCount > 0 && (
-                        <span className="rounded-full bg-amber-100 px-2 py-0.5 text-xs font-medium text-amber-900">
-                          {pendingCount} to review
-                        </span>
+                        <StatusChip tone="warn"><span className="tabular-nums">{pendingCount}</span> to review</StatusChip>
                       )}
                     </div>
                   </div>

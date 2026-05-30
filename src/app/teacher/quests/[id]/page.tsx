@@ -8,6 +8,7 @@ import {
 } from '@/components/ui/card';
 import { MarkdownRenderer } from '@/components/markdown-renderer';
 import { PageHeader } from '@/components/page-header';
+import { StatusChip, QuestStatusChip } from '@/components/status-chip';
 import { formatLongCountdown } from '../indicator';
 import { EditQuestForm } from './edit-quest-form';
 import { DeleteQuestButton } from './delete-quest-button';
@@ -209,9 +210,7 @@ export default async function QuestDetailPage({
 
       <div className="space-y-2">
         <div className="flex flex-wrap items-center gap-2 text-xs">
-          <span className="rounded-full bg-muted px-2.5 py-0.5 font-medium capitalize text-muted-foreground">
-            {quest.quest_type}
-          </span>
+          <StatusChip tone="muted" capitalize>{quest.quest_type}</StatusChip>
           <span className="text-muted-foreground">+{quest.xp_reward} XP</span>
           {quest.quest_type === 'coop' && quest.max_team_size && (
             <>
@@ -222,14 +221,10 @@ export default async function QuestDetailPage({
             </>
           )}
           {isClosed && (
-            <span className="rounded-full bg-muted px-2.5 py-0.5 font-medium text-muted-foreground">
-              Closed
-            </span>
+            <StatusChip tone="muted">Closed</StatusChip>
           )}
           {!isClosed && isExpired && quest.quest_type === 'solo' && (
-            <span className="rounded-full bg-amber-100 px-2.5 py-0.5 font-medium text-amber-900">
-              Expired
-            </span>
+            <StatusChip tone="warn">Expired</StatusChip>
           )}
         </div>
         {quest.expires_at && (
@@ -379,9 +374,9 @@ export default async function QuestDetailPage({
                                           const c = draftCountsByInstance.get(inst.id);
                                           if (!c || c.total === 0) return null;
                                           return (
-                                            <span className="ml-2 rounded-full bg-muted px-2 py-0.5 text-xs font-normal text-muted-foreground">
-                                              {c.submitted}/{c.total} drafts submitted
-                                            </span>
+                                            <StatusChip tone="muted" className="ml-2 font-normal">
+                                              <span className="tabular-nums">{c.submitted}/{c.total}</span> drafts submitted
+                                            </StatusChip>
                                           );
                                         })()}
                                     </p>
@@ -466,9 +461,9 @@ export default async function QuestDetailPage({
                           {submitter?.full_name ?? '(unknown)'}
                         </span>
                         {attempt > 1 && (
-                          <span className="ml-2 rounded-full bg-amber-100 px-2 py-0.5 text-xs font-medium text-amber-900">
-                            Attempt {attempt}
-                          </span>
+                          <StatusChip tone="warn" className="ml-2">
+                            Attempt <span className="tabular-nums">{attempt}</span>
+                          </StatusChip>
                         )}
                         <span className="ml-2 text-xs text-muted-foreground">
                           {submitter?.class_id
@@ -478,19 +473,7 @@ export default async function QuestDetailPage({
                           {formatSaigon(s.submitted_at)}
                         </span>
                       </div>
-                      <span
-                        className={`rounded-full px-2.5 py-0.5 text-xs font-medium ${
-                          s.status === 'passed'
-                            ? 'bg-primary/10 text-primary'
-                            : s.status === 'failed'
-                              ? 'bg-destructive/10 text-destructive'
-                              : 'bg-amber-100 text-amber-900'
-                        }`}
-                      >
-                        {s.status === 'pending_review'
-                          ? 'pending review'
-                          : s.status}
-                      </span>
+                      <QuestStatusChip status={s.status} />
                     </li>
                   );
                 })}

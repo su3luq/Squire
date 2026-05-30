@@ -4,6 +4,7 @@ import { createClient } from '@/lib/supabase/server';
 import { buttonVariants } from '@/components/ui/button';
 import { PageHeader } from '@/components/page-header';
 import { EmptyState } from '@/components/empty-state';
+import { StatusChip } from '@/components/status-chip';
 import { cn } from '@/lib/utils';
 
 export const dynamic = 'force-dynamic';
@@ -75,17 +76,11 @@ export default async function ClassesListPage() {
                       </p>
                     </div>
                     {archived ? (
-                      <span className="shrink-0 rounded-full bg-muted px-2.5 py-0.5 text-xs font-medium text-muted-foreground">
-                        Archived
-                      </span>
+                      <StatusChip tone="muted" className="shrink-0">Archived</StatusChip>
                     ) : c.registration_open ? (
-                      <span className="shrink-0 rounded-full bg-primary/10 px-2.5 py-0.5 text-xs font-medium text-primary">
-                        Registration open
-                      </span>
+                      <StatusChip tone="primary" className="shrink-0">Registration open</StatusChip>
                     ) : (
-                      <span className="shrink-0 rounded-full bg-muted px-2.5 py-0.5 text-xs font-medium text-muted-foreground">
-                        Registration closed
-                      </span>
+                      <StatusChip tone="muted" className="shrink-0">Registration closed</StatusChip>
                     )}
                   </div>
                 </Link>

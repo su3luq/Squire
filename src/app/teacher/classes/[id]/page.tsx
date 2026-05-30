@@ -9,6 +9,7 @@ import {
 } from '@/components/ui/card';
 import { Avatar } from '@/components/avatar';
 import { PageHeader } from '@/components/page-header';
+import { StatusChip } from '@/components/status-chip';
 import { EditClassForm } from './edit-class-form';
 import { RegistrationToggle } from './registration-toggle';
 import { ArchiveButton } from './archive-button';
@@ -60,17 +61,11 @@ export default async function ClassDetailPage({
 
       <div className="flex flex-wrap items-center gap-2 text-xs">
         {isArchived ? (
-          <span className="rounded-full bg-muted px-2.5 py-0.5 font-medium text-muted-foreground">
-            Archived
-          </span>
+          <StatusChip tone="muted">Archived</StatusChip>
         ) : cls.registration_open ? (
-          <span className="rounded-full bg-primary/10 px-2.5 py-0.5 font-medium text-primary">
-            Registration open
-          </span>
+          <StatusChip tone="primary">Registration open</StatusChip>
         ) : (
-          <span className="rounded-full bg-muted px-2.5 py-0.5 font-medium text-muted-foreground">
-            Registration closed
-          </span>
+          <StatusChip tone="muted">Registration closed</StatusChip>
         )}
         <span className="text-muted-foreground">
           {studentCount} {studentCount === 1 ? 'student' : 'students'}
@@ -110,9 +105,9 @@ export default async function ClassDetailPage({
                           {s.email}
                         </p>
                       </div>
-                      <span className="hidden w-20 shrink-0 justify-self-start rounded-full bg-muted px-2 py-0.5 text-center text-xs font-medium text-muted-foreground sm:inline-block">
-                        Rank {s.current_rank}
-                      </span>
+                      <StatusChip tone="muted" className="hidden w-20 shrink-0 justify-self-start text-center sm:inline-flex">
+                        Rank <span className="tabular-nums">{s.current_rank}</span>
+                      </StatusChip>
                       <span className="hidden w-24 shrink-0 text-right text-xs tabular-nums text-muted-foreground sm:inline-block">
                         {s.xp_total.toLocaleString()} XP
                       </span>
