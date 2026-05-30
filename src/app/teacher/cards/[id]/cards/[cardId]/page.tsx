@@ -1,6 +1,7 @@
 import { createClient } from '@/lib/supabase/server';
 import { notFound } from 'next/navigation';
 import Link from 'next/link';
+import { ArrowLeft } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { CardEditorForm } from '../card-editor-form';
 import { LessonTitleRename } from '../lesson-title-rename';
@@ -57,38 +58,34 @@ export default async function EditCardPage({
   }
 
   return (
-    <main className="container mx-auto max-w-4xl p-6">
+    <main className="mx-auto max-w-3xl space-y-4 px-4 py-6">
       <Link
         href={`/teacher/cards/${id}`}
-        className="mb-4 inline-block text-sm text-blue-600 hover:underline"
+        className="inline-flex items-center gap-1 text-sm text-muted-foreground transition-colors hover:text-foreground"
       >
-        ← Lesson
+        <ArrowLeft className="h-4 w-4" /> Cards
       </Link>
 
-      <div className="mb-2">
+      <div>
         <LessonTitleRename lessonId={id} initialTitle={lesson.title} />
+        <p className="text-sm text-muted-foreground">
+          Lesson {lesson.lesson_number} · Edit card
+        </p>
       </div>
-      <p className="mb-6 text-sm text-slate-600">
-        Lesson {lesson.lesson_number} · Edit card
-      </p>
 
-      <Card>
-        <CardContent className="pt-6">
-          <CardEditorForm
-            lessonId={id}
-            initial={initial}
-            mode="edit"
-            action={action}
-          />
-        </CardContent>
-      </Card>
+      <CardEditorForm
+        lessonId={id}
+        initial={initial}
+        mode="edit"
+        action={action}
+      />
 
       <Card className="mt-6">
         <CardHeader>
-          <CardTitle className="text-red-700">Danger zone</CardTitle>
+          <CardTitle className="text-destructive">Danger zone</CardTitle>
         </CardHeader>
         <CardContent>
-          <p className="mb-3 text-sm text-slate-600">
+          <p className="mb-3 text-sm text-muted-foreground">
             Deleting this card removes it, its quiz questions, and any student review
             progress associated with it.
           </p>
