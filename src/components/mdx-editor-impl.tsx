@@ -88,9 +88,13 @@ export function MdxEditor({
       onBlur={flush}
       className={cn(
         'rounded-md border border-input bg-card text-sm focus-within:border-ring focus-within:ring-1 focus-within:ring-ring',
-        // The shipped MDXEditor stylesheet uses its own design tokens. We
-        // pull them into our brand palette where it matters most.
+        // MDXEditor reads its own design tokens (--accent*, --base*). We
+        // pipe them through our brand palette so the editor inherits both
+        // the bronze accent AND the light/dark shell — without this the
+        // editor would render its default slate palette regardless of
+        // theme, which is what created the dark-mode regression.
         '[--accentBase:var(--color-primary)] [--accentBgSubtle:color-mix(in_oklch,var(--color-primary)_10%,transparent)] [--accentLine:var(--color-border)] [--accentBorder:var(--color-border)] [--accentBorderHover:var(--color-border)] [--accentSolid:var(--color-primary)] [--accentSolidHover:var(--color-primary)] [--accentText:var(--color-primary)] [--accentTextContrast:var(--color-primary-foreground)]',
+        '[--baseBase:var(--color-background)] [--baseBg:var(--color-card)] [--baseBgSubtle:var(--color-muted)] [--baseBgHover:var(--color-muted)] [--baseBgActive:var(--color-accent)] [--baseLine:var(--color-border)] [--baseBorder:var(--color-border)] [--baseBorderHover:var(--color-border)] [--baseSolid:var(--color-foreground)] [--baseSolidHover:var(--color-foreground)] [--baseText:var(--color-foreground)] [--baseTextContrast:var(--color-foreground)]',
         className,
       )}
     >
@@ -101,13 +105,17 @@ export function MdxEditor({
         readOnly={!editable}
         contentEditableClassName={cn(
           'prose prose-sm max-w-none px-4 py-3',
-          'prose-headings:font-semibold prose-headings:tracking-tight',
-          'prose-p:leading-relaxed',
+          // Every prose element pinned to theme tokens so the editable
+          // content shifts with the shell instead of staying slate-y.
+          'prose-headings:font-semibold prose-headings:tracking-tight prose-headings:text-foreground',
+          'prose-p:leading-relaxed prose-p:text-foreground',
+          'prose-strong:text-foreground prose-em:text-foreground',
           'prose-a:text-primary prose-a:no-underline hover:prose-a:underline',
-          'prose-code:rounded prose-code:bg-muted prose-code:px-1 prose-code:py-0.5 prose-code:font-mono prose-code:text-[0.875em] prose-code:before:content-none prose-code:after:content-none',
+          'prose-code:rounded prose-code:bg-muted prose-code:px-1 prose-code:py-0.5 prose-code:font-mono prose-code:text-[0.875em] prose-code:text-foreground prose-code:before:content-none prose-code:after:content-none',
           'prose-pre:bg-muted prose-pre:text-foreground',
-          'prose-blockquote:border-l-4 prose-blockquote:border-primary/30 prose-blockquote:bg-muted/40 prose-blockquote:py-1 prose-blockquote:px-3 prose-blockquote:not-italic prose-blockquote:text-foreground',
-          'prose-ul:my-3 prose-ol:my-3 prose-li:my-1',
+          'prose-blockquote:border-l-4 prose-blockquote:border-primary/40 prose-blockquote:bg-muted/40 prose-blockquote:py-1 prose-blockquote:px-3 prose-blockquote:not-italic prose-blockquote:text-foreground',
+          'prose-ul:my-3 prose-ol:my-3 prose-li:my-1 prose-li:text-foreground marker:text-muted-foreground',
+          'prose-hr:border-border',
           'focus:outline-none',
         )}
         plugins={[

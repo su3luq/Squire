@@ -45,14 +45,14 @@ export function CardModal({ children }: { children: React.ReactNode }) {
       onMouseDown={onOverlayMouseDown}
       role="dialog"
       aria-modal="true"
-      className="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto bg-slate-900/40 p-4 backdrop-blur-sm sm:p-8"
+      className="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto bg-foreground/40 p-4 backdrop-blur-sm sm:p-8"
     >
-      <div className="relative my-4 w-full max-w-3xl rounded-lg bg-white p-6 shadow-xl sm:my-8 sm:p-8">
+      <div className="relative my-4 w-full max-w-3xl rounded-lg border border-border bg-card p-6 text-card-foreground shadow-xl sm:my-8 sm:p-8">
         <button
           type="button"
           onClick={close}
           aria-label="Close"
-          className="absolute right-4 top-4 inline-flex h-8 w-8 items-center justify-center rounded-md text-slate-500 transition-colors hover:bg-slate-100 hover:text-slate-900"
+          className="absolute right-4 top-4 inline-flex h-8 w-8 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
         >
           <X className="h-5 w-5" />
         </button>

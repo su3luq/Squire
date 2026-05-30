@@ -72,7 +72,7 @@ function YouTubeEmbed({ videoId, start }: { videoId: string; start?: number }) {
     ? `https://www.youtube.com/embed/${videoId}?start=${start}`
     : `https://www.youtube.com/embed/${videoId}`;
   return (
-    <div className="my-4 aspect-video w-full overflow-hidden rounded-md border border-slate-200 bg-black">
+    <div className="my-4 aspect-video w-full overflow-hidden rounded-md border border-border bg-black">
       <iframe
         src={src}
         title="YouTube video"
@@ -91,7 +91,7 @@ function VideoEmbed({ src }: { src: string }) {
       controls
       preload="metadata"
       src={src}
-      className="my-4 w-full rounded-md border border-slate-200 bg-black"
+      className="my-4 w-full rounded-md border border-border bg-black"
     />
   );
 }
@@ -152,31 +152,41 @@ const components: Components = {
   },
 };
 
-// Prose modifiers tuned for our slate palette. `prose-sm` for compact rendering.
+// Prose modifiers tuned to our theme tokens so the renderer adapts to
+// both light + dark modes without a separate dark stylesheet. Every
+// color reference goes through CSS variables (theme tokens) — no
+// hardcoded slate/blue/etc., so the same prose surface reads correctly
+// when the .dark class flips.
 const PROSE_CLASSES = [
-  'prose prose-slate prose-sm max-w-none',
+  'prose prose-sm max-w-none',
   // Mobile/tablet overflow guard: break long words and constrain inline media
   // so tables, images, and code blocks don't burst out of their container.
   '[overflow-wrap:break-word] [word-break:break-word]',
   '[&_table]:block [&_table]:w-max [&_table]:max-w-full [&_table]:overflow-x-auto',
   '[&_pre]:max-w-full [&_pre]:overflow-x-auto',
-  'prose-headings:font-semibold prose-headings:text-slate-900',
-  'prose-h1:text-3xl prose-h1:mt-0 prose-h1:mb-3 prose-h1:border-b prose-h1:border-slate-200 prose-h1:pb-2',
-  'prose-h2:text-2xl prose-h2:mb-2 prose-h2:border-b prose-h2:border-slate-100 prose-h2:pb-1',
+  // Headings inherit the theme foreground so they shift with light/dark.
+  'prose-headings:font-semibold prose-headings:text-foreground',
+  'prose-h1:text-3xl prose-h1:mt-0 prose-h1:mb-3 prose-h1:border-b prose-h1:border-border prose-h1:pb-2',
+  'prose-h2:text-2xl prose-h2:mb-2 prose-h2:border-b prose-h2:border-border prose-h2:pb-1',
   'prose-h3:text-xl prose-h3:mb-2',
   'prose-h4:text-lg',
-  'prose-p:text-slate-700 prose-p:leading-relaxed',
-  'prose-a:text-blue-600 prose-a:no-underline hover:prose-a:underline',
-  'prose-strong:text-slate-900 prose-em:text-slate-700',
-  'prose-code:rounded prose-code:bg-slate-100 prose-code:px-1 prose-code:py-0.5 prose-code:text-[0.875em] prose-code:font-mono prose-code:text-slate-800 prose-code:before:content-none prose-code:after:content-none',
-  'prose-pre:bg-slate-900 prose-pre:text-slate-100 prose-pre:rounded-md',
-  'prose-blockquote:border-l-4 prose-blockquote:border-blue-300 prose-blockquote:bg-blue-50/40 prose-blockquote:py-1 prose-blockquote:px-3 prose-blockquote:not-italic prose-blockquote:text-slate-700',
-  'prose-hr:border-slate-200',
-  'prose-table:border prose-table:border-slate-200',
-  'prose-th:bg-slate-50 prose-th:px-3 prose-th:py-2 prose-th:text-left prose-th:font-semibold',
-  'prose-td:border-t prose-td:border-slate-200 prose-td:px-3 prose-td:py-2',
-  'prose-ul:my-3 prose-ol:my-3 prose-li:my-1',
-  'prose-img:rounded-md prose-img:border prose-img:border-slate-200 prose-img:max-w-full prose-img:h-auto',
+  // Body copy uses foreground; muted for slight de-emphasis where needed.
+  'prose-p:text-foreground prose-p:leading-relaxed',
+  'prose-a:text-primary prose-a:no-underline hover:prose-a:underline',
+  'prose-strong:text-foreground prose-em:text-foreground',
+  // List markers (the "1." "2." in ordered lists, bullets in ul) need an
+  // explicit color or they fall back to the user-agent default which is
+  // off in dark mode. marker:* applies to the ::marker pseudo.
+  'prose-ul:my-3 prose-ol:my-3 prose-li:my-1 prose-li:text-foreground marker:text-muted-foreground',
+  // Code: subtle muted background, foreground text.
+  'prose-code:rounded prose-code:bg-muted prose-code:px-1 prose-code:py-0.5 prose-code:text-[0.875em] prose-code:font-mono prose-code:text-foreground prose-code:before:content-none prose-code:after:content-none',
+  'prose-pre:bg-muted prose-pre:text-foreground prose-pre:rounded-md',
+  'prose-blockquote:border-l-4 prose-blockquote:border-primary/40 prose-blockquote:bg-muted/40 prose-blockquote:py-1 prose-blockquote:px-3 prose-blockquote:not-italic prose-blockquote:text-foreground',
+  'prose-hr:border-border',
+  'prose-table:border prose-table:border-border',
+  'prose-th:bg-muted prose-th:px-3 prose-th:py-2 prose-th:text-left prose-th:font-semibold prose-th:text-foreground',
+  'prose-td:border-t prose-td:border-border prose-td:px-3 prose-td:py-2 prose-td:text-foreground',
+  'prose-img:rounded-md prose-img:border prose-img:border-border prose-img:max-w-full prose-img:h-auto',
 ].join(' ');
 
 export function MarkdownRenderer({
@@ -188,7 +198,7 @@ export function MarkdownRenderer({
 }) {
   if (!source.trim()) {
     if (emptyPlaceholder === undefined) return null;
-    return <p className="text-sm italic text-slate-400">{emptyPlaceholder}</p>;
+    return <p className="text-sm italic text-muted-foreground/70">{emptyPlaceholder}</p>;
   }
   return (
     <div className={PROSE_CLASSES}>

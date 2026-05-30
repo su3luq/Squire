@@ -29,20 +29,20 @@ export default async function CardModalPage({
     <CardModal>
       <div className="space-y-4">
         <div className="pr-10">
-          <p className="text-xs font-medium uppercase tracking-wide text-slate-500">
+          <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
             Lesson {card.lessons?.lesson_number} · {card.lessons?.title}
           </p>
-          <h2 className="mt-1 text-2xl font-bold text-slate-900">{card.headline}</h2>
+          <h2 className="mt-1 text-2xl font-bold text-foreground">{card.headline}</h2>
         </div>
 
-        <div className="border-t border-slate-200 pt-4">
+        <div className="border-t border-border pt-4">
           <MarkdownRenderer
             source={card.body}
             emptyPlaceholder="This card has no body content."
           />
         </div>
 
-        <div className="flex justify-end border-t border-slate-200 pt-3">
+        <div className="flex justify-end border-t border-border pt-3">
           <CopyMarkdownButton source={card.body} />
         </div>
       </div>

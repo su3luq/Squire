@@ -67,13 +67,13 @@ export function ClassAccessRow({
     <li className="px-3 py-2 text-sm">
       <div className="flex items-center justify-between gap-3">
         <div className="min-w-0 flex-1">
-          <p className="truncate font-medium text-slate-900">{className}</p>
+          <p className="truncate font-medium text-foreground">{className}</p>
           {alreadyUnlocked ? (
-            <p className="text-xs text-green-700">
+            <p className="text-xs text-emerald-700 dark:text-emerald-400">
               Unlocked {new Date(unlockedAt).toLocaleDateString()}
             </p>
           ) : (
-            <p className="text-xs text-slate-500">
+            <p className="text-xs text-muted-foreground">
               {studentCount === 0 ? 'No students yet' : 'Locked'}
             </p>
           )}
@@ -130,7 +130,7 @@ export function ClassAccessRow({
                   )}
                 </AlertDialogDescription>
               </AlertDialogHeader>
-              {error && <p className="text-sm text-red-600">{error}</p>}
+              {error && <p className="text-sm text-destructive">{error}</p>}
               <AlertDialogFooter>
                 <AlertDialogCancel disabled={isPending}>Cancel</AlertDialogCancel>
                 <AlertDialogAction onClick={handleConfirm} disabled={isPending}>
@@ -145,7 +145,7 @@ export function ClassAccessRow({
       {/* Persistent result feedback below the row after a successful unlock. */}
       {lastResult && (
         <div className="mt-2 space-y-1">
-          <p className="text-xs text-slate-600">
+          <p className="text-xs text-muted-foreground">
             Reviewable cards: {lastResult.cards_count} ·{' '}
             {lastResult.reviews_created === 0
               ? 'no new review rows needed'
@@ -154,7 +154,7 @@ export function ClassAccessRow({
                 } created`}
           </p>
           {lastResult.cards_skipped_no_mcq > 0 && (
-            <div className="rounded-md border border-amber-200 bg-amber-50 px-2 py-1.5 text-xs text-amber-800">
+            <div className="rounded-md border border-amber-200 bg-amber-50 px-2 py-1.5 text-xs text-amber-800 dark:border-amber-900/50 dark:bg-amber-950/40 dark:text-amber-300">
               <p className="font-medium">
                 {lastResult.cards_skipped_no_mcq}{' '}
                 {lastResult.cards_skipped_no_mcq === 1 ? 'card was' : 'cards were'}{' '}
@@ -165,7 +165,7 @@ export function ClassAccessRow({
                   <li key={h}>{h}</li>
                 ))}
               </ul>
-              <p className="mt-1 text-amber-700">
+              <p className="mt-1 text-amber-700 dark:text-amber-400">
                 Add at least one MCQ to each, then re-sync to include them.
               </p>
             </div>

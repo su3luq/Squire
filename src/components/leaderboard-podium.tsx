@@ -22,16 +22,20 @@ interface LeaderboardPodiumProps {
   className?: string;
 }
 
+// Light-mode uses soft pastel washes into transparent. Dark mode needs
+// more saturation against the dark shell — the silver in particular
+// disappears against neutral charcoal in light-mode pastel form, so
+// dark variants step down lightness and up saturation.
 const PLACE_GRADIENT = {
-  1: 'from-amber-300/60 via-amber-200/40 to-transparent',
-  2: 'from-slate-300/60 via-slate-200/40 to-transparent',
-  3: 'from-orange-300/60 via-orange-200/40 to-transparent',
+  1: 'from-amber-300/60 via-amber-200/40 to-transparent dark:from-amber-500/30 dark:via-amber-400/15 dark:to-transparent',
+  2: 'from-slate-300/60 via-slate-200/40 to-transparent dark:from-slate-400/30 dark:via-slate-300/15 dark:to-transparent',
+  3: 'from-orange-300/60 via-orange-200/40 to-transparent dark:from-orange-500/30 dark:via-orange-400/15 dark:to-transparent',
 } as const;
 
 const PLACE_ICON_COLOR = {
-  1: 'text-amber-500',
-  2: 'text-slate-500',
-  3: 'text-orange-600',
+  1: 'text-amber-500 dark:text-amber-400',
+  2: 'text-slate-500 dark:text-slate-400',
+  3: 'text-orange-600 dark:text-orange-400',
 } as const;
 
 /**
