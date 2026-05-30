@@ -22,7 +22,7 @@ single workspace + a focused editor. Teacher UX principles (the through-line):
 ### Non-goals
 - The Quests ⊕ Review merge (separate sub-project).
 - Redesigning the unlock/class-access *flow* (we restyle it; behavior unchanged).
-- Schema changes — none. `review_cards`, `card_quiz_questions`, `lesson_unlocks`, `lessons` and the `createCard`/`editCard` server actions + `card-schema` stay as-is.
+- Table/column changes — none. The only DB addition is one read-only aggregate **view** (`card_recall_stats`, §7) for the new Recall stat. `review_cards`, `card_quiz_questions`, `lesson_unlocks`, `lessons` and the `createCard`/`editCard` server actions + `card-schema` stay as-is.
 
 ---
 
@@ -58,8 +58,16 @@ A Server Component page; the collapsible groups are a small client component.
 **Command zone** (bronze-tinted band): stat tiles `N Cards · N Lessons · N Unlocked` (mono) + a single **New lesson** primary action. *No top-level "New card"* — cards only exist inside a lesson.
 
 **Lesson groups** (collapsible, newest first; one or many open):
-- Header: caret, `L{lesson_number}`, title, `N cards`, an **`⚠ N needs a question`** chip when any card has 0 MCQs (visible even collapsed; lessons needing attention get a `border-primary/40`-style accent), the unlock status chip (`Unlocked ×N` / `Draft · not unlocked`), and an **Add card** button.
-- Body (when open): a grid of card chips, each showing headline + status (`Live · N Q` green / `Needs a question` amber), plus a dashed **Add card** tile. Clicking a card → editor; Add card → new-card editor.
+- Header: caret, `L{lesson_number}`, title, `N cards`, a **Recall** stat (see §4a), an **`⚠ N needs a question`** chip when any card has 0 MCQs (visible even collapsed; lessons needing attention get a `border-primary/40`-style accent), the unlock status chip (`Unlocked ×N` / `Draft · not unlocked`), and an **Add card** button.
+- Body (when open): a grid of card chips, each showing headline + status (`Live · N Q` green / `Needs a question` amber) + its own **Recall %**, plus a dashed **Add card** tile. Clicking a card → editor; Add card → new-card editor.
+
+### 4a. Recall stat (content difficulty signal)
+
+A per-lesson and per-card **Recall** = `% of question answers correct` from `review_attempts`. Tells the teacher which content students struggle with, right where they author it. Complements (does not duplicate) the analytics page's FSRS-stability "retention".
+
+- **Display:** `Recall 72%` (mono). Color-tiered: ≥80% green, 60–79% neutral, <60% bronze-amber "struggling" — all with `dark:` variants (semantic, per rule 19).
+- **Min-attempts gate:** show a number only when the lesson/card has ≥8 answered attempts; below that show `—` (or "new") so small samples don't mislead.
+- **Source:** a new aggregate view `card_recall_stats(card_id, attempts, correct)` = `count(*)` / `count(*) filter (where is_correct)` grouped by `card_id`, declared `with (security_invoker = true)` so `review_attempts` RLS still applies (teacher sees all; nobody else can read others'). The workspace fetches it once and aggregates to lesson level in-app. **New migration — drafted for approval at build time.**
 - The unlock chip / a "Manage" affordance links to `/teacher/cards/[lessonId]` (lesson management).
 
 **New lesson** creates the lesson (existing action) and lands back on the workspace with it expanded and an "add your first card" prompt.
@@ -100,8 +108,22 @@ lessons
 - Per card: `questionCount = card_quiz_questions[0].count` → `Live` (≥1) or `Needs a question` (0).
 - Per lesson: `needsCount` = cards with 0 questions; `unlockCount = lesson_unlocks.length` → `Unlocked ×N` / `Draft`.
 - Command-zone stats: total cards, total lessons, lessons with `unlockCount > 0`.
+- **Recall:** a second fetch of `card_recall_stats` (one small row per card); map `card_id → {attempts, correct}`. Per-card recall = `correct/attempts` when `attempts ≥ 8`. Per-lesson recall = `Σcorrect / Σattempts` across the lesson's cards, same gate.
 
 Sort cards within a lesson by `position`.
+
+### Database changes (one new migration, drafted for approval at build time)
+
+```sql
+create view public.card_recall_stats with (security_invoker = true) as
+  select card_id,
+         count(*)::int                              as attempts,
+         count(*) filter (where is_correct)::int    as correct
+  from public.review_attempts
+  group by card_id;
+```
+
+Read-only aggregate; `security_invoker` makes it honor `review_attempts` RLS. No table/column changes. Per the SQL rules: drafted here, applied via `apply_migration` only after explicit approval, then advisors re-run.
 
 ---
 
@@ -126,3 +148,4 @@ Removed/redirected: `src/app/teacher/lessons/**` (moved to `cards/`).
 ## 10. Open items to confirm during planning
 - Keep the old "Quick start" (lesson+card in one) or retire it in favor of New lesson → add card? (Proposed: retire; New lesson lands with an add-first-card prompt.)
 - Lesson management reached via the unlock chip vs an explicit "Manage" button in the group header (proposed: the unlock chip is the link, with a small manage icon).
+- Recall stat label ("Recall" vs "Success"/"Accuracy") and the min-attempts gate (proposed: "Recall", ≥8 attempts). Tier thresholds (proposed: ≥80 / 60–79 / <60).
